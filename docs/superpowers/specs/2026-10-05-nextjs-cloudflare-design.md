@@ -35,8 +35,13 @@ Browser → Cloudflare Worker (Next.js, opennext adapter)
 | Hyperdrive connection string | Cloudflare Dashboard → Workers → Settings → Bindings (Hyperdrive) + `wrangler.toml` id | NOT plain env; pooled 6543 URL |
 | `DIRECT_URL` | Local `.env` + GitHub Secret (migration job only) | Never in Worker runtime |
 | R2 binding | `wrangler.toml` + Dashboard | Not a secret string |
+| KV binding (`RATE_LIMIT_KV`) | `wrangler.toml` + Dashboard | Sliding-window rate limits (per-isolate Map is backstop only) |
 | `LICENSE_PORTAL_*`, `GEMINI_API_KEY` | Worker secrets (`wrangler secret put` / Dashboard → Variables → Secrets) | Server-only, never `NEXT_PUBLIC_` |
+| `AUTH_SECRET`, `SETUP_TOKEN` | Worker secrets | Auth.js + one-time bootstrap |
+| `META_CAPI_TOKEN`, `META_TEST_EVENT_CODE`, `TURNSTILE_SECRET_KEY` | Worker secrets | Server-side tracking + bot protection |
 | `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_DEFAULT_LOCALE` | `wrangler.toml` `[vars]` + `.env.local` | Build-time public only |
+| `NEXT_PUBLIC_META_PIXEL_ID`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | `wrangler.toml` `[vars]` | Public by design (browser must read them) |
+| `SENTRY_DSN`, `RESEND_API_KEY` | Worker secrets (Sentry tunnel keeps DSN off client) | Observability + future lead notifications |
 
 Never commit `.env*`. Never prefix secrets with `NEXT_PUBLIC_`.
 
@@ -53,13 +58,16 @@ Never commit `.env*`. Never prefix secrets with `NEXT_PUBLIC_`.
 - Hyperdrive misbound → `/api/health` reports `postgresConfigured:false`; deploy check fails fast.
 - R2 misbound → upload route 500 with `R2_NOT_BOUND`, landing still renders.
 
-## 8. Testing
-- `tsc --noEmit` + production build in CI (existing `ci.yml` kept).
-- Smoke: `/api/health`, `/api/leads` GET, lead POST, R2 upload roundtrip on preview env before production promote.
-- No new unit framework; reuse manual AdminPanel verification (prototype stage).
+## 8. Testing (enterprise grade — supersedes the prototype "manual verification" stance)
+- Unit (Vitest): pure logic — password hashing, TOTP against RFC 6238 vectors, sanitizer, slug, pagination, content EN/BN merge, Meta CAPI payload (PII hashed, no raw values), rate limiter.
+- Integration: real Postgres test DB — transaction atomicity, unique/partial indexes, CHECK constraints, soft delete, session expiry. Skips loudly (never silently green) when the test DB URL is absent.
+- E2E (Playwright): lead submit → visible in admin; setup → login → edit hero → public reflects it without rebuild; self-deactivation blocked; non-superadmin 403 on user management; locale switch + fallback; sitemap excludes drafts.
+- Accessibility (axe): landing light+dark, admin, login, lead form at 360px — zero critical/serious; keyboard traversal; reduced-motion honored.
+- Performance (LHCI): LCP < 2.0s, CLS < 0.05, TBT < 300ms on mobile preset. Baseline first, then blocking, so real numbers are recorded before the gate bites.
+- CI is a required check; branch protection blocks merge without it.
 
 ## 9. Out of scope
-- MySQL support, Supabase Auth/Realtime, image optimization service, multi-env preview DB seeding.
+- MySQL support, Supabase Auth/Realtime, R2 image transformation (paid), multi-region failover.
 
 ## 10. Admin auth — Auth.js v5 (user-approved)
 - Auth.js v5 Credentials provider + Drizzle adapter + database sessions (opaque tokens, no JWT). CSRF/cookies/expiry owned by library.
@@ -80,3 +88,49 @@ Never commit `.env*`. Never prefix secrets with `NEXT_PUBLIC_`.
 - Storage: new `landing_content` table (`sectionKey`, `locale`, `content jsonb`) — one row per section per locale, seeded from current `landingContent.ts` slices. Existing `landing_sections` keeps ordering/visibility; `landing_content` holds the payload.
 - New `social_links` table (`platform`, `url`, `sortOrder`, `isVisible`) consumed by footer/contact.
 - Contact numbers/WhatsApp/Messenger stay in `site_settings` (already exist); hero CTA labels live in `landing_content.hero`.
+
+## 14. Bilingual parity EN/BN (user requirement)
+- Every manageable string exists in both locales; `bn` missing → `en` fallback with admin-visible "missing translation" report (never blank, never Crash).
+- Locale-aware URLs (`/bn/...`), `hreflang` (en/bn/x-default), per-locale sitemap + canonical + OG locale. Admin edits EN/BN side-by-side.
+- Bangla copy natural for BD operators; no awkward literal translations (design-track concern, data model supports it).
+
+## 15. Server-side tracking for leads (user requirement)
+- Event bus `lib/events.ts`: providers plug in; **Meta CAPI ships now**, TikTok Events API + GA4 Measurement Protocol later without touching call sites.
+- Lead POST captures `fbp`/`fbc` cookies + generates `event_id`; browser pixel fires same `event_id` → Meta dedupes. CAPI sends `Lead` (hashed PII, `action_source: website`) async after 201; result logged to `integration_logs`; admin can retry per lead like license sync.
+- Pixel ID public (`NEXT_PUBLIC_`), CAPI token secret. Test event code supported for verification in Events Manager.
+
+## 16. Enterprise-grade hardening (user requirement)
+- Security: KV-backed sliding-window rate limits on all public mutations + Cloudflare WAF rate rules; Turnstile on lead form; security headers (CSP, HSTS, frame-deny, nosniff); R2 upload validation (size cap, MIME sniff, SVG rejected); blog HTML sanitized on render; TOTP 2FA for superadmin; session list + revoke in user mgmt; audit-log viewer in admin.
+- Leads pro: status-history timeline (`lead_activities`), assign to admin users, duplicate-phone warning (not block), CSV export, follow-up due date, new-lead notification abstraction (Resend adapter interface; logs until wired).
+- Content ops: scheduled-post publisher via Cron Trigger; on-demand revalidation on every admin mutation (edit → live, no redeploy); media picker reused in all editors; unique-slug helper; `menus` + `redirects` tables (header/footer 100% managed, SEO-safe URL changes).
+- Ops: preview env + separate preview DB; `drizzle-kit migrate` (journal) in prod — never `push`; Supabase PITR backups noted; Sentry + structured request logs; `/api/ready` deep health; runbook `docs/RUNBOOK.md`; paginated list APIs (`limit`/`offset` caps).
+- Performance budgets enforced in CI: LCP/INP/CLS targets, `next/image` with R2 loader, lazy below-fold, `llms.txt` + sitemap slugs for AI discoverability.
+
+## 17. Validation & data integrity
+- Every mutation endpoint validates with Zod `.strict()` (unknown keys rejected → mass assignment impossible). Hand-rolled allowlists in the early tasks are placeholders for this, not the end state.
+- Multi-table writes run in one transaction (content + revision, lead + activity, settings + audit).
+- Soft delete on all content; hard delete never removes a live URL. DB-level CHECK/unique constraints (partial unique index on slug where not deleted) are the guarantee, app validation is courtesy.
+- Referential guards: last-superadmin protection, self-deactivation block, media-in-use block, slug availability.
+
+## 18. Content lifecycle
+- Draft → publish → rollback with full revision history (`content_revisions`); published edits never overwrite live copy until published.
+- Optimistic locking via `version` column; conflicting save returns 409 with the current server payload.
+- Scheduled publishing via Cron Trigger.
+
+## 19. Failure modes
+- Error boundaries per route + global; brand-styled 404 that offers contact.
+- Uniform `{ error, requestId }` envelope with per-request UUID echoed to logs.
+- DB outage: public landing serves static fallback silently, admin shows maintenance, lead POST fails visibly (never fake success), `/api/ready` reports 503.
+- Dispatch retry queue (`dispatch_queue`) with exponential backoff so a 6-hour Meta/License outage loses zero leads.
+
+## 20. Compliance & consent
+- Consent banner gates pixel/CAPI; consent recorded per lead (`consentGiven`, `consentAt`, `consentText` = policy version).
+- `/privacy` and `/terms` in EN + BN, CMS-editable; retention enforced by cron (default 180 days, anonymization not deletion for Won/Qualified).
+- Bengali locale uses `Intl` formatting (dates, currency, numbers) — not string concatenation.
+
+## 21. Production governance
+- Wrangler environments (`production` / `preview`) with isolated Hyperdrive, R2 and KV per environment.
+- CI supply-chain gates: gitleaks, `npm audit --audit-level=high`, osv-scanner, Dependabot, least-privilege `permissions`, schema-drift guard (uncommitted migrations fail CI).
+- Preview deploy per PR with Playwright smoke + LHCI comment; branch protection + CODEOWNERS on `db/schema.ts`, `auth.ts`, `middleware.ts`, `wrangler.toml`, `.github/**`.
+- External uptime monitoring on `/api/health` + `/api/ready`, alerting on lead-submit success rate (< 95% over 15 min = revenue incident).
+- Runbook covers deploy/rollback, secret rotation, PITR restore drill (executed once, dated), plus `docs/SECURITY.md` with data-flow diagram and threat model.

@@ -1786,9 +1786,111 @@ Apply: lead POST `hitLimit('lead:'+ip, 5, 600)`, login `hitLimit('login:'+ip, 10
 
 - [ ] **Step 4: Upload validation** — 5MB cap (`file.size`), MIME allowlist `image/jpeg|image/png|image/webp` by sniffing first bytes (not `file.type` — client-controlled), SVG/GIF/HTML rejected (XSS vector), filename sanitized (existing), R2 key prefixed `media/YYYY/MM/`. Return 413/415 with clear messages.
 
-- [ ] **Step 5: Blog sanitization** — `lib/sanitize.ts` allowlist (`p,b,i,strong,em,a[href],ul,ol,li,h2,h3,blockquote,code,pre,img[src|alt]`) strips `script/style/on*` handlers; render path uses it before `dangerouslySetInnerHTML`. (Small local allowlist function, no new dependency — keeps Worker bundle lean.)
+- [ ] **Step 5: Blog sanitization** — allowlist (`p,b,i,strong,em,a[href],ul,ol,li,h2,h3,blockquote,code,pre,img[src|alt]`) strips `script/style/on*` handlers; render path uses it before `dangerouslySetInnerHTML`. Small local implementation, no dependency — a sanitizer package would be the first thing to bloat the Worker bundle.
 
-- [ ] **Step 6: TOTP for superadmin** — `lib/totp.ts` (RFC 6238, WebCrypto HMAC-SHA1, 30s step, ±1 window); `admin_users` gets `totpSecret` (nullable) + `totpEnabled`; enroll shows QR (`otpauth://` URI rendered as data-URL QR — no external call); login requires code when enabled; recovery via superadmin peer reset (audited). Editor/admin roles: optional; superadmin: enforced at setup.
+```ts
+// lib/sanitize.ts
+const ALLOWED = new Set(['p', 'b', 'i', 'strong', 'em', 'a', 'ul', 'ol', 'li', 'h2', 'h3', 'blockquote', 'code', 'pre', 'img', 'br', 'hr', 'span']);
+const ALLOWED_ATTRS: Record<string, Set<string>> = {
+  a: new Set(['href', 'title', 'rel']),
+  img: new Set(['src', 'alt', 'width', 'height']),
+  span: new Set(['class']),
+};
+const SAFE_URL = /^(https?:|\/)/i;
+
+/** Allowlist sanitizer. Not a parser shortcut: unknown tags are dropped entirely,
+ *  attributes are filtered per-tag, and href/src must be http(s) or root-relative,
+ *  so `javascript:` and `data:` payloads cannot survive. */
+export function sanitizeHtml(dirty: string): string {
+  if (typeof DOMParser !== 'undefined') {
+    const doc = new DOMParser().parseFromString(dirty, 'text/html');
+    const walk = (node: Element) => {
+      for (const child of [...node.children]) {
+        const tag = child.tagName.toLowerCase();
+        if (!ALLOWED.has(tag)) {
+          child.replaceWith(...child.childNodes);
+          continue;
+        }
+        const keep = ALLOWED_ATTRS[tag] ?? new Set<string>();
+        for (const attr of [...child.attributes]) {
+          const name = attr.name.toLowerCase();
+          if (!keep.has(name) || name.startsWith('on')) { child.removeAttribute(attr.name); continue; }
+          if ((name === 'href' || name === 'src') && !SAFE_URL.test(attr.value.trim())) {
+            child.removeAttribute(attr.name);
+          }
+        }
+        if (tag === 'a') child.setAttribute('rel', 'noopener noreferrer');
+        walk(child);
+      }
+    };
+    walk(doc.body);
+    return doc.body.innerHTML;
+  }
+  // Workers runtime has no DOMParser — fall back to stripping every tag that is not
+  // allowlisted, then unescaping text. Conservative on purpose: it can only remove.
+  return dirty
+    .replace(/<\/?([a-zA-Z][a-zA-Z0-9]*)\b[^>]*>/g, (m, tag: string) =>
+      ALLOWED.has(tag.toLowerCase()) ? m : '',
+    )
+    .replace(/\son[a-zA-Z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+}
+```
+DOMParser is absent on Workers, so the regex fallback is the path that actually runs in production — treat it as the primary implementation, not an afterthought.
+
+- [ ] **Step 6: TOTP for superadmin** — `admin_users` gets `totpSecret` (nullable) + `totpEnabled`; enroll renders an `otpauth://` URI as a data-URL QR (no external call); login requires the code when enabled; recovery via superadmin peer reset (audited). Editor/admin optional; superadmin enforced at setup.
+
+Implement to RFC 6238 so Task 18's official test vectors can validate it. WebCrypto throughout — `node:crypto` is not available on Workers:
+```ts
+// lib/totp.ts
+const SECRET_BYTES = 20;   // 160-bit, RFC 4226 recommendation
+
+function bufToHex(b: ArrayBuffer): string {
+  return [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, '0')).join('');
+}
+function hexToBytes(hex: string): Uint8Array {
+  return new Uint8Array(hex.match(/.{1,2}/g)!.map((h) => parseInt(h, 16)));
+}
+function base32Encode(buf: Uint8Array): string {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  let bits = '', out = '';
+  for (const byte of buf) bits += byte.toString(2).padStart(8, '0');
+  for (let i = 0; i < bits.length; i += 5) {
+    const chunk = bits.slice(i, i + 5).padEnd(5, '0');
+    out += alphabet[parseInt(chunk, 2)];
+  }
+  return out;
+}
+
+export function generateTotpSecret(): string {
+  return base32Encode(crypto.getRandomValues(new Uint8Array(SECRET_BYTES))).replace(/=+$/, '');
+}
+
+export function totpUri(email: string, secret: string): string {
+  const label = encodeURIComponent(`EcoMate Admin:${email}`);
+  return `otpauth://totp/${label}?secret=${secret}&issuer=EcoMate&algorithm=SHA1&digits=6&period=30`;
+}
+
+async function hotp(secret: string, counter: number): Promise<string> {
+  const key = await crypto.subtle.importKey('raw', hexToBytes(base32Decode(secret)), { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']);
+  const buf = new ArrayBuffer(8);
+  new DataView(buf).setBigUint64(0, BigInt(counter));
+  const sig = new Uint8Array(await crypto.subtle.sign('HMAC', key, buf));
+  const offset = sig[sig.length - 1] & 0x0f;
+  const bin = ((sig[offset] & 0x7f) << 24) | (sig[offset + 1] << 16) | (sig[offset + 2] << 8) | sig[offset + 3];
+  return String(bin % 1_000_000).padStart(6, '0');
+}
+
+export async function verifyTotp(secret: string, token: string): Promise<boolean> {
+  if (!/^\d{6}$/.test(token)) return false;
+  const counter = Math.floor(Date.now() / 1000 / 30);
+  // +/-1 step absorbs clock skew between the server and the user's phone
+  for (const offset of [-1, 0, 1]) {
+    if ((await hotp(secret, counter + offset)) === token) return true;
+  }
+  return false;
+}
+```
+Plus the base32 decoder (`base32Decode`) and `generateTotpQrDataUrl(uri)` which renders via an inline-SVG QR encoder or a ~1KB `qrcode` dependency — whichever the bundle audit in Task 18 prefers. Store the secret **encrypted at rest** with a Worker secret as the key; a plaintext `totpSecret` column in a leaked dump defeats the second factor.
 
 - [ ] **Step 7: Commit**
 
@@ -1881,7 +1983,40 @@ git commit -m "feat: locale routing, hreflang, menus, redirects, revalidation, i
 
 - [ ] **Step 3: Notification abstraction** — `lib/notify.ts` `notifyNewLead(lead)` → Resend adapter interface; unwired provider = structured log + `integration_logs` row (same retry pattern as license portal). Wiring Resend later = env + one provider file, zero call-site changes.
 
-- [ ] **Step 4: Pagination everywhere** — `lib/paginate.ts` parses `limit` (default 20, max 100) + `offset`; all list routes return `{ data, total, limit, offset }`. AdminPanel lists updated to new envelope (single shared fetch wrapper change in `src/services/api.ts`).
+- [ ] **Step 4: Pagination everywhere** — all list routes return `{ data, total, limit, offset }`. AdminPanel lists updated to the new envelope (one shared fetch-wrapper change in `src/services/api.ts`).
+
+```ts
+// lib/paginate.ts
+export interface Page<T> {
+  data: T[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+const DEFAULT_LIMIT = 20;
+const MAX_LIMIT = 100;
+
+/** Clamp rather than reject: a client asking for limit=100000 gets 100, not a 400.
+ *  Offsets are floored at 0 so a negative value cannot produce a negative slice. */
+export function parsePage(url: string): { limit: number; offset: number } {
+  const q = new URL(url).searchParams;
+  const rawLimit = Number(q.get('limit'));
+  const rawOffset = Number(q.get('offset'));
+  const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(Math.floor(rawLimit), MAX_LIMIT) : DEFAULT_LIMIT;
+  const offset = Number.isFinite(rawOffset) && rawOffset > 0 ? Math.floor(rawOffset) : 0;
+  return { limit, offset };
+}
+
+/** Wraps a Drizzle query with a count so callers get the envelope for free.
+ *  Uses the two-query form rather than `count()` over the full result set. */
+export async function paginate<T>(url: string, run: (limit: number, offset: number) => Promise<T[]>): Promise<Page<T>> {
+  const { limit, offset } = parsePage(url);
+  const [data, [{ count }]] = await Promise.all([run(limit, offset), countMatching()]);
+  return { data, total: Number(count), limit, offset };
+}
+```
+`countMatching()` is the caller's own `select({ count: sql`count(*)` })` on the same table/filter — each route supplies its own so the count matches its WHERE clause; a shared global count would be wrong for filtered lists. Always pass the same filters to both, and add a matching index for the sort column or the offset scan degrades on large tables.
 
 - [ ] **Step 5: Prod-safe migrations + preview env** — CI: `drizzle-kit migrate` (journal from `drizzle/`) against `DIRECT_URL` on deploy; `db:push` banned in prod job (comment guard in workflow). Preview env job deploys PRs with separate preview Hyperdrive DB + KV; preview secrets suffixed `-preview`. Supabase PITR enabled (dashboard note in runbook).
 

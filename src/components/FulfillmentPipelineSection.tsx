@@ -42,6 +42,69 @@ export const FulfillmentPipelineSection: React.FC<FulfillmentPipelineProps> = ({
           </p>
         </div>
 
+        {/* Signature Verification Flow Diagram: Physical Packing Verification in Motion */}
+        <div className="mt-8 sm:mt-12 rounded-2xl border border-indigo-200 dark:border-indigo-500/20 bg-gradient-to-br from-indigo-50/50 via-white to-purple-50/30 dark:from-[#0C0E1B] dark:via-[#090A14] dark:to-[#07080F] p-4 sm:p-7 shadow-sm">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 border-b border-indigo-200/60 dark:border-white/[0.08] pb-3 mb-5">
+            <span className="text-[11px] sm:text-xs font-mono font-semibold uppercase tracking-wider text-indigo-700 dark:text-indigo-400">
+              {locale === 'en' ? 'Physical Packing Verification Sequence' : 'ফিজিক্যাল প্যাকিং ভেরিফিকেশন সিকোয়েন্স'}
+            </span>
+            <span className="text-[10px] sm:text-[11px] font-mono text-emerald-700 dark:text-emerald-400 bg-emerald-100/80 dark:bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-500/20 font-semibold">
+              ● {locale === 'en' ? 'Hardware Scanner Ready' : 'হার্ডওয়্যার বারকোড স্ক্যানার কানেক্টেড'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs items-center">
+            {/* Step 1: Order Ticket */}
+            <div className="p-3 rounded-xl bg-white dark:bg-black/40 border border-slate-200 dark:border-white/[0.06] shadow-2xs">
+              <span className="text-[10px] font-mono text-indigo-600 dark:text-indigo-400 font-bold block mb-1">STAGE 01</span>
+              <p className="font-bold text-slate-900 dark:text-white">Order Queued</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">WooCommerce #EM-84920</p>
+              <div className="mt-2 text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">✓ COD Confirmed</div>
+            </div>
+
+            {/* Step 2: Barcode Scan */}
+            <div className="p-3 rounded-xl bg-white dark:bg-black/40 border border-indigo-300 dark:border-indigo-500/40 shadow-2xs">
+              <span className="text-[10px] font-mono text-indigo-600 dark:text-indigo-400 font-bold block mb-1">STAGE 02</span>
+              <p className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                <Barcode className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+                <span>Barcode Scan</span>
+              </p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Physical garment scanned</p>
+              <div className="mt-2 text-[10px] font-mono text-indigo-600 dark:text-indigo-400 font-semibold">SKU: POLO-NVY-XL</div>
+            </div>
+
+            {/* Step 3: Match & Chime */}
+            <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-300 dark:border-emerald-500/40 shadow-2xs">
+              <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-400 font-bold block mb-1">STAGE 03</span>
+              <p className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>Audio Chime</span>
+              </p>
+              <p className="text-[11px] text-emerald-700 dark:text-emerald-300 mt-0.5">100% SKU match verified</p>
+              <div className="mt-2 text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">WRONG SIZE BLOCKED</div>
+            </div>
+
+            {/* Step 4: Shipping Label Unlock */}
+            <div className="p-3 rounded-xl bg-white dark:bg-black/40 border border-slate-200 dark:border-white/[0.06] shadow-2xs">
+              <span className="text-[10px] font-mono text-indigo-600 dark:text-indigo-400 font-bold block mb-1">STAGE 04</span>
+              <p className="font-bold text-slate-900 dark:text-white">Label Unlocks</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Thermal print generated</p>
+              <div className="mt-2 text-[10px] font-mono text-indigo-600 dark:text-indigo-400 font-semibold">Steadfast #SF-948102</div>
+            </div>
+
+            {/* Step 5: Dispatch & Handover */}
+            <div className="p-3 rounded-xl bg-white dark:bg-black/40 border border-slate-200 dark:border-white/[0.06] shadow-2xs">
+              <span className="text-[10px] font-mono text-purple-600 dark:text-purple-400 font-bold block mb-1">STAGE 05</span>
+              <p className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                <Truck className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                <span>Rider Handover</span>
+              </p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Manifest auto-signed</p>
+              <div className="mt-2 text-[10px] text-purple-600 dark:text-purple-400 font-semibold">SMS Sent to Buyer</div>
+            </div>
+          </div>
+        </div>
+
         {/* Connected Interactive Stepper Rail */}
         <div className="mt-8 sm:mt-12">
           {/* Horizontal scroll container on mobile, full width on desktop */}

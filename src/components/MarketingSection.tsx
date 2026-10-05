@@ -25,6 +25,52 @@ export const MarketingSection: React.FC<MarketingSectionProps> = ({ content, loc
           </p>
         </div>
 
+        {/* Server-Side Conversion Telemetry Architecture Flow */}
+        <div className="mt-8 sm:mt-12 rounded-2xl border border-rose-200 dark:border-rose-500/20 bg-gradient-to-br from-rose-50/50 via-white to-purple-50/30 dark:from-[#110B18] dark:via-[#090A14] dark:to-[#07080F] p-4 sm:p-7 shadow-sm">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 border-b border-rose-200/60 dark:border-white/[0.08] pb-3 mb-5">
+            <span className="text-[11px] sm:text-xs font-mono font-semibold uppercase tracking-wider text-rose-700 dark:text-rose-400">
+              {locale === 'en' ? 'Server-Side Deduplicated Tracking Architecture' : 'সার্ভার-সাইড ট্র্যাকিং আর্কিটেকচার'}
+            </span>
+            <span className="text-[10px] sm:text-[11px] font-mono text-emerald-700 dark:text-emerald-400 bg-emerald-100/80 dark:bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-500/20 font-semibold">
+              ● EMQ Quality Score 9.4/10
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+            {/* Stage 1: Ad Click */}
+            <div className="p-3.5 rounded-xl bg-white dark:bg-black/40 border border-slate-200 dark:border-white/[0.06] shadow-2xs">
+              <span className="text-[10px] font-mono text-rose-600 dark:text-rose-400 font-bold block mb-1">DATA STAGE 01</span>
+              <p className="font-bold text-slate-900 dark:text-white">Customer Ad Click</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Meta / TikTok sponsored click</p>
+              <div className="mt-2 text-[10px] font-mono text-slate-600 dark:text-slate-400">fbp / fbc clickID captured</div>
+            </div>
+
+            {/* Stage 2: Browser Adblocker bypass */}
+            <div className="p-3.5 rounded-xl bg-white dark:bg-black/40 border border-slate-200 dark:border-white/[0.06] shadow-2xs">
+              <span className="text-[10px] font-mono text-purple-600 dark:text-purple-400 font-bold block mb-1">DATA STAGE 02</span>
+              <p className="font-bold text-slate-900 dark:text-white">iOS & AdBlock Immunity</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Bypasses Safari 7-day cookie limits</p>
+              <div className="mt-2 text-[10px] font-mono text-purple-600 dark:text-purple-400 font-semibold">1st-Party Domain Cookied</div>
+            </div>
+
+            {/* Stage 3: EcoMate Server Dispatch */}
+            <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/20 border border-rose-300 dark:border-rose-500/30 shadow-2xs">
+              <span className="text-[10px] font-mono text-rose-700 dark:text-rose-400 font-bold block mb-1">DATA STAGE 03</span>
+              <p className="font-bold text-slate-900 dark:text-white">Server-Side CAPI Event</p>
+              <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5">Dispatched directly from backend</p>
+              <div className="mt-2 text-[10px] font-mono text-emerald-700 dark:text-emerald-400 font-bold">100% PURCHASE MATCHED</div>
+            </div>
+
+            {/* Stage 4: Net Real Cash ROAS */}
+            <div className="p-3.5 rounded-xl bg-white dark:bg-black/40 border border-emerald-300 dark:border-emerald-500/30 shadow-2xs">
+              <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-400 font-bold block mb-1">DATA STAGE 04</span>
+              <p className="font-bold text-slate-900 dark:text-white">True Net Cash ROAS</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Subtracts courier returns automatically</p>
+              <div className="mt-2 text-[10px] font-mono text-emerald-700 dark:text-emerald-400 font-bold">REAL PROFIT VISIBILITY</div>
+            </div>
+          </div>
+        </div>
+
         {/* 4 Server-Side Marketing Integrations */}
         <div className="mt-8 sm:mt-12 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           {content.marketing.features.map((feature, idx) => (

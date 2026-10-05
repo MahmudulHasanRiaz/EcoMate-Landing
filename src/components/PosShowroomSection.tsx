@@ -25,6 +25,65 @@ export const PosShowroomSection: React.FC<PosShowroomProps> = ({ content, locale
           </p>
         </div>
 
+        {/* Live Showroom Cashier Counter Simulation: Physical Retail Meets Central Inventory */}
+        <div className="mt-8 sm:mt-12 rounded-2xl border border-purple-200 dark:border-purple-500/20 bg-gradient-to-br from-purple-50/50 via-white to-indigo-50/30 dark:from-[#0E0F1E] dark:via-[#090A14] dark:to-[#07080F] p-4 sm:p-7 shadow-sm">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 border-b border-purple-200/60 dark:border-white/[0.08] pb-3 mb-5">
+            <span className="text-[11px] sm:text-xs font-mono font-semibold uppercase tracking-wider text-purple-700 dark:text-purple-300">
+              {locale === 'en' ? 'Showroom Counter Live Billing Flow' : 'শোরুম ক্যাশিয়ার কাউন্টার লাইভ বিলিং'}
+            </span>
+            <span className="text-[10px] sm:text-[11px] font-mono text-emerald-700 dark:text-emerald-400 bg-emerald-100/80 dark:bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-500/20 font-semibold">
+              ● Banani Flagship Terminal #02 (Live)
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 text-xs">
+            {/* Step 1: Physical Barcode Scanning */}
+            <div className="p-3.5 sm:p-4 rounded-xl bg-white dark:bg-black/40 border border-purple-200/70 dark:border-white/[0.06] shadow-2xs">
+              <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
+                <span className="font-mono text-[10px] text-purple-600 dark:text-purple-400 font-bold">POS STEP 01</span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-medium font-mono">1.2s Scan Speed</span>
+              </div>
+              <h4 className="font-bold text-slate-900 dark:text-white text-sm mb-1">Instant Barcode Billing</h4>
+              <p className="text-slate-600 dark:text-slate-300 text-xs">
+                Walk-in customer hands item to cashier. Handheld scanner beeps once, instantly pulling unit cost and inventory lock.
+              </p>
+              <div className="mt-3 p-2 rounded bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/[0.04] font-mono text-[11px]">
+                Item: Denim Jacket (Size M) · ৳ 2,850
+              </div>
+            </div>
+
+            {/* Step 2: Split Payments */}
+            <div className="p-3.5 sm:p-4 rounded-xl bg-white dark:bg-black/40 border border-purple-200/70 dark:border-white/[0.06] shadow-2xs">
+              <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
+                <span className="font-mono text-[10px] text-purple-600 dark:text-purple-400 font-bold">POS STEP 02</span>
+                <span className="text-purple-600 dark:text-purple-400 font-medium font-mono">Split Payment</span>
+              </div>
+              <h4 className="font-bold text-slate-900 dark:text-white text-sm mb-1">bKash + Cash Settlement</h4>
+              <p className="text-slate-600 dark:text-slate-300 text-xs">
+                Supports partial payments: customer pays ৳ 1,500 in Cash and ৳ 1,350 via bKash QR. Automatically recorded in cash drawer.
+              </p>
+              <div className="mt-3 p-2 rounded bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/[0.04] font-mono text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold">
+                Cashier: Rifat Ahmed · Commission Logged
+              </div>
+            </div>
+
+            {/* Step 3: Central Stock Auto-Deduction */}
+            <div className="p-3.5 sm:p-4 rounded-xl bg-white dark:bg-black/40 border border-emerald-300 dark:border-emerald-500/30 shadow-2xs">
+              <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
+                <span className="font-mono text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">POS STEP 03</span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-medium font-mono">Zero Lag Sync</span>
+              </div>
+              <h4 className="font-bold text-slate-900 dark:text-white text-sm mb-1">Instant Warehouse Deduction</h4>
+              <p className="text-slate-600 dark:text-slate-300 text-xs">
+                Upon invoice print, Central Stock drops from 35 to 34. Online store stock updates simultaneously to prevent double orders.
+              </p>
+              <div className="mt-3 p-2 rounded bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-500/30 font-mono text-[11px] text-emerald-800 dark:text-emerald-300 font-bold">
+                Online Web Stock: 34 Units [SYNCED]
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* 4 Core POS Capabilities Grid */}
         <div className="mt-8 sm:mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {content.posShowroom.features.map((feat, idx) => (

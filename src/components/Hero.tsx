@@ -142,8 +142,73 @@ export const Hero: React.FC<HeroProps> = ({ content, locale }) => {
           </div>
         </div>
 
+        {/* Signature Convergence Architecture Visual: Multi-Channels -> Unified EcoMate Core Engine */}
+        <div className="mt-8 sm:mt-14 max-w-5xl mx-auto">
+          <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white/70 dark:bg-[#0A0C16]/90 backdrop-blur-xl p-4 sm:p-6 shadow-sm">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 border-b border-slate-200/80 dark:border-white/[0.08] pb-3 mb-4">
+              <span className="text-[11px] sm:text-xs font-mono font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                {locale === 'en' ? 'Central Operating Architecture' : 'সেন্ট্রাল অপারেটিং আর্কিটেকচার'}
+              </span>
+              <span className="text-[10px] sm:text-[11px] font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-500/20 font-semibold">
+                ● {locale === 'en' ? 'Real-Time Bi-Directional Sync' : 'লাইভ দ্বি-মুখী সিঙ্ক'}
+              </span>
+            </div>
+
+            {/* Visual Node Convergence Layout */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4 mb-4">
+              {/* Node 1: Online Channels */}
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/[0.05] text-center">
+                <Store className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-600 dark:text-indigo-400 mx-auto mb-1.5" />
+                <p className="text-xs font-bold text-slate-800 dark:text-slate-100">Online Channels</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">WooCommerce · Custom Web</p>
+                <div className="mt-2 text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">Auto-Ingest ↓</div>
+              </div>
+
+              {/* Node 2: Showroom POS */}
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/[0.05] text-center">
+                <Store className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600 dark:text-purple-400 mx-auto mb-1.5" />
+                <p className="text-xs font-bold text-slate-800 dark:text-slate-100">Showroom POS</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Banani · Dhanmondi Outlets</p>
+                <div className="mt-2 text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">Stock Decrement ↓</div>
+              </div>
+
+              {/* Node 3: Warehouses */}
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/[0.05] text-center">
+                <Warehouse className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600 dark:text-amber-400 mx-auto mb-1.5" />
+                <p className="text-xs font-bold text-slate-800 dark:text-slate-100">Central Hub</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Multi-Bin · Barcode Lock</p>
+                <div className="mt-2 text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">Live Allocation ↓</div>
+              </div>
+
+              {/* Node 4: Couriers */}
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/[0.05] text-center">
+                <Truck className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-600 dark:text-emerald-400 mx-auto mb-1.5" />
+                <p className="text-xs font-bold text-slate-800 dark:text-slate-100">Courier Logistics</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Steadfast · Pathao · RedX</p>
+                <div className="mt-2 text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">COD Reconciled ↓</div>
+              </div>
+            </div>
+
+            {/* Center Core Bar */}
+            <div className="p-3 rounded-xl bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-indigo-500/10 border border-indigo-200 dark:border-indigo-500/30 flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left">
+              <div className="flex items-center gap-2.5">
+                <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-xs sm:text-sm font-bold text-indigo-950 dark:text-white">
+                  EcoMate Central Operations Console:
+                </span>
+                <span className="text-xs text-slate-600 dark:text-slate-300 hidden md:inline">
+                  {locale === 'en' ? 'Single source of truth for stock, packing verification & settled cash' : 'স্টক, প্যাকিং ভেরিফিকেশন ও ক্যাশ রিকনসিলিয়েশনের কেন্দ্রীয় নিয়ন্ত্রণ'}
+                </span>
+              </div>
+              <span className="text-[11px] font-mono text-indigo-700 dark:text-indigo-300 font-bold">
+                ZERO DISCONNECTION
+              </span>
+            </div>
+          </div>
+        </div>
+
         {/* Cinematic Dashboard Composition */}
-        <div className="mt-8 sm:mt-14 lg:mt-16 relative z-10 clear-both">
+        <div className="mt-6 sm:mt-10 lg:mt-12 relative z-10 clear-both">
           {/* Subtle perimeter glow around dashboard container with pointer-events-none */}
           <div className="pointer-events-none absolute -inset-1 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-indigo-500/10 via-purple-500/5 to-transparent dark:from-indigo-500/20 dark:via-purple-500/10 blur-xl opacity-70" />
 

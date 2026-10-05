@@ -25,15 +25,15 @@ export const MultiChannelSection: React.FC<MultiChannelSectionProps> = ({ conten
           </p>
         </div>
 
-        {/* Central Inventory Allocation Demo Bar - Differentiator Visual */}
+        {/* Central Inventory Allocation & Selective Routing Architecture */}
         <div className="mt-8 sm:mt-10 rounded-2xl border border-indigo-200 dark:border-indigo-500/20 bg-indigo-50/70 dark:bg-indigo-950/20 p-4 sm:p-6 backdrop-blur-md shadow-sm">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-indigo-200/80 dark:border-indigo-500/20 pb-3.5 mb-4">
             <div>
               <span className="text-[10px] sm:text-xs font-mono text-indigo-700 dark:text-indigo-300 uppercase tracking-wider font-semibold">
-                Central Catalog & Stock Orchestrator
+                Central Catalog & Selective Publishing Engine
               </span>
               <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mt-0.5">
-                Product SKU: LUX-POLO-NAVY (Available: 350 Units)
+                Master SKU: LUX-POLO-NAVY-XL (Central Physical Stock: 350 Units)
               </h3>
             </div>
             <div className="inline-flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-100/80 dark:bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-500/20 font-semibold self-start md:self-auto">
@@ -42,33 +42,46 @@ export const MultiChannelSection: React.FC<MultiChannelSectionProps> = ({ conten
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+          {/* Selective Channel Distribution Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs mb-4">
             <div className="p-3 sm:p-3.5 rounded-xl bg-white dark:bg-black/40 border border-indigo-100 dark:border-white/[0.06] shadow-2xs">
               <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1">
                 <span>Online WooCommerce Store</span>
-                <span className="text-indigo-600 dark:text-indigo-400 font-mono font-bold">180 Units</span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-mono font-bold">PUBLISHED [✓]</span>
               </div>
-              <p className="text-slate-900 dark:text-slate-300 font-semibold">Global Web Catalog</p>
+              <p className="text-slate-900 dark:text-slate-200 font-semibold">Allocated: 180 Units</p>
               <p className="text-[11px] text-slate-500 mt-0.5">Auto-decrement upon customer checkout</p>
+              <div className="mt-2 text-[10px] font-mono text-indigo-600 dark:text-indigo-400">Price: ৳ 1,450 (Standard)</div>
             </div>
 
             <div className="p-3 sm:p-3.5 rounded-xl bg-white dark:bg-black/40 border border-indigo-100 dark:border-white/[0.06] shadow-2xs">
               <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1">
-                <span>Gulshan Flagship POS</span>
-                <span className="text-indigo-600 dark:text-indigo-400 font-mono font-bold">120 Units</span>
+                <span>Banani Flagship POS</span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-mono font-bold">PUBLISHED [✓]</span>
               </div>
-              <p className="text-slate-900 dark:text-slate-300 font-semibold">Physical Showroom Floor</p>
+              <p className="text-slate-900 dark:text-slate-200 font-semibold">Allocated: 120 Units</p>
               <p className="text-[11px] text-slate-500 mt-0.5">Barcode cashier checkout decrement</p>
+              <div className="mt-2 text-[10px] font-mono text-purple-600 dark:text-purple-400">Showroom Exclusive Price: ৳ 1,390</div>
             </div>
 
             <div className="p-3 sm:p-3.5 rounded-xl bg-white dark:bg-black/40 border border-indigo-100 dark:border-white/[0.06] shadow-2xs">
               <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1">
-                <span>Dhanmondi Outlet POS</span>
-                <span className="text-indigo-600 dark:text-indigo-400 font-mono font-bold">50 Units</span>
+                <span>Dhanmondi Outlet Display</span>
+                <span className="text-amber-600 dark:text-amber-400 font-mono font-bold">RESERVED [50 Units]</span>
               </div>
-              <p className="text-slate-900 dark:text-slate-300 font-semibold">Showroom Display Rack</p>
+              <p className="text-slate-900 dark:text-slate-200 font-semibold">Floor Stock</p>
               <p className="text-[11px] text-slate-500 mt-0.5">Low-stock transfer trigger enabled</p>
+              <div className="mt-2 text-[10px] font-mono text-amber-600 dark:text-amber-400">Trigger Alert at &lt; 10 units</div>
             </div>
+          </div>
+
+          {/* Synchronized Rules Banner */}
+          <div className="p-2.5 rounded-lg bg-white/60 dark:bg-black/30 border border-indigo-200/60 dark:border-white/[0.04] flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-slate-600 dark:text-slate-400">
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              <strong>Central Guardrail:</strong> When total stock reaches zero, buy buttons disable across ALL stores simultaneously.
+            </span>
+            <span className="font-mono text-indigo-700 dark:text-indigo-300 font-semibold">ZERO OVERSELLING GUARANTEE</span>
           </div>
         </div>
 

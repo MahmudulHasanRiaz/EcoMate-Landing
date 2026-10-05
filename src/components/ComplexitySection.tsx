@@ -27,7 +27,7 @@ export const ComplexitySection: React.FC<ComplexitySectionProps> = ({ content, l
           </p>
         </div>
 
-        {/* Visual Problem Equation Banner (Requirement 6) */}
+        {/* Visual Problem Equation Banner */}
         <div className="mt-8 sm:mt-10 p-4 sm:p-6 rounded-2xl bg-white dark:bg-[#0C0E1A] border border-slate-200/90 dark:border-white/10 shadow-sm">
           <p className="text-[11px] sm:text-xs font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mb-3 sm:mb-4">
             {locale === 'en' ? 'Why Scaling Businesses Hit Operational Walls:' : 'ব্যবসা বৃদ্ধির সাথে সাথে অপারেশন জটিল হওয়ার মূল কারণ:'}
@@ -60,8 +60,112 @@ export const ComplexitySection: React.FC<ComplexitySectionProps> = ({ content, l
           </div>
         </div>
 
-        {/* Problem Breakdown Grid */}
-        <div className="mt-8 sm:mt-10 grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
+        {/* Visual Architectural Contrast: Disconnected Chaos vs Unified Control */}
+        <div className="mt-8 sm:mt-12 rounded-2xl border border-slate-200 dark:border-white/10 bg-white/60 dark:bg-[#0B0D18]/80 backdrop-blur-xl p-5 sm:p-8 shadow-sm">
+          <div className="text-center max-w-2xl mx-auto mb-6 sm:mb-8">
+            <span className="text-[11px] sm:text-xs font-mono font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+              {locale === 'en' ? 'Operational Architecture Comparison' : 'অপারেশনাল আর্কিটেকচার তুলনা'}
+            </span>
+            <h3 className="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white mt-1">
+              {locale === 'en' ? 'The Disconnected Stack vs. The EcoMate Engine' : 'টুকরো টুকরো টুলস বনাম একীভূত ইকোমেট ইঞ্জিন'}
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 items-stretch">
+            {/* The Disconnected Reality (Chaos) */}
+            <div className="rounded-xl border border-rose-200/80 dark:border-rose-500/20 bg-rose-50/40 dark:bg-rose-950/10 p-5 sm:p-6 flex flex-col justify-between relative overflow-hidden">
+              <div>
+                <div className="flex items-center justify-between pb-3 border-b border-rose-200/60 dark:border-rose-500/20">
+                  <span className="text-xs font-bold uppercase tracking-wider text-rose-700 dark:text-rose-400 flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-rose-500 inline-block" />
+                    {locale === 'en' ? 'Fragmented Operation (Without EcoMate)' : 'টুকরো টুকরো অপারেশন (ইকোমেট ছাড়া)'}
+                  </span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 font-semibold">
+                    HIGH FRICTION
+                  </span>
+                </div>
+
+                {/* Disconnected Nodes Diagram */}
+                <div className="my-5 space-y-2.5">
+                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-white/80 dark:bg-black/30 border border-rose-200/60 dark:border-white/[0.04] text-xs">
+                    <span className="font-medium text-slate-800 dark:text-slate-200">Online Store & Facebook Orders</span>
+                    <span className="font-mono text-[11px] text-rose-600 dark:text-rose-400 font-semibold">Unlinked Excel Sheet ✗</span>
+                  </div>
+
+                  <div className="flex justify-center my-0.5">
+                    <span className="text-[10px] font-mono text-rose-500/80 dark:text-rose-400/80">↓ Manual copy-pasting between tabs</span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-white/80 dark:bg-black/30 border border-rose-200/60 dark:border-white/[0.04] text-xs">
+                    <span className="font-medium text-slate-800 dark:text-slate-200">Showroom POS & Warehouse Bin</span>
+                    <span className="font-mono text-[11px] text-rose-600 dark:text-rose-400 font-semibold">Stock Desync & Oversell ✗</span>
+                  </div>
+
+                  <div className="flex justify-center my-0.5">
+                    <span className="text-[10px] font-mono text-rose-500/80 dark:text-rose-400/80">↓ Verbal calls & unverified packing slips</span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-white/80 dark:bg-black/30 border border-rose-200/60 dark:border-white/[0.04] text-xs">
+                    <span className="font-medium text-slate-800 dark:text-slate-200">Courier Delivery & COD Return</span>
+                    <span className="font-mono text-[11px] text-rose-600 dark:text-rose-400 font-semibold">Blind Dispatch & Lost Cash ✗</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-rose-200/60 dark:border-rose-500/20 text-xs text-rose-800 dark:text-rose-300 font-medium">
+                {locale === 'en' ? 'Result: 4-6% return rate, delayed reconciliation, and constant firefighting.' : 'ফলাফল: উচ্চ রিটার্ন, ক্যাশ রিকনসিলিয়েশন ঘাটতি ও কর্মীদের ভুলে ক্যাপিটাল ব্লকেজ।'}
+              </div>
+            </div>
+
+            {/* The EcoMate Architecture (Control) */}
+            <div className="rounded-xl border border-emerald-200/80 dark:border-emerald-500/20 bg-emerald-50/40 dark:bg-emerald-950/10 p-5 sm:p-6 flex flex-col justify-between relative overflow-hidden">
+              <div>
+                <div className="flex items-center justify-between pb-3 border-b border-emerald-200/60 dark:border-emerald-500/20">
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
+                    {locale === 'en' ? 'Disciplined Pipeline (With EcoMate)' : 'একীভূত ডিসিপ্লিনড অপারেশন (ইকোমেট)'}
+                  </span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-semibold">
+                    100% SYNCHRONIZED
+                  </span>
+                </div>
+
+                {/* Connected Flow Diagram */}
+                <div className="my-5 space-y-2.5">
+                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-white/80 dark:bg-black/30 border border-emerald-200/60 dark:border-white/[0.04] text-xs">
+                    <span className="font-medium text-slate-800 dark:text-slate-200">All Sales Channels (Web + POS)</span>
+                    <span className="font-mono text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">Instant Order Ingestion ✓</span>
+                  </div>
+
+                  <div className="flex justify-center my-0.5">
+                    <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400">↓ Automated courier fraud check & reservation</span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-white/80 dark:bg-black/30 border border-emerald-200/60 dark:border-white/[0.04] text-xs">
+                    <span className="font-medium text-slate-800 dark:text-slate-200">Barcode Audio Verification Station</span>
+                    <span className="font-mono text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">Zero Mismatch Guarantee ✓</span>
+                  </div>
+
+                  <div className="flex justify-center my-0.5">
+                    <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400">↓ Auto-generated consignment & tracking SMS</span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-white/80 dark:bg-black/30 border border-emerald-200/60 dark:border-white/[0.04] text-xs">
+                    <span className="font-medium text-slate-800 dark:text-slate-200">Automated Courier COD Reconciliation</span>
+                    <span className="font-mono text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">100% Bank Matched ✓</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-emerald-200/60 dark:border-emerald-500/20 text-xs text-emerald-800 dark:text-emerald-300 font-medium">
+                {locale === 'en' ? 'Result: Sub-0.05% packing error, fast cash cycle, and zero operational blindness.' : 'ফলাফল: নির্ভুল প্যাকিং, দ্রুত ক্যাশ ফ্লো এবং ব্যবসা পরিচালনায় শতভাগ দৃশ্যমানতা।'}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Problem Deep Dive Section */}
+        <div className="mt-8 sm:mt-12 grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
           {/* Left Column: Problem Selector Pills (col-span-5) */}
           <div className="lg:col-span-5 space-y-2">
             <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2 px-1">

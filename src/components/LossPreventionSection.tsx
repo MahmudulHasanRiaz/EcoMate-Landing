@@ -36,6 +36,52 @@ export const LossPreventionSection: React.FC<LossPreventionProps> = ({ content, 
           </p>
         </div>
 
+        {/* Visual Courier Intelligence Trust-Score Matrix */}
+        <div className="mt-8 sm:mt-12 rounded-2xl border border-slate-200 dark:border-white/10 bg-white/70 dark:bg-[#0A0C16] p-4 sm:p-7 backdrop-blur-md shadow-sm">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 border-b border-slate-200/80 dark:border-white/[0.08] pb-3 mb-5">
+            <span className="text-[11px] sm:text-xs font-mono font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+              {locale === 'en' ? 'Pre-Dispatch Courier Intelligence in Action' : 'ডিসপ্যাচের আগে কুরিয়ার হিস্ট্রি বিশ্লেষণ'}
+            </span>
+            <span className="text-[10px] sm:text-[11px] font-mono text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2.5 py-0.5 rounded-full border border-indigo-200 dark:border-indigo-500/20 font-semibold">
+              ● Cross-Courier Aggregate Telemetry (Steadfast + Pathao)
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            {/* Scenario A: Genuine Customer */}
+            <div className="p-4 rounded-xl border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-2xs">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-mono text-[11px] font-bold text-emerald-800 dark:text-emerald-300">SCENARIO A: GENUINE BUYER</span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300">
+                  96% DELIVERY SCORE
+                </span>
+              </div>
+              <p className="font-semibold text-slate-900 dark:text-white">Customer: Tanvir Hasan (Dhanmondi, Dhaka)</p>
+              <div className="mt-2 space-y-1 text-[11px] text-slate-600 dark:text-slate-300 font-mono">
+                <p>• Historical parcels ordered: 25</p>
+                <p>• Successfully accepted & paid: 24 (1 returned due to delay)</p>
+                <p className="text-emerald-700 dark:text-emerald-400 font-bold">• EcoMate Decision: AUTO-APPROVE FOR IMMEDIATE PACKING</p>
+              </div>
+            </div>
+
+            {/* Scenario B: Serial Returner */}
+            <div className="p-4 rounded-xl border border-rose-200 dark:border-rose-500/30 bg-rose-50/50 dark:bg-rose-950/20 shadow-2xs">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-mono text-[11px] font-bold text-rose-800 dark:text-rose-300">SCENARIO B: SERIAL CANCELLER</span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300">
+                  24% DELIVERY SCORE
+                </span>
+              </div>
+              <p className="font-semibold text-slate-900 dark:text-white">Customer: Unverified Caller (Sylhet Sadar)</p>
+              <div className="mt-2 space-y-1 text-[11px] text-slate-600 dark:text-slate-300 font-mono">
+                <p>• Historical parcels ordered: 17 across Bangladesh</p>
+                <p>• Rejected at doorstep / unreachable: 13 parcels</p>
+                <p className="text-rose-700 dark:text-rose-400 font-bold">• EcoMate Decision: REQUIRE ৳ 150 ADVANCE DELIVERY CHARGE</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Two Concrete Business-Value Narratives */}
         <div className="mt-8 sm:mt-12 grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
           {/* Packing Mistake Narrative */}

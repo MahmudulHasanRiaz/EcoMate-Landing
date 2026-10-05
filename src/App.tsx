@@ -7,7 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { landingContent } from './data/landingContent';
 import { Locale, Theme } from './types/landing';
 
-// Component imports for all 16 narrative sections
+// Component imports for narrative sections
 import { Header } from './components/Header';
 import { Hero } from './components/Hero';
 import { ComplexitySection } from './components/ComplexitySection';
@@ -21,7 +21,7 @@ import { MarketingSection } from './components/MarketingSection';
 import { TeamOperationsSection } from './components/TeamOperationsSection';
 import { ExecutiveAnalyticsSection } from './components/ExecutiveAnalyticsSection';
 import { CustomerProofSection } from './components/CustomerProofSection';
-import { ProductInActionSection } from './components/ProductInActionSection';
+import { FaqSection } from './components/FaqSection';
 import { PricingSection } from './components/PricingSection';
 import { FinalConversionSection } from './components/FinalConversionSection';
 import { Footer } from './components/Footer';
@@ -74,48 +74,45 @@ export default function App() {
         onToggleTheme={handleToggleTheme}
       />
 
-      {/* Main Content Flow — 16 Narrative Sections */}
+      {/* Main Content Flow — Streamlined, High-Converting Narrative */}
       <main>
-        {/* Section 01: Hero */}
+        {/* Section 01: Hero with Integrated Convergence Bus & Live Console */}
         <Hero content={content} locale={locale} />
 
-        {/* Section 02: Growth Creates Complexity */}
+        {/* Section 02: Growth Creates Complexity — Chaos vs Control */}
         <ComplexitySection content={content} locale={locale} />
 
-        {/* Section 03: One Business. One Control Center */}
+        {/* Section 03: One Business. One Control Center — 6 Pillars */}
         <EcosystemSection content={content} locale={locale} />
 
-        {/* Section 04: Sell Everywhere. Manage Everything From One Place */}
+        {/* Section 04: Sell Everywhere — Master SKU Selective Routing */}
         <MultiChannelSection content={content} locale={locale} />
 
-        {/* Section 05: From Order to Delivery (The 7/8-Step Connected Fulfillment Pipeline) */}
+        {/* Section 05: The 5-Stage Physical Packing & Barcode Pipeline */}
         <FulfillmentPipelineSection content={content} locale={locale} />
 
-        {/* Section 06: Prevent Mistakes. Protect Your Money (Economics & Calculator) */}
+        {/* Section 06: Courier Return Fraud & Loss Prevention Calculator + Mid-Funnel CTA */}
         <LossPreventionSection content={content} locale={locale} />
 
-        {/* Section 07: Know Your Stock. Know Your Money (Warehouses, COGS, Ledger) */}
+        {/* Section 07: Warehouses, Bin Locations & Double-Entry Accounting */}
         <InventoryFinanceSection content={content} locale={locale} />
 
-        {/* Section 08: Online + Physical Business (Multi-Showroom POS & Split Payments) */}
+        {/* Section 08: Showroom POS & Real-Time Cashier Simulation */}
         <PosShowroomSection content={content} locale={locale} />
 
-        {/* Section 09: Marketing That You Can Actually Measure (Server-Side CAPI & Feeds) */}
+        {/* Section 09: Server-Side Deduplicated Tracking Architecture */}
         <MarketingSection content={content} locale={locale} />
 
-        {/* Section 10: Your Team, Organized (RBAC, Shifts, Attendance, Commissions) */}
+        {/* Section 10: Team Governance & RBAC Accountabilities */}
         <TeamOperationsSection content={content} locale={locale} />
 
-        {/* Section 11: See the Business Clearly (Executive Realized Profit Analytics) */}
+        {/* Section 11: Executive Realized Profit Analytics & Courier Cohort Matrix */}
         <ExecutiveAnalyticsSection content={content} locale={locale} />
 
-        {/* Section 12: Customer Proof (Verifiable Case Studies & Video Walkthrough) */}
+        {/* Section 12: Customer Proof & Verified Founder Stories */}
         <CustomerProofSection content={content} locale={locale} />
 
-        {/* Section 13: Product in Action (Cinematic Interactive Tour & Problem Solver) */}
-        <ProductInActionSection content={content} locale={locale} />
-
-        {/* Section 14: Dynamic Pricing (Supports Visible Tiered & Custom Architecture Modes) */}
+        {/* Section 13: Pricing (Supports Visible Tiered & Custom Architecture Modes) */}
         <PricingSection
           content={content}
           locale={locale}
@@ -123,7 +120,10 @@ export default function App() {
           onTogglePricingMode={handleTogglePricingMode}
         />
 
-        {/* Section 15: Final Conversion (Streamlined Demo Booking & Direct WhatsApp/Call) */}
+        {/* Section 14: Merchant Objection Handling FAQ */}
+        <FaqSection content={content} locale={locale} />
+
+        {/* Section 15: Final Conversion & Direct Multi-Channel Contact */}
         <FinalConversionSection content={content} locale={locale} />
       </main>
 

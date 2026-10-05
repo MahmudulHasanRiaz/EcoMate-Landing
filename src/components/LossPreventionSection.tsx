@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { LandingContent, Locale } from '../types/landing';
-import { ShieldCheck, AlertTriangle, Calculator, CheckCircle2, TrendingUp, DollarSign } from 'lucide-react';
+import { ShieldCheck, AlertTriangle, Calculator, CheckCircle2, TrendingUp, DollarSign, ArrowRight } from 'lucide-react';
 
 interface LossPreventionProps {
   content: LandingContent;
@@ -254,6 +254,36 @@ export const LossPreventionSection: React.FC<LossPreventionProps> = ({ content, 
                   Protected straight to your net operating profit every single month.
                 </p>
               </div>
+            </div>
+          </div>
+
+          {/* High-Converting Mid-Funnel Action Strip */}
+          <div className="mt-8 pt-6 border-t border-indigo-200/60 dark:border-white/[0.08] flex flex-col sm:flex-row items-center justify-between gap-4 bg-white/70 dark:bg-black/30 p-4 sm:p-5 rounded-xl border border-indigo-100 dark:border-white/[0.04]">
+            <div className="text-center sm:text-left">
+              <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                {locale === 'en' ? 'Stop bleeding delivery margins this week.' : 'এই সপ্তাহ থেকেই কুরিয়ার লস ও ভুল ডেলিভারির টাকা বাঁচান।'}
+              </p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                {locale === 'en' ? 'Walk through your exact numbers with an operations specialist.' : 'আপনার বর্তমান পার্সেল ভলিউম অনুযায়ী ফ্রি আরওআই (ROI) অডিট করান।'}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2.5 shrink-0 w-full sm:w-auto">
+              <a
+                href="#lead-form"
+                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-full text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition-colors cursor-pointer"
+              >
+                <span>{locale === 'en' ? 'Book a Free Audit' : 'ফ্রি আরওআই অডিট বুক করুন'}</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </a>
+              <a
+                href="https://wa.me/8801894828290?text=Hello%20EcoMate%20Team%2C%20I%20want%20to%20calculate%20savings%20for%20my%20order%20volume."
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 hover:bg-emerald-100 transition-colors cursor-pointer"
+              >
+                <span>WhatsApp</span>
+              </a>
             </div>
           </div>
         </div>

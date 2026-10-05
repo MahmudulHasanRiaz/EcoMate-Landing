@@ -542,6 +542,39 @@ export const landingContent: Record<Locale, LandingContent> = {
         },
       ],
     },
+    faq: {
+      eyebrow: 'Frequently Asked Questions',
+      heading: 'Common Questions From Bangladeshi E-commerce Founders.',
+      subheading:
+        'Clear, straightforward answers about data migration, offline POS, hardware compatibility, and courier integrations.',
+      items: [
+        {
+          question: 'How long does it take to migrate our existing products and customer history?',
+          answer:
+            'Most merchants complete migration within 24 to 48 hours. Our team provides pre-built CSV templates and direct 1-click importers for WooCommerce, Excel spreadsheets, and legacy inventory systems, ensuring zero order downtime.',
+        },
+        {
+          question: 'What happens in our showroom POS if the internet connection drops or electricity fails?',
+          answer:
+            'EcoMate POS includes full offline billing cache. Your cashiers can continue barcode scanning, invoicing walk-in buyers, and printing thermal receipts without internet. As soon as connectivity restores, all transactions automatically sync with the central cloud inventory.',
+        },
+        {
+          question: 'Our warehouse packing team is non-technical. Can they learn the barcode packing station easily?',
+          answer:
+            'Yes. The smart packing station is intentionally designed around audio cues: a clear success chime on correct barcode match, and an unmistakably loud alert beep on SKU mismatch. Warehouse staff learn the entire flow in under 20 minutes.',
+        },
+        {
+          question: 'Do we need a software engineer or developer to integrate Steadfast, Pathao, or RedX?',
+          answer:
+            'No. EcoMate comes with pre-built native API integrations for Steadfast, Pathao, and RedX. You simply paste your courier API keys into the settings panel once, and shipping label generation, consignment booking, and tracking work automatically.',
+        },
+        {
+          question: 'Can EcoMate connect to our custom Laravel or bespoke online storefront?',
+          answer:
+            'Yes. In addition to our plug-and-play WooCommerce integration, EcoMate exposes documented REST webhooks and APIs to ingest orders and push live stock availability to any custom-built headless storefront or mobile app.',
+        },
+      ],
+    },
     pricing: {
       eyebrow: 'Investment in Control',
       heading: 'Predictable Pricing for Serious Operations.',
@@ -1208,6 +1241,39 @@ export const landingContent: Record<Locale, LandingContent> = {
           shortDesc: 'রিয়েল-টাইম সিওজিএস (COGS), খরচের হিসাব এবং মান্থ-এন্ড পিরিয়ড লক।',
           problemSolved: 'মাসের শেষের একাউন্টিং জটিলতা দূর করে সর্বদা আর্থিক স্বচ্ছতা দেয়।',
           keyCapability: 'অডিট-যোগ্য ব্যালেন্স শিট, সেলস থেকে অটোমেটেড ভাউচার এবং ভ্যাট/ট্যাক্স সামারি।',
+        },
+      ],
+    },
+    faq: {
+      eyebrow: 'সাধারণ প্রশ্নোত্তর',
+      heading: 'বাংলাদেশের ই-কমার্স ব্যবসায়ীদের গুরুত্বপূর্ণ কিছু প্রশ্নের উত্তর।',
+      subheading:
+        'ডাটা মাইগ্রেশন, অফলাইন পিওএস বিলিং, ওয়্যারহাউস স্টাফ ট্রেইনিং এবং কুরিয়ার সংযোগ সংক্রান্ত সরাসরি উত্তর।',
+      items: [
+        {
+          question: 'আমাদের বর্তমান এক্সেল শিট বা পুরোনো সফটওয়্যার থেকে ডাটা ট্রান্সফার করতে কতদিন লাগবে?',
+          answer:
+            'অধিকাংশ ক্ষেত্রে মাত্র ২৪ থেকে ৪৮ ঘণ্টার মধ্যে সম্পন্ন হয়। আমাদের টেকনিক্যাল টিম এক্সেল, গুগল শিট এবং উকমার্স থেকে ১-ক্লিকে প্রোডাক্ট ও কাস্টমার ডাটা ইমপোর্ট করে দেয়, যাতে চলমান ব্যবসা একদিনের জন্যও বন্ধ রাখতে না হয়।',
+        },
+        {
+          question: 'শোরুমে ইন্টারনেট বা ওয়াইফাই চলে গেলে কি পিওএস-এ বিল কাটা যাবে?',
+          answer:
+            'হ্যাঁ, অবশ্যই। ইকোমেট পিওএস-এ অফলাইন ক্যাশ মেমোরি রয়েছে। ইন্টারনেট না থাকলেও বারকোড স্ক্যান করে ক্যাশ বা বিকাশ রসিদ প্রিন্ট করা যাবে। ইন্টারনেট ফিরে আসার সাথে সাথে ক্লাউড সার্ভারের সাথে সকল স্টক অটোমেটিক আপডেট হয়ে যাবে।',
+        },
+        {
+          question: 'আমাদের প্যাকিংয়ের কর্মীরা বেশি শিক্ষিত না; তারা কি বারকোড স্ক্যানার দিয়ে কাজ করতে পারবে?',
+          answer:
+            'হ্যাঁ, খুব সহজে। আমাদের স্মার্ট প্যাকিং সিস্টেম মূলত সাউন্ড-নির্ভর: সঠিক প্রোডাক্ট স্ক্যান হলে মিষ্টি chime শব্দ বাজে এবং ভুল প্রোডাক্ট স্ক্যান করলে স্পষ্ট লাল অ্যালার্ট ও বিকট বিপ শব্দ দেয়। যে কেউ ১৫-২০ মিনিটেই এটি চালানো শিখে যায়।',
+        },
+        {
+          question: 'স্টিডফাস্ট, পাঠাও বা রেডএক্স কানেক্ট করতে কি আমাদের আলাদা কোনো সফটওয়্যার ইঞ্জিনিয়ার লাগবে?',
+          answer:
+            'না, কোনো ইঞ্জিনিয়ারের প্রয়োজন নেই। ইকোমেটে স্টিডফাস্ট, পাঠাও ও রেডএক্স-এর অফিশিয়াল এপিআই রেডি করা আছে। শুধু আপনার কুরিয়ার অ্যাকাউন্ট কি (API Key) বসিয়ে দিলেই অটোমেটিক ট্র্যাকিং ও শিপিং লেবেল জেনারেট শুরু হয়ে যাবে।',
+        },
+        {
+          question: 'আমাদের নিজস্ব কাস্টম লারাভেল বা রিয়্যাক্ট ওয়েবসাইটের সাথে কি ইকোমেট কানেক্ট করা সম্ভব?',
+          answer:
+            'হ্যাঁ। উকমার্সের পাশাপাশি ইকোমেটের ওপেন REST API ও ওয়েবহুক রয়েছে, যার মাধ্যমে যে কোনো কাস্টম ওয়েবসাইট বা মোবাইল অ্যাপের সাথে অর্ডার ও ইনভেন্টরি মুহূর্তেই সিঙ্ক করা যায়।',
         },
       ],
     },

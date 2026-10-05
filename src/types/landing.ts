@@ -230,6 +230,15 @@ export interface LandingContent {
     subheading: string;
     modules: ShowcaseModule[];
   };
+  faq: {
+    eyebrow: string;
+    heading: string;
+    subheading: string;
+    items: {
+      question: string;
+      answer: string;
+    }[];
+  };
   pricing: {
     eyebrow: string;
     heading: string;

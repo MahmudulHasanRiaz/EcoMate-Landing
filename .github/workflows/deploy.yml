@@ -1,4 +1,4 @@
-name: Production Deployment - Cloudflare Pages (Manual Trigger Only)
+name: Production Deployment - Cloudflare Workers (Manual Trigger Only)
 
 on:
   workflow_dispatch:
@@ -29,6 +29,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # Node 24 is the project floor; assert it before the install steps.
+      - name: Assert Node floor (24)
+        run: node -e "if (parseInt(process.versions.node.split('.')[0], 10) < 24) { console.error('Node 24+ required'); process.exit(1); }"
+
       - name: Setup Node.js (v24)
         uses: actions/setup-node@v4
         with:
@@ -43,55 +47,79 @@ jobs:
 
       - name: Build production bundle
         run: npm run build
+        env:
+          # Required at build time under `cacheComponents: true`: cached data functions
+          # run during the build with no Hyperdrive binding, and `db/client.ts` falls back
+          # to DIRECT_URL. The migration step below reuses the same secret.
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
 
       - name: Verify build artifact integrity
         run: |
-          if [ ! -f dist/index.html ]; then
-            echo "::error::CRITICAL: dist/index.html missing! Aborting deployment."
+          if [ ! -d .opennext ]; then
+            echo "::error::CRITICAL: .opennext build output missing! Aborting deployment."
             exit 1
           fi
-          echo "Build integrity confirmed. Artifacts ready for Cloudflare deployment."
+          echo "Build integrity confirmed. .opennext bundle ready for Cloudflare."
 
       - name: Archive build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: cloudflare-dist-bundle
-          path: dist
+          name: opennext-bundle
+          path: .opennext
           retention-days: 2
+          if-no-files-found: error
 
   deploy_to_cloudflare:
-    name: 2. Cloudflare Pages Deployment
+    name: 2. Cloudflare Workers Deployment
     needs: [build_and_verify]
     if: success()
     runs-on: ubuntu-latest
     environment:
       name: ${{ github.event.inputs.environment || 'production' }}
-      url: ${{ steps.deploy_step.outputs.deployment-url }}
     steps:
       - name: Checkout repository for configuration
         uses: actions/checkout@v4
 
+      - name: Assert Node floor (24)
+        run: node -e "if (parseInt(process.versions.node.split('.')[0], 10) < 24) { console.error('Node 24+ required'); process.exit(1); }"
+
+      - name: Setup Node.js (v24)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'npm'
+
+      # The opennext CLI that drives the deploy is a project dependency, so the deploy job
+      # needs its own install.
+      - name: Install dependencies (Strict frozen lockfile)
+        run: npm ci
+
       - name: Download build artifact
         uses: actions/download-artifact@v4
         with:
-          name: cloudflare-dist-bundle
-          path: dist
+          name: opennext-bundle
+          path: .opennext
 
-      - name: Deploy to Cloudflare via Wrangler
-        id: deploy_step
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy
+      # `migrate` (journaled SQL), never `push` (live schema diff) in a deploy workflow.
+      - name: Apply DB migrations
+        run: npm run db:migrate
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+
+      # The opennext CLI must drive the deploy. A plain `wrangler deploy` (what
+      # `cloudflare/wrangler-action` runs) does not carry the opennext build output/args
+      # and silently ships a broken or empty Worker.
+      - name: Deploy to Cloudflare via opennext
+        run: npx opennextjs-cloudflare deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          NODE_ENV: production
 
       - name: Output Deployment Confirmation
         run: |
           echo "=========================================================="
-          echo " Cloudflare Pages Deployment Completed Successfully"
+          echo " Cloudflare Workers Deployment Completed Successfully"
           echo " Environment: ${{ github.event.inputs.environment }}"
           echo " Notes: ${{ github.event.inputs.deployment_notes }}"
           echo " Triggered by: ${{ github.actor }}"

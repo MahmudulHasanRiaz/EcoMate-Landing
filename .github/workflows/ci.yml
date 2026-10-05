@@ -22,6 +22,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # Fails fast when the runner image's Node drops below the project floor, before any
+      # install step can mask it. The project requires Node 24 everywhere (`engines`,
+      # `.node-version`, `.nvmrc`).
+      - name: Assert Node floor (24)
+        run: node -e "if (parseInt(process.versions.node.split('.')[0], 10) < 24) { console.error('Node 24+ required'); process.exit(1); }"
+
       - name: Setup Node.js (v24)
         uses: actions/setup-node@v4
         with:
@@ -36,11 +42,17 @@ jobs:
 
       - name: Execute production build
         run: npm run build
+        env:
+          # `cacheComponents: true` (next.config.ts) executes every `'use cache'` data
+          # function during the build, where there is no request context and therefore no
+          # Hyperdrive binding. `db/client.ts` falls back to this env var; without it the
+          # first prerender dies with DB_UNAVAILABLE.
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
 
       - name: Verify build artifacts
         run: |
-          if [ ! -f dist/index.html ]; then
-            echo "::error::Build verification failed: dist/index.html does not exist!"
+          if [ ! -d .opennext ]; then
+            echo "::error::Build verification failed: .opennext directory does not exist!"
             exit 1
           fi
           echo "Production build verified successfully. Ready for manual deployment."

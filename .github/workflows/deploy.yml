@@ -82,13 +82,8 @@ jobs:
           CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          bindings=$(curl -s "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/workers/scripts/ecomate-landing/bindings" \
-            -H "Authorization: Bearer ${CF_TOKEN}")
-          echo "Bindings: $bindings"
-          
-          settings=$(curl -s "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/workers/scripts/ecomate-landing/settings" \
-            -H "Authorization: Bearer ${CF_TOKEN}")
-          echo "Settings: $settings"
+          curl -s -i "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/workers/scripts/ecomate-landing" \
+            -H "Authorization: Bearer ${CF_TOKEN}" | head -n 20
 
       - name: Output Deployment Confirmation
         run: |

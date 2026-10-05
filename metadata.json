@@ -1,0 +1,6 @@
+{
+  "name": "EcoMate - E-commerce Operating Platform",
+  "description": "Your entire e-commerce operation, managed from one place. Multi-store, showrooms, smart packing, inventory, couriers, and finance.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

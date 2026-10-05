@@ -77,13 +77,16 @@ jobs:
           name: cloudflare-dist-bundle
           path: dist
 
-      - name: Inspect Existing Cloudflare Projects
+      - name: Deploy to Cloudflare via Wrangler
+        id: deploy_step
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --dry-run
         env:
-          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          curl -s -i "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/workers/scripts/ecomate-landing" \
-            -H "Authorization: Bearer ${CF_TOKEN}" | head -n 20
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: Output Deployment Confirmation
         run: |

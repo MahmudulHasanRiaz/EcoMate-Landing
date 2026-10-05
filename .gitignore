@@ -6,3 +6,6 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Lockfile governance (use npm package-lock.json for CI/CD)
+bun.lock

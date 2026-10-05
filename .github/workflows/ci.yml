@@ -1,0 +1,46 @@
+name: CI - Code Integrity & Build Check
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build_and_validate:
+    name: Lint & Build Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (v20)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies with frozen package-lock
+        run: npm ci
+
+      - name: Validate TypeScript code
+        run: npm run lint
+
+      - name: Execute production build
+        run: npm run build
+
+      - name: Verify build artifacts
+        run: |
+          if [ ! -f dist/index.html ]; then
+            echo "::error::Build verification failed: dist/index.html does not exist!"
+            exit 1
+          fi
+          echo "Production build verified successfully. Ready for manual deployment."

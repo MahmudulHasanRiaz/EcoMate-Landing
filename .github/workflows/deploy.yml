@@ -1,0 +1,98 @@
+name: Production Deployment - Cloudflare Pages (Manual Trigger Only)
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target Deployment Environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - preview
+      deployment_notes:
+        description: 'Deployment reason / release notes'
+        required: false
+        default: 'Manual production rollout via GitHub Actions'
+        type: string
+
+concurrency:
+  group: deploy-${{ github.event.inputs.environment || 'production' }}
+  cancel-in-progress: false
+
+jobs:
+  build_and_verify:
+    name: 1. CI Validation & Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (v20)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies (Strict frozen lockfile)
+        run: npm ci
+
+      - name: TypeScript typecheck & lint
+        run: npm run lint
+
+      - name: Build production bundle
+        run: npm run build
+
+      - name: Verify build artifact integrity
+        run: |
+          if [ ! -f dist/index.html ]; then
+            echo "::error::CRITICAL: dist/index.html missing! Aborting deployment."
+            exit 1
+          fi
+          echo "Build integrity confirmed. Artifacts ready for Cloudflare deployment."
+
+      - name: Archive build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloudflare-dist-bundle
+          path: dist
+          retention-days: 2
+
+  deploy_to_cloudflare:
+    name: 2. Cloudflare Pages Deployment
+    needs: [build_and_verify]
+    if: success()
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ github.event.inputs.environment || 'production' }}
+      url: ${{ steps.deploy_step.outputs.deployment-url }}
+    steps:
+      - name: Checkout repository for configuration
+        uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: cloudflare-dist-bundle
+          path: dist
+
+      - name: Deploy to Cloudflare Pages via Wrangler
+        id: deploy_step
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=${{ vars.CLOUDFLARE_PROJECT_NAME || secrets.CLOUDFLARE_PROJECT_NAME || 'ecomate-platform' }} --branch=${{ github.event.inputs.environment == 'production' && 'main' || 'preview' }} --commit-dirty=true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Output Deployment Confirmation
+        run: |
+          echo "=========================================================="
+          echo " Cloudflare Pages Deployment Completed Successfully"
+          echo " Environment: ${{ github.event.inputs.environment }}"
+          echo " Notes: ${{ github.event.inputs.deployment_notes }}"
+          echo " Triggered by: ${{ github.actor }}"
+          echo "=========================================================="

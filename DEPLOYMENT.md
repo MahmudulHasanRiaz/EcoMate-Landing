@@ -14,9 +14,10 @@ This document explains the production deployment governance configured for EcoMa
                        ▼
 ┌──────────────────────────────────────────────┐
 │           GitHub Actions (ci.yml)            │
+│  - Setup Node.js (v24 minimum)               │
 │  - npm ci (frozen lockfile)                  │
 │  - npm run lint (TypeScript validate)        │
-│  - npm run build (Vite production bundle)    │
+│  - npm run build (production bundle)         │
 │  * NO DEPLOYMENT OCCURS ON COMMIT *          │
 └──────────────────────┬───────────────────────┘
                        │
@@ -29,6 +30,7 @@ This document explains the production deployment governance configured for EcoMa
                        ▼
 ┌──────────────────────────────────────────────┐
 │         Job 1: Build & Verify Integrity      │
+│  - Setup Node.js (v24 minimum)               │
 │  - Fresh npm ci & production build           │
 │  - Verifies dist/index.html artifact         │
 └──────────────────────┬───────────────────────┘

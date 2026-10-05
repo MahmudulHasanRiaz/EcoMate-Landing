@@ -1,3 +1,40 @@
 name = "ecomate-landing"
-compatibility_date = "2024-09-23"
-assets = { directory = "dist", not_found_handling = "single-page-application" }
+# Current date, not a stale one: Cloudflare enables new platform behaviour on/after
+# this date, and opennext + Next 16 rely on it. 2025-09-01 was already 13 months
+# behind at the time of writing. Verify with `npx wrangler deploy --dry-run`
+# before the first real deploy, and bump it whenever wrangler warns.
+compatibility_date = "2026-06-01"
+compatibility_flags = ["nodejs_compat"]
+
+# ---------------------------------------------------------------------------
+# Bindings. Each id below is created once against the real Cloudflare account;
+# the two placeholders must be replaced with the ids those commands print.
+# ---------------------------------------------------------------------------
+
+# Postgres through Hyperdrive (required by db/client.ts). Create with:
+#   npx wrangler hyperdrive create ecomate-db --connection-string="postgresql://postgres:PASSWORD@db.REF.supabase.co:6543/postgres?pgbouncer=true"
+[[hyperdrive]]
+binding = "HYPERDRIVE"
+id = "PASTE_HYPERDRIVE_ID_FROM_STEP_1"
+
+# R2 bucket backing the media library (app/api/media/*). Create with:
+#   npx wrangler r2 bucket create ecomate-media
+# then attach the public custom domain that next.config.ts images.remotePatterns and the
+# upload handler's CDN URL both expect:
+#   npx wrangler r2 bucket domain ecomate-media --custom-domain media.ecomate.app
+[[r2_buckets]]
+binding = "R2_BUCKET"
+bucket_name = "ecomate-media"
+
+# KV namespace for rate-limit counters (Task 14 lib/rateLimit.ts). Create with:
+#   npx wrangler kv namespace create RATE_LIMIT_KV
+#   npx wrangler kv namespace create RATE_LIMIT_KV --preview  # preview counters stay separate
+[[kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+id = "PASTE_KV_ID" # from: npx wrangler kv namespace create RATE_LIMIT_KV
+
+[vars]
+NEXT_PUBLIC_SITE_URL = "https://ecomate.app"
+NEXT_PUBLIC_DEFAULT_LOCALE = "en"
+NEXT_PUBLIC_META_PIXEL_ID = ""
+NEXT_PUBLIC_TURNSTILE_SITE_KEY = ""

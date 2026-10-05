@@ -4,9 +4,36 @@
 
 **Goal:** Migrate the Vite+Express prototype to full-stack Next.js (App Router) deployed on Cloudflare Workers, with Drizzle + Hyperdrive + Postgres and R2 media storage.
 
-**Architecture:** Next.js App Router served from a Cloudflare Worker via `@opennextjs/cloudflare`. Express `server.ts` routes become `app/api/*/route.ts` handlers. Drizzle uses the `postgres-js` driver through a Hyperdrive binding (never `pg` Pool). Uploads go to an R2 binding. No separate backend framework.
+**Architecture:** Next.js 16 App Router served from a Cloudflare Worker via `@opennextjs/cloudflare`. Express `server.ts` routes become `app/api/*/route.ts` handlers. Drizzle uses the `postgres-js` driver through a Hyperdrive binding (never `pg` Pool). Uploads go to an R2 binding. No separate backend framework.
 
-**Tech Stack:** Next.js 15 (App Router), React 19, `@opennextjs/cloudflare`, Auth.js v5 (Credentials + Drizzle adapter + database sessions), Drizzle ORM (`postgres-js` driver), Hyperdrive, R2, Wrangler, Tailwind CSS 4, TypeScript.
+**Tech Stack (pinned to what actually exists on the registry — verified 2026-10-06):**
+
+| Package | Version | Why this exact one |
+|---|---|---|
+| `next` | `16.3.8` | `latest` tag. `@opennextjs/cloudflare` peer is `>=15.5.27 <16 \|\| >=16.3.8` — 16.3.8 is the lowest 16.x the adapter officially supports |
+| `react` / `react-dom` | `^19` | required by Next 16 |
+| `@opennextjs/cloudflare` | `^1.20.8` | current release; needs `wrangler ^4.125.0`, `rclone.js ^0.6.6` |
+| `wrangler` | `^4.147.0` | satisfies adapter peer |
+| `next-auth` | `5.0.0-beta.32` (`beta` tag) | peer range includes `^16` |
+| `@auth/drizzle-adapter` | `^1.11.3` | Auth.js v5 adapter |
+| `drizzle-orm` / `drizzle-kit` | `^0.45.3` / `^0.31.11` | already in the repo, unchanged |
+| `postgres` | `^3.4.9` | the only Postgres driver that works on Workers |
+| `zod` | `^4` | v4 API (`z.strictObject`, `z.email`, `z.url`) — NOT v3 |
+| `tailwindcss` / `@tailwindcss/postcss` | `^4.3.3` | v4 is wired through PostCSS under Next, not the Vite plugin |
+| `vitest` | `^5` | current major |
+| Node.js | `>=24` everywhere | `.node-version`, `.nvmrc`, `engines`, all CI jobs |
+
+**Next.js 16 conventions this plan follows (things that differ from Next 14/15):**
+
+1. `middleware.ts` → **`proxy.ts`**, exporting `proxy()` instead of `middleware()`. (`npx @next/codemod@latest upgrade` renames it; we write it directly.)
+2. `params` and `searchParams` are **`Promise`** in pages, layouts and route handlers — every handler awaits them.
+3. **Cache Components** (`cacheComponents: true`) replaces `experimental.ppr` and `dynamic = 'force-dynamic'`. Data reads use `'use cache'` + `cacheLife()` / `cacheTag()`; admin writes use `updateTag()` (same-request visibility) or `revalidateTag()` (background).
+4. `fetch(url, { next: { tags } })` and `unstable_cache()` are legacy — tag at the data-function level instead.
+5. Fonts via **`next/font`** (`next/font/google`), not hand-written `<link>` tags, so they are self-hosted, preloaded and zero-CLS.
+6. Images via **`next/image`** with an explicit `sizes` attribute and `priority` on the LCP hero image.
+7. Node.js runtime is the default everywhere; no `export const runtime = 'edge'`.
+8. Inline `<Script>` bodies require an `id`.
+9. Tailwind v4 goes through `@tailwindcss/postcss` + `postcss.config.mjs` (the `@tailwindcss/vite` plugin is Vite-only and is removed).
 
 ---
 
@@ -44,12 +71,12 @@
 | `src/services/api.ts` | Keep | Unchanged — same `/api` paths work against Route Handlers |
 | `.github/workflows/deploy.yml` | Modify | opennext build + wrangler deploy + `DIRECT_URL` for migrations |
 | `.env.example` | Modify | Documents new vars (no secrets committed) |
-| `auth.ts`, `middleware.ts`, `lib/password.ts`, `app/admin/*`, `app/api/admin/*` | Create (Task 9: Auth.js v5) | Credentials auth + RBAC + user management |
+| `auth.ts`, `proxy.ts`, `lib/password.ts`, `app/admin/*`, `app/api/admin/*` | Create (Task 9: Auth.js v5) | Credentials auth + RBAC + user management |
 | `app/sitemap.ts`, `app/robots.ts`, `lib/seo.ts` | Create (Task 10) | Sitemap, robots, JSON-LD |
 | Current sections/components | Polish (Task 11) | Metric audit, light mode, mobile-first QA |
 | `landing_content` + `social_links` tables, `app/api/content/*`, `app/api/social-links/*` | Create (Task 12) | Whole-site DB-driven content per locale |
 | `lib/events.ts`, `lib/metaCapi.ts`, `components/MetaPixel.tsx`, lead tracking columns | Create/Modify (Task 13) | Meta CAPI server-side Lead tracking + event bus |
-| `lib/rateLimit.ts`, `lib/sanitize.ts`, `middleware.ts` headers, Turnstile, TOTP | Create/Modify (Task 14) | KV rate limits, bot protection, headers, 2FA, upload validation |
+| `lib/rateLimit.ts`, `lib/sanitize.ts`, `proxy.ts` headers, Turnstile, TOTP | Create/Modify (Task 14) | KV rate limits, bot protection, headers, 2FA, upload validation |
 | `menus` + `redirects` tables, locale routing, hreflang, `llms.txt`, revalidation hooks | Create/Modify (Task 15) | Bilingual parity + SEO-100 |
 | `lead_activities` table, CSV export, notifications abstraction, `docs/RUNBOOK.md`, Sentry | Create/Modify (Task 16) | Lead module pro + enterprise ops |
 
@@ -67,12 +94,20 @@
 
 Run:
 ```bash
-npm i next@^15 react@^19 react-dom@^19 @opennextjs/cloudflare postgres@^3 drizzle-orm@^0.45 @aws-sdk/client-s3@^3 zod@^3
-npm i -D wrangler@^4 drizzle-kit@^0.31 vitest@^2 @vitest/coverage-v8@^2 @playwright/test@^1 @axe-core/playwright@^4 @lhci/cli@^0.14
+npm i next@16.3.8 react@^19 react-dom@^19 @opennextjs/cloudflare@^1.20.8 postgres@^3.4.9 drizzle-orm@^0.45.3 @aws-sdk/client-s3@^3 zod@^4
+npm i -D wrangler@^4.147.0 drizzle-kit@^0.31.11 vitest@^5 @vitest/coverage-v8@^5 @playwright/test@^1 @axe-core/playwright@^4 @lhci/cli@^0.14 rclone.js@^0.6.6 postcss@^8 @tailwindcss/postcss@^4.3.3
 npm rm express @types/express vite @vitejs/plugin-react @tailwindcss/vite
 npx playwright install --with-deps chromium
 ```
-Expected: exit 0, `package-lock.json` updated. (`tailwindcss@^4` + `autoprefixer` stay; Next 15 handles PostCSS via installed `postcss` — add `npm i -D postcss@^8` if `postcss.config` missing.)
+Expected: exit 0, `package-lock.json` updated.
+
+Notes:
+- `next` is **already** at `^16.3.8` in `package.json` — this is a no-op for Next and must stay that way. Do **not** install `next@^15`; `@opennextjs/cloudflare` declares peer `next: ">=15.5.27 <16 || >=16.3.8"`, so 16.3.8 is supported and 15.x would silently drop Cache Components support.
+- `rclone.js` is a required peer of `@opennextjs/cloudflare` (used for R2 sync during deploy).
+- `@tailwindcss/vite` must go (Vite-only) and `@tailwindcss/postcss` must arrive — otherwise the existing `src/index.css` stops compiling in Task 2.
+- Do **not** remove `tailwindcss` or `autoprefixer` from `devDependencies`.
+
+Also update `.node-version` and `.nvmrc` (both currently `24`) — they are already correct; leave them. Confirm `engines.node` is `>=24.0.0` in Step 2.
 
 - [ ] **Step 2: Replace npm scripts**
 
@@ -93,36 +128,65 @@ Replace `package.json` `scripts` block with exactly:
   "db:seed": "tsx db/seed.ts"
 },
 ```
-Also set `"engines": { "node": ">=20.0.0" }` (Workers build runs on Node 20+; old `>=24` block rejected some CI images).
+Also set `"engines": { "node": ">=24.0.0" }` — Node 24 is the project-wide floor. `.node-version` and `.nvmrc` already contain `24`; leave them as-is so `nvm use`, CI `setup-node` and local shells all agree.
 
-- [ ] **Step 3: Write `next.config.ts`**
+- [ ] **Step 3: Write `next.config.ts`** — Cache Components on from day one, plus the R2 image host so Task 6 media works without a rebuild:
 
 ```ts
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Next 16: replaces the old `experimental.ppr`. Enables Partial Prerendering so the
+  // marketing page ships static shell + cached content, with only genuinely fresh parts
+  // (consent state, locale) rendering per request.
+  cacheComponents: true,
+  images: {
+    remotePatterns: [{ protocol: 'https', hostname: 'media.ecomate.app' }],
+  },
+  typedRoutes: true,
 };
 export default nextConfig;
 ```
 
-- [ ] **Step 4: Write `opennext.config.ts`**
+- [ ] **Step 4: Write `opennext.config.ts`** and the Tailwind PostCSS bridge
 
+`opennext.config.ts`:
 ```ts
 import { defineCloudflareConfig } from '@opennextjs/cloudflare';
 export default defineCloudflareConfig({});
 ```
 
-- [ ] **Step 5: Typecheck the scaffold (expected to fail on missing `app/` — proves baseline)**
+`postcss.config.mjs` (replaces the Vite plugin — without this `src/index.css` fails to compile in Task 2):
+```js
+export default {
+  plugins: {
+    '@tailwindcss/postcss': {},
+  },
+};
+```
+
+- [ ] **Step 4b: Fix `tsconfig.json` for Next 16**
+
+The current file has `"types": ["vite/client"]`, which makes `next dev` fail type resolution once Vite is gone. Change to:
+```json
+"types": ["node"]
+```
+Keep `paths: { "@/*": ["./*"] }`, `jsx: "react-jsx"`, `moduleResolution: "bundler"`, `allowImportingTsExtensions: true`, `noEmit: true` unchanged. Add `"include": ["**/*.ts", "**/*.tsx", ".next/types/**/*.ts"]` so Next's generated route types are typechecked. Remove `"experimentalDecorators"`/`"useDefineForClassFields": false` only if `tsc` complains — they were AI-Studio scaffolding, not needed.
+
+- [ ] **Step 5: Verify the scaffold compiles and Tailwind still resolves**
 
 Run: `npx tsc --noEmit`
-Expected: FAIL with errors like `No inputs were found` or missing `app/layout`. Do not fix yet; Task 2 provides `app/`.
+Expected: no errors *about the missing `app/page.tsx`* is acceptable, but there must be **no** module-resolution errors, no `vite/client` type errors, and no PostCSS/Tailwind config errors. If `app/layout.tsx` is genuinely required for `tsc` to pass, create the minimal skeleton in this step (a `<html><body>{children}</body></html>` with `import './globals.css'`); Task 2 replaces its contents.
+
+Run: `npx tailwindcss --help 2>/dev/null || npx postcss --version`
+Expected: proves the PostCSS toolchain resolves.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add package.json package-lock.json next.config.ts opennext.config.ts
-git commit -m "feat: scaffold Next.js + opennext Cloudflare adapter"
+git add package.json package-lock.json next.config.ts opennext.config.ts postcss.config.mjs tsconfig.json
+git commit -m "feat: scaffold Next.js 16 + opennext Cloudflare adapter with Cache Components"
 ```
 
 ---
@@ -140,13 +204,40 @@ git commit -m "feat: scaffold Next.js + opennext Cloudflare adapter"
 Run: `git mv src/index.css app/globals.css`
 Expected: `app/globals.css` exists, `src/index.css` gone.
 
-- [ ] **Step 2: Write `app/layout.tsx`** (fonts + meta ported from `index.html:13-15`, body classes from `index.html:17`)
+- [ ] **Step 2: Write `app/layout.tsx`** — same meta and body classes as `index.html:3-17`, but fonts via **`next/font`**, not hand-written `<link>` tags. `next/font` self-hosts, preloads and eliminates the layout shift that a Google Fonts `<link>` causes on a mobile-first sales page.
 
 ```tsx
 import type { Metadata } from 'next';
+import { Hind_Siliguri, Instrument_Serif, JetBrains_Mono, Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 
+const sans = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-sans',
+});
+const serif = Instrument_Serif({
+  subsets: ['latin'],
+  weight: '400',
+  style: ['normal', 'italic'],
+  display: 'swap',
+  variable: '--font-serif',
+});
+const bangla = Hind_Siliguri({
+  subsets: ['bengali', 'latin'],
+  weight: ['400', '500', '600', '700'],
+  display: 'swap',
+  variable: '--font-bangla',
+});
+const mono = JetBrains_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500', '600'],
+  display: 'swap',
+  variable: '--font-mono',
+});
+
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ecomate.app'),
   title: 'EcoMate — Your Entire E-commerce Operation, Managed From One Place',
   description:
     'EcoMate is the complete operating platform for scaling e-commerce businesses. Unify online stores, showrooms, inventory, smart packing, couriers, finance, and marketing.',
@@ -154,15 +245,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="scroll-smooth">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap"
-          rel="stylesheet"
-        />
-      </head>
+    <html
+      lang="en"
+      className={`scroll-smooth ${sans.variable} ${serif.variable} ${bangla.variable} ${mono.variable}`}
+    >
       <body className="bg-[#F8FAFC] text-slate-900 antialiased selection:bg-indigo-600 selection:text-white dark:bg-[#07080E] dark:text-slate-100">
         {children}
       </body>
@@ -171,7 +257,35 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 }
 ```
 
-- [ ] **Step 3: Write `app/page.tsx`** — copy `src/App.tsx:1-161` verbatim, add `'use client';` as line 1 (it uses `useState`/`useEffect`), change CSS import to none (layout owns it). Component imports (`./components/Header` etc.) keep working because files stay under `src/`; update the three data/type imports only if files move (they don't move in this plan).
+Then map the existing Tailwind font utilities onto the CSS variables in `app/globals.css` so the current components keep their exact typography (they reference `font-sans`, `font-serif`, `font-bangla`, `font-mono` today):
+```css
+@theme {
+  --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-serif), ui-serif, Georgia, serif;
+  --font-bangla: var(--font-bangla), var(--font-sans), sans-serif;
+  --font-mono: var(--font-mono), ui-monospace, monospace;
+}
+```
+(Read `app/globals.css` first — if it already declares a `@theme` block with these keys, merge into it rather than adding a second.)
+
+- [ ] **Step 3: Write `app/page.tsx`** — copy `src/App.tsx:1-161`, add `'use client';` as line 1 (it uses `useState`/`useEffect`), drop the CSS import (layout owns it). Component imports (`./components/Header` etc.) keep working because files stay under `src/`. Keep it a Client Component for now; Task 12 §4 splits the data read onto the server.
+
+- [ ] **Step 3b: Convert `<img>` to `next/image` in the section components**
+
+Next.js 16 serves images through the built-in optimizer; a raw `<img>` bypasses responsive `sizes`, lazy loading and the R2 remote pattern configured in Task 1. Audit and convert:
+
+Run: `rg -n "<img" src/components src/App.tsx`
+Expected: every hit converted. The pattern for a decorative/product shot:
+```tsx
+import Image from 'next/image';
+
+{/* below-the-fold: lazy by default, explicit sizes so mobile does not download desktop pixels */}
+<Image src={src} alt={alt} width={1200} height={675} sizes="(max-width: 768px) 100vw, 50vw" className="rounded-xl" />
+
+{/* the hero LCP image only */}
+<Image src={hero} alt={heroAlt} width={1600} height={900} priority sizes="100vw" className="h-auto w-full" />
+```
+Rules: the single LCP/hero image gets `priority`; everything else stays lazy. Every image needs real `alt` (empty string only for purely decorative). Component-library `background-image` CSS stays as-is — only real content images become `next/image`. Assets that are R2 URLs work because `images.remotePatterns` was set in Task 1; local `/assets/*.svg` placeholders keep using plain `src`.
 
 - [ ] **Step 4: Boot dev server and verify landing renders**
 
@@ -182,8 +296,8 @@ Expected: `✓ Ready on http://localhost:3000`, page renders hero + sections, no
 
 ```bash
 git rm src/main.tsx index.html vite.config.ts
-git add app/layout.tsx app/globals.css app/page.tsx
-git commit -m "feat: port landing UI to Next.js App Router"
+git add app/layout.tsx app/globals.css app/page.tsx src/components
+git commit -m "feat: port landing UI to Next.js App Router with next/font and next/image"
 ```
 
 ---
@@ -463,13 +577,15 @@ import { getDb } from '@/db/client';
 import { landingSectionsTable } from '@/db/schema';
 import { ok, fail } from '@/lib/json';
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+// Next 16: `params` is a Promise in route handlers. Never destructure it synchronously.
+export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const body = await req.json();
     const [updated] = await getDb()
       .update(landingSectionsTable)
       .set({ ...body })
-      .where(eq(landingSectionsTable.id, Number(params.id)))
+      .where(eq(landingSectionsTable.id, Number(id)))
       .returning();
     if (!updated) return fail('Section not found', 404);
     return ok(updated);
@@ -570,12 +686,13 @@ import { getDb } from '@/db/client';
 import { pricingPlansTable } from '@/db/schema';
 import { ok, fail } from '@/lib/json';
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const body = await req.json();
     const [updated] = await getDb()
       .update(pricingPlansTable).set(body)
-      .where(eq(pricingPlansTable.id, Number(params.id))).returning();
+      .where(eq(pricingPlansTable.id, Number(id))).returning();
     if (!updated) return fail('Pricing plan not found', 404);
     return ok(updated);
   } catch (e: any) {
@@ -583,9 +700,10 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await getDb().delete(pricingPlansTable).where(eq(pricingPlansTable.id, Number(params.id)));
+    const { id } = await params;
+    await getDb().delete(pricingPlansTable).where(eq(pricingPlansTable.id, Number(id)));
     return ok({ success: true });
   } catch (e: any) {
     return fail(e.message);
@@ -885,7 +1003,14 @@ Replace the verify block with:
           echo "Production build verified successfully. Ready for manual deployment."
 ```
 
-- [ ] **Step 2: Update `deploy.yml`** — build job uploads `.opennext` instead of `dist`; deploy job runs `opennextjs-cloudflare deploy` (needs `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` secrets, unchanged). Add `DIRECT_URL` to GitHub Secrets and a migration step before deploy:
+- [ ] **Step 2: Update `deploy.yml`** — build job uploads `.opennext` instead of `dist`; deploy job runs `opennextjs-cloudflare deploy` (needs `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` secrets, unchanged). Both workflows already pin `actions/setup-node@v4` with `node-version: 24`; keep that and add an explicit floor assertion right after the checkout step in **both** `ci.yml` and `deploy.yml` so a silent runner-image downgrade cannot slip through:
+
+```yaml
+      - name: Assert Node floor (24)
+        run: node -e "if (parseInt(process.versions.node.split('.')[0], 10) < 24) { console.error('Node 24+ required'); process.exit(1); }"
+```
+
+Also add `DIRECT_URL` to GitHub Secrets and a migration step before deploy:
 
 ```yaml
       - name: Apply DB migrations
@@ -922,19 +1047,25 @@ git commit -m "ci: cut over pipelines to opennext Worker deploy with DB migratio
 ### Task 9: Auth.js v5 auth + User Management module (brief §18 security requirement)
 
 **Files:**
-- Modify: `package.json` (add `next-auth@^5` beta + `@auth/drizzle-adapter`)
-- Modify: `db/schema.ts` (append `admin_users` + `admin_audit_logs`; Auth.js tables come from adapter)
+- Modify: `package.json` (`next-auth@5.0.0-beta.32`, `@auth/drizzle-adapter@^1.11.3`)
+- Modify: `db/schema.ts` (append `admin_users`, `admin_audit_logs`, **and the four Auth.js tables explicitly**)
 - Create: `lib/password.ts` (PBKDF2 verify, WebCrypto-native for Workers)
 - Create: `auth.ts` (NextAuth config: Credentials + Drizzle adapter + database sessions)
 - Create: `app/api/auth/[...nextauth]/route.ts` (Auth.js handler)
-- Create: `middleware.ts` (Auth.js gate + RBAC)
+- Create: **`proxy.ts`** (Next 16 renamed `middleware.ts` → `proxy.ts`, export `proxy()`)
 - Create: `app/admin/login/page.tsx`, `app/admin/setup/page.tsx`, `app/admin/page.tsx`
 - Create: `app/api/admin/users/route.ts`, `app/api/admin/users/[id]/route.ts`, `app/api/admin/setup/route.ts`
 
 - [ ] **Step 1: Install Auth.js + adapter**
 
-Run: `npm i next-auth@beta @auth/drizzle-adapter`
-Expected: exit 0. (`next@^15` + `nodejs_compat` flag from Task 7 Step 2 are hard requirements — Auth.js needs Node crypto compat on Workers.)
+Run:
+```bash
+npm i next-auth@5.0.0-beta.32 @auth/drizzle-adapter@^1.11.3
+```
+Expected: exit 0, no peer warnings (`next-auth` peer range is `^12.2.5 || ^13 || ^14 || ^15 || ^16`).
+Hard requirements already satisfied by Task 1/7: `next@16.3.8` and the `nodejs_compat` compatibility flag in `wrangler.toml`.
+
+**Known risk, stated up front:** Auth.js v5 is still a beta and its official docs do not document Cloudflare Workers as a first-class target. It works on Workers via `nodejs_compat` because it uses standard `Request`/`Response` and Web Crypto, but if the adapter path breaks, the fallback is `better-auth` (also Workers-documented) or a hand-rolled opaque-session module. Do not discover this during production deploy — verify `/api/auth/providers` responds in the preview environment (Task 8 Step 4) before shipping.
 
 - [ ] **Step 2: Append auth tables to `db/schema.ts`**
 
@@ -961,7 +1092,48 @@ export const adminAuditLogsTable = pgTable('admin_audit_logs', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 ```
-Auth.js `accounts`/`sessions`/`verificationTokens` tables come from `@auth/drizzle-adapter` (`DrizzleAdapter` auto-maps); do not hand-write them. Regenerate: `npm run db:generate`.
+**The Auth.js tables must be written by hand.** `DrizzleAdapter(db, tableMap)` takes an explicit table map — there is no auto-mapping. Omitting them is the single most common Auth.js + Drizzle failure. Append to `db/schema.ts` (column names must match what Auth.js queries):
+
+```ts
+export const accountsTable = pgTable('accounts', {
+  userId: text('userId').notNull(),
+  type: text('type').notNull(),
+  provider: text('provider').notNull(),
+  providerAccountId: text('providerAccountId').notNull(),
+  refresh_token: text('refresh_token'),
+  access_token: text('access_token'),
+  expires_at: integer('expires_at'),
+  token_type: text('token_type'),
+  scope: text('scope'),
+  id_token: text('id_token'),
+  session_state: text('session_state'),
+});
+
+export const sessionsTable = pgTable('sessions', {
+  sessionToken: text('sessionToken').primaryKey(),
+  userId: text('userId').notNull().references(() => usersTable.id, { onDelete: 'cascade' }),
+  expires: timestamp('expires').notNull(),
+});
+
+// Auth.js' built-in identity table — used for the session callback and sign-in flow.
+export const usersTable = pgTable('users', {
+  id: text('id').primaryKey(),
+  name: text('name'),
+  email: text('email').unique(),
+  emailVerified: timestamp('emailVerified'),
+  image: text('image'),
+});
+
+export const verificationTokensTable = pgTable('verification_tokens', {
+  identifier: text('identifier').notNull(),
+  token: text('token').notNull(),
+  expires: timestamp('expires').notNull(),
+});
+```
+
+Two identity tables now coexist by design: Auth.js' `users` (session linkage) and our `admin_users` (email, password hash, role). `admin_users.email` is the join key the session callback reads in Step 4. Index `sessions.expires` — Task 16's retention cron queries on it.
+
+Regenerate: `npm run db:generate`.
 
 - [ ] **Step 3: Write `lib/password.ts`** — PBKDF2-SHA256, 600k iterations, WebCrypto (native on Workers, no `node:crypto` import):
 
@@ -1011,11 +1183,17 @@ import Credentials from 'next-auth/providers/credentials';
 import { DrizzleAdapter } from '@auth/drizzle-adapter';
 import { eq } from 'drizzle-orm';
 import { getDb } from '@/db/client';
-import { adminUsersTable, adminAuditLogsTable } from '@/db/schema';
+import { adminUsersTable, adminAuditLogsTable, usersTable, accountsTable, sessionsTable, verificationTokensTable } from '@/db/schema';
 import { verifyPassword } from '@/lib/password';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: DrizzleAdapter(getDb() as any),
+  // Explicit table map — Auth.js will not infer these.
+  adapter: DrizzleAdapter(getDb() as any, {
+    usersTable,
+    accountsTable,
+    sessionsTable,
+    verificationTokensTable,
+  }),
   session: { strategy: 'database', maxAge: 12 * 60 * 60 },
   pages: { signIn: '/admin/login' },
   // NOT bare `trustHost: true` — that accepts ANY Host header, which is a host-header
@@ -1061,14 +1239,15 @@ import { handlers } from '@/auth';
 export const { GET, POST } = handlers;
 ```
 
-- [ ] **Step 6: Write `middleware.ts`** — Auth.js gate + RBAC; public GET + lead POST stay open:
+- [ ] **Step 6: Write `proxy.ts`** — **Next.js 16 renamed `middleware.ts` to `proxy.ts`** and the export from `middleware()` to `proxy()`. Do not create a `middleware.ts`; it will be ignored (with a warning) in v16. Auth.js gate + RBAC; public GET + lead POST stay open:
 
 ```ts
-export { auth as middleware } from '@/auth';
+// proxy.ts — project root
+export { auth as proxy } from '@/auth';
 
 export const config = { matcher: ['/admin/:path*', '/api/:path*'] };
 ```
-Plus an `authorized` callback in `auth.ts` callbacks (append to Step 4 config):
+Auth.js v5's `auth` wrapper works when exported under either name, so `proxy` keeps its own `authorized` logic while calling the library's session check. Add an `authorized` callback in `auth.ts` callbacks (append to Step 4 config):
 ```ts
 async authorized({ request, auth: session }: any) {
   const { pathname } = request.nextUrl;
@@ -1086,19 +1265,26 @@ async authorized({ request, auth: session }: any) {
 ```
 Role enforcement (superadmin-only user mgmt, editor read limits) happens inside each admin handler by reading `(await auth())` session role and returning 403 — never trust client-sent role.
 
+Caveat to verify in preview: Auth.js v5 beta is not officially documented for Cloudflare Workers. `auth()` calls inside Route Handlers are Node-runtime work executed through `nodejs_compat`; if the preview environment shows `crypto.randomUUID is not a function` or a missing `TextEncoder`, that is the cause — escalate rather than patching around it, the fallback is the `better-auth` swap recorded in Step 1.
+
 - [ ] **Step 7: Write setup + login + users routes** — `POST /api/admin/setup`: requires `SETUP_TOKEN` secret match AND `admin_users` empty, creates first superadmin (min-12-char password), then setup is permanently dead (empty-check fails forever). `GET/POST /api/admin/users` + `PUT/DELETE /api/admin/users/[id]`: superadmin-only list/create/deactivate/password-reset/role-change; every action writes `admin_audit_logs`; password reset revokes all user sessions via adapter `deleteSession` loop.
 
 - [ ] **Step 8: Write admin pages** — `app/admin/login/page.tsx` (Auth.js `signIn('credentials')` form), `app/admin/setup/page.tsx` (one-time form), `app/admin/page.tsx` (session check via `auth()`; renders existing `AdminPanel` + new Users tab UI calling `/api/admin/users`). PrototypeController button links to `/admin` instead of modal state.
 
 - [ ] **Step 9: Session hardening (admin HTML must never be cached, sessions must be revocable)**
 
-`no-store` on every admin response — a cached `/admin` HTML in a shared browser is a credential leak:
+`no-store` on every admin response — a cached `/admin` HTML in a shared browser is a credential leak. **Under Cache Components (Task 1) do NOT use `export const dynamic = 'force-dynamic'`** — that flag was removed; dynamic is the default. Use instead:
 ```ts
 // app/admin/layout.tsx
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-// plus in middleware: if (pathname.startsWith('/admin')) res.headers.set('Cache-Control', 'no-store, private');
+export const metadata = { robots: { index: false, follow: false } }; // keep admin out of search results
+// plus in proxy.ts:
+if (pathname.startsWith('/admin')) {
+  const res = NextResponse.next();
+  res.headers.set('Cache-Control', 'no-store, private');
+  return res;
+}
 ```
+Any data read inside an admin page must stay dynamic (it reads `cookies()` via `auth()`, which is never cached) — do not put admin queries behind `'use cache'`.
 Session management in user mgmt: `GET /api/admin/users/[id]/sessions` lists active sessions (created, lastSeen, ip, userAgent from the Auth.js `sessions` table), `DELETE /api/admin/users/[id]/sessions/[sid]` revokes one, and "sign out everywhere" revokes all. Password reset and role change revoke **every** session for that user (privilege change must not leave a live session with the old role).
 Account lockout: after 5 failed logins for one email in 15 minutes, reject further attempts for that email with a generic message and write `LOGIN_LOCKED` to the audit log. Rate limit (Task 14) is per-IP; this is per-account, because distributed IP rotation defeats per-IP limits alone.
 Cookie hardening: Auth.js sets `httpOnly` + `sameSite=lax`; additionally set `secure: true` explicitly in `cookies.sessionToken` options and pin `maxAge` to the session `maxAge` so the cookie expires with the server-side session.
@@ -1106,7 +1292,7 @@ Cookie hardening: Auth.js sets `httpOnly` + `sameSite=lax`; additionally set `se
 - [ ] **Step 10: Commit**
 
 ```bash
-git add package.json package-lock.json db/schema.ts drizzle/ lib/password.ts auth.ts middleware.ts "app/api/auth" app/admin "app/api/admin"
+git add package.json package-lock.json db/schema.ts drizzle/ lib/password.ts auth.ts proxy.ts "app/api/auth" app/admin "app/api/admin"
 git commit -m "feat: Auth.js v5 credentials auth with RBAC, revocable sessions and user management"
 ```
 
@@ -1253,7 +1439,9 @@ export async function GET(req: Request) {
 ```
 `app/api/content/[sectionKey]/route.ts`: PUT upserts `{sectionKey, locale}` payload (admin save; replaces static slice). `app/api/social-links/route.ts`: GET visible list + POST/PUT/DELETE CRUD, same `ok`/`fail` pattern as Task 6 Step 1.
 
-- [ ] **Step 4: Make `app/page.tsx` server-driven with static fallback** — convert to async server component: try `getDb()` content for locale `en`, deep-merge over static `landingContent.en` (DB wins per sectionKey, static fills gaps); on `HYPERDRIVE_NOT_BOUND` use static only. Pass assembled object to existing client section components unchanged (they already take `content` prop — zero component rewrites). Locale toggle refetches `/api/content?locale=bn` client-side.
+- [ ] **Step 4: Make `app/page.tsx` server-driven with static fallback** — convert to an async Server Component that reads through the cached `lib/content.ts` helper (Task 15 §5 defines it; define it here if Task 15 has not landed yet — same signature). Deep-merge the DB payload over static `landingContent.en` (DB wins per `sectionKey`, static fills gaps); on `HYPERDRIVE_NOT_BOUND` or any DB error, fall back to static only and log server-side without alerting the visitor (Task 20 §3 makes this the documented outage behaviour). Pass the assembled object to the existing client section components unchanged — they already take a `content` prop, so zero component rewrites are needed. Locale toggle fetches `/api/content?locale=bn` client-side.
+
+Do **not** add `'use client'` to `app/page.tsx` for the data read; wrap only the interactive shell. Data read stays on the server, interactivity stays on the client.
 
 - [ ] **Step 5: Admin sections tab edits payload** — extend existing sections editor (Task 4 API already supports PUT by id for order/visibility): add per-sectionKey locale JSON textarea + save via `PUT /api/content/[sectionKey]` + social-links manager rows. Verify: edit hero headline in admin → reload landing → headline changed without redeploy.
 
@@ -1429,7 +1617,7 @@ git commit -m "feat: Meta CAPI server-side Lead tracking with pixel deduplicatio
 - Create: `lib/sanitize.ts` (blog HTML allowlist)
 - Create: `lib/totp.ts` (TOTP for superadmin)
 - Create: `components/Turnstile.tsx`
-- Modify: `middleware.ts` (security headers on all responses)
+- Modify: `proxy.ts` (security headers on all responses)
 - Modify: `app/api/leads/route.ts` (KV limit + Turnstile verify)
 - Modify: `app/api/media/upload/route.ts` (size cap, MIME sniff, SVG reject)
 - Modify: blog render path (sanitize before `dangerouslySetInnerHTML`)
@@ -1458,7 +1646,7 @@ Apply: lead POST `hitLimit('lead:'+ip, 5, 600)`, login `hitLimit('login:'+ip, 10
 
 - [ ] **Step 2: Turnstile on lead form** — `components/Turnstile.tsx` renders Cloudflare widget (`NEXT_PUBLIC_TURNSTILE_SITE_KEY`); token posted with lead; server verifies via `https://challenges.cloudflare.com/turnstile/v0/siteverify` with `TURNSTILE_SECRET_KEY`, rejects on failure (400). Widget invisible until submit to keep mobile UX clean.
 
-- [ ] **Step 3: Security headers in `middleware.ts`** — append to every response: `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=()`, and a tight CSP (`default-src 'self'; img-src 'self' data: https:; script-src 'self' https://connect.facebook.net https://challenges.cloudflare.com; connect-src 'self' https://graph.facebook.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com`). Verify none of the landing scripts break (Meta pixel + Turnstile explicitly allowlisted).
+- [ ] **Step 3: Security headers in `proxy.ts`** (Next 16 name for `middleware.ts`) — append to every response: `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=()`, and a tight CSP (`default-src 'self'; img-src 'self' data: https:; script-src 'self' https://connect.facebook.net https://challenges.cloudflare.com; connect-src 'self' https://graph.facebook.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com`). Verify none of the landing scripts break (Meta pixel + Turnstile explicitly allowlisted).
 
 - [ ] **Step 4: Upload validation** — 5MB cap (`file.size`), MIME allowlist `image/jpeg|image/png|image/webp` by sniffing first bytes (not `file.type` — client-controlled), SVG/GIF/HTML rejected (XSS vector), filename sanitized (existing), R2 key prefixed `media/YYYY/MM/`. Return 413/415 with clear messages.
 
@@ -1469,7 +1657,7 @@ Apply: lead POST `hitLimit('lead:'+ip, 5, 600)`, login `hitLimit('login:'+ip, 10
 - [ ] **Step 7: Commit**
 
 ```bash
-git add lib/rateLimit.ts lib/sanitize.ts lib/totp.ts components/Turnstile.tsx middleware.ts app/api/leads "app/api/media" "app/api/admin"
+git add lib/rateLimit.ts lib/sanitize.ts lib/totp.ts components/Turnstile.tsx proxy.ts app/api/leads "app/api/media" "app/api/admin"
 git commit -m "feat: KV rate limits, Turnstile, security headers, upload validation, TOTP"
 ```
 
@@ -1486,7 +1674,7 @@ git commit -m "feat: KV rate limits, Turnstile, security headers, upload validat
 - Modify: every admin PUT (settings/sections/content/pricing/blog) → `revalidatePath`/`revalidateTag`
 - Modify: media admin (alt-text required), AdminPanel (side-by-side EN/BN editor + missing-translation report)
 
-- [ ] **Step 1: Append `menus`, `menu_items`, `redirects` tables** — `menus(key, locale)`, `menu_items(menuId FK cascade, label, href, sortOrder, isVisible)`, `redirects(fromPath unique, toPath, statusCode default 308)`. Header reads menu `main`, footer reads `footer`; `middleware.ts` checks `redirects` (cached, 5-min TTL in KV) before routing — URL changes stay SEO-safe.
+- [ ] **Step 1: Append `menus`, `menu_items`, `redirects` tables** — `menus(key, locale)`, `menu_items(menuId FK cascade, label, href, sortOrder, isVisible)`, `redirects(fromPath unique, toPath, statusCode default 308)`. Header reads menu `main`, footer reads `footer`; `proxy.ts` checks `redirects` (cached, 5-min TTL in KV) before routing — URL changes stay SEO-safe.
 
 - [ ] **Step 2: Locale routing** — `app/[locale]/page.tsx` + `app/[locale]/blog/[slug]/page.tsx` for `en|bn`; root `/` serves default locale (`NEXT_PUBLIC_DEFAULT_LOCALE`), `/bn/*` serves Bangla; unknown locale → 404. `generateStaticParams` returns `[{locale:'en'},{locale:'bn'}]`. Middleware preserves redirect-table checks first.
 
@@ -1496,14 +1684,41 @@ Numbers, currency and dates must be `Intl`-formatted per locale, not interpolate
 
 - [ ] **Step 4: SEO-100 pass** — `hreflang` (`en`, `bn`, `x-default`) on every page; per-locale canonical; sitemap includes all published blog slugs + case-study slugs in both locales with `lastmod`; OG images resolved from R2 post `featuredImageUrl` with absolute URL fallback; breadcrumb JSON-LD on blog/case-study; `public/llms.txt` summarizing site + sitemap pointer for AI discoverability; media admin rejects publish without `altText`.
 
-- [ ] **Step 5: On-demand revalidation** — every admin PUT/POST/DELETE (settings, sections, content, pricing, blog, menus, social) calls `revalidateTag('<domain>')` after commit; public pages use `fetch(..., { next: { tags: ['<domain>'] } })`. Verify: edit hero in admin → reload landing (no rebuild) shows change; response carries fresh `Last-Modified`.
+- [ ] **Step 5: On-demand revalidation, Cache Components style** — Task 1 enabled `cacheComponents: true`, so caching is declared at the **data function**, not at `fetch`. Do **not** use `fetch(url, { next: { tags } })` or `unstable_cache()`; both are legacy under Cache Components.
+
+Wrap every public read in `lib/content.ts` with a domain tag:
+```ts
+// lib/content.ts
+import { cacheLife, cacheTag } from 'next/cache';
+import { getDb } from '@/db/client';
+import { landingContentTable } from '@/db/schema';
+import { eq } from 'drizzle-orm';
+
+export async function getLandingContent(locale: string) {
+  'use cache';
+  cacheTag(`content:${locale}`);
+  cacheLife({ stale: 300, revalidate: 3600, expire: 86400 });
+  return getDb().select().from(landingContentTable).where(eq(landingContentTable.locale, locale));
+}
+```
+Invalidate from every admin mutation (settings, sections, content, pricing, blog, menus, social):
+```ts
+import { updateTag, revalidateTag } from 'next/cache';
+// inside the same request, right after the DB write commits:
+//   updateTag(`content:${locale}`)        -> the admin sees their own edit immediately
+// from background jobs (cron, License Portal retry):
+//   revalidateTag(`content:${locale}`)    -> next visitor sees it
+```
+Same pattern per domain: `pricing`, `blog`, `menus`, `social`, `testimonials`, `casestudies`.
+
+Verify: edit the hero in admin → the admin screen and a fresh public request both show the change with **no rebuild**; `x-nextjs-cache` reflects the revalidation.
 
 - [ ] **Step 6: Side-by-side locale editor + missing-translation report** — AdminPanel content editor shows EN and BN fields adjacent; `/api/admin/i18n-report` lists `landing_content` keys where `bn` row missing or equal to seed-empty; dashboard badge counts gaps. Fallback chain documented: `bn` missing → `en` rendered (page never blank).
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add db/schema.ts drizzle/ app/api/menus app/api/redirects "app/[locale]" app/sitemap.ts lib/seo.ts lib/format.ts public/llms.txt middleware.ts
+git add db/schema.ts drizzle/ app/api/menus app/api/redirects "app/[locale]" app/sitemap.ts lib/seo.ts lib/format.ts public/llms.txt proxy.ts
 git commit -m "feat: locale routing, hreflang, menus, redirects, revalidation, i18n report"
 ```
 
@@ -1565,28 +1780,32 @@ git commit -m "feat: lead timeline, CSV export, pagination, preview env, observa
 - Create: `lib/guard.ts` (referential guards)
 - Test: `tests/validation/*.test.ts`
 
-- [ ] **Step 1: Write Zod schemas** — Tasks 4-5 hand-allowlisted fields to close the mass-assignment hole fast; this task makes it declarative so the field list has one source of truth:
+- [ ] **Step 1: Write Zod schemas** — Tasks 4-5 hand-allowlisted fields to close the mass-assignment hole fast; this task makes it declarative (Zod **4** syntax) so the field list has one source of truth:
+
+Zod 4 (`zod@^4`) API — `z.strictObject`, top-level `z.email()` / `z.url()`, no `.strict()` chaining:
 
 ```ts
 // lib/validation/settings.ts
 import { z } from 'zod';
-export const settingsPatch = z.object({
+const optionalUrl = z.union([z.url(), z.literal('')]);
+
+export const settingsPatch = z.strictObject({
   siteName: z.string().min(1).max(120).optional(),
   tagline: z.string().min(1).max(300).optional(),
-  logoUrl: z.string().url().or(z.literal('')).optional(),
-  faviconUrl: z.string().url().or(z.literal('')).optional(),
+  logoUrl: optionalUrl.optional(),
+  faviconUrl: optionalUrl.optional(),
   defaultLocale: z.enum(['en', 'bn']).optional(),
   supportPhone: z.string().min(6).max(32).optional(),
-  supportEmail: z.string().email().or(z.literal('')).optional(),
+  supportEmail: z.union([z.email(), z.literal('')]).optional(),
   whatsappNumber: z.string().regex(/^\d{6,20}$/).optional(),
-  messengerUrl: z.string().url().or(z.literal('')).optional(),
+  messengerUrl: optionalUrl.optional(),
   address: z.string().max(300).optional(),
   isPricingVisible: z.boolean().optional(),
   seoTitle: z.string().max(70).optional(),
   seoDescription: z.string().max(200).optional(),
-}).strict(); // .strict() is the point: unknown keys are rejected, not silently dropped
+}); // z.strictObject IS the point: unknown keys are rejected, not silently dropped
 ```
-`.strict()` everywhere is what actually prevents mass assignment. Pricing: `monthlyPrice`/`annualPrice` `z.number().int().min(0).max(10_000_000)`, `slug` `z.string().regex(/^[a-z0-9-]{2,60}$/)`, `featuresEn/Bn` `z.array(z.string().max(200)).max(40)`. Lead: `name` `min 1 max 120`, `phone` `regex(/^[+0-9][0-9 \-()]{7,19}$/)` after stripping spaces, `email` optional `.or(literal(''))`, `consentGiven` `z.literal(true)`. Blog: `slug` slug regex, `content` `max(100_000)`, `status` enum, `seoTitle` max 70 / `seoDescription` max 200 (search engines truncate beyond these; catching it in admin is free SEO). Media: `url` url-or-empty, `altText` required non-empty on publish (Task 15 §4 depends on it), `category` enum.
+`z.strictObject` everywhere is what actually prevents mass assignment. Pricing: `monthlyPrice`/`annualPrice` `z.number().int().min(0).max(10_000_000)`, `slug` `z.string().regex(/^[a-z0-9-]{2,60}$/)`, `featuresEn/Bn` `z.array(z.string().max(200)).max(40)`. Lead: `name` `min 1 max 120`, `phone` `regex(/^[+0-9][0-9 \-()]{7,19}$/)` after stripping spaces, `email` optional `.or(literal(''))`, `consentGiven` `z.literal(true)`. Blog: `slug` slug regex, `content` `max(100_000)`, `status` enum, `seoTitle` max 70 / `seoDescription` max 200 (search engines truncate beyond these; catching it in admin is free SEO). Media: `url` url-or-empty, `altText` required non-empty on publish (Task 15 §4 depends on it), `category` enum.
 
 - [ ] **Step 2: Adopt in every mutation route** — uniform error contract:
 ```ts
@@ -1604,7 +1823,7 @@ Extend `lib/json.ts` → `fail(message, status, details?)`. AdminPanel renders f
 - `assertSlugAvailable(table, slug, excludeId)` — for blog posts, case studies, pricing plans.
 All four call sites return 409 with the conflicting entity named, so the admin UI can explain instead of just failing.
 
-- [ ] **Step 4: Tests for validators and guards** — `tests/validation/*.test.ts`: each schema rejects unknown key (`.strict()` proof), rejects oversized/out-of-range values, accepts valid; guards tested against a seeded test DB. Run `npm test` — expected PASS.
+- [ ] **Step 4: Tests for validators and guards** — `tests/validation/*.test.ts`: each schema rejects unknown key (`z.strictObject` proof), rejects oversized/out-of-range values, accepts valid; guards tested against a seeded test DB. Run `npm test` — expected PASS.
 
 - [ ] **Step 5: Commit**
 
@@ -1691,12 +1910,12 @@ git commit -m "feat: content revisions, draft/publish split, rollback and optimi
 - Create: `app/error.tsx`, `app/global-error.tsx`, `app/not-found.tsx`, `app/[locale]/loading.tsx`
 - Create: `app/privacy/page.tsx`, `app/terms/page.tsx` (+ `bn` variants)
 - Create: `components/ConsentBanner.tsx`
-- Modify: `middleware.ts` (error envelope + request id), `app/api/leads/route.ts` (retry queue drain)
+- Modify: `proxy.ts` (error envelope + request id), `app/api/leads/route.ts` (retry queue drain)
 - Modify: `db/schema.ts` (append `dispatch_queue`)
 
 - [ ] **Step 1: Error boundaries + not-found** — a 500 in a section must not blank the whole 16-section sales page. `app/error.tsx` (route-level reset), `app/global-error.tsx` (root fallback with html/body), `app/not-found.tsx` (brand-styled 404 with links to `/`, `/blog`, and WhatsApp contact — a 404 that offers a human is a lead), `app/[locale]/loading.tsx` (skeleton preserving layout height so CLS stays under the LHCI budget from Task 18).
 
-- [ ] **Step 2: Uniform API error envelope with request id** — every handler returns `{ error, requestId }`; `middleware.ts` mints `crypto.randomUUID()` per request, sets `x-request-id`, and echoes it. Client errors surface the request id so a support request ("it failed at 14:32") maps to an exact log line. Stack traces never reach the client; `fail()` logs server-side with the request id.
+- [ ] **Step 2: Uniform API error envelope with request id** — every handler returns `{ error, requestId }`; `proxy.ts` mints `crypto.randomUUID()` per request, sets `x-request-id`, and echoes it. Client errors surface the request id so a support request ("it failed at 14:32") maps to an exact log line. Stack traces never reach the client; `fail()` logs server-side with the request id.
 
 - [ ] **Step 3: DB-down degradation** — landing must still sell when Postgres is unreachable: the server component catches `HYPERDRIVE_NOT_BOUND`/connection errors, serves the static `landingContent` fallback with a subtle non-blocking banner (only in non-production to avoid confusing visitors... no: in production serve silently, and log — a visitor should never see our outage), admin shows a maintenance state with retry, `/api/ready` returns 503 so the platform/orchestrator knows. Lead POST during an outage must fail loudly (400/503 with "try again") rather than pretend success — losing a lead silently is worse than a visible error.
 
@@ -1711,7 +1930,7 @@ git commit -m "feat: content revisions, draft/publish split, rollback and optimi
 - [ ] **Step 8: Commit**
 
 ```bash
-git add app/error.tsx app/global-error.tsx app/not-found.tsx "app/[locale]/loading.tsx" app/privacy app/terms components/ConsentBanner.tsx middleware.ts app/api/cron db/schema.ts drizzle/ app/api/leads
+git add app/error.tsx app/global-error.tsx app/not-found.tsx "app/[locale]/loading.tsx" app/privacy app/terms components/ConsentBanner.tsx proxy.ts app/api/cron db/schema.ts drizzle/ app/api/leads
 git commit -m "feat: error boundaries, request-id errors, DB-down degradation, consent gate, legal pages"
 ```
 
@@ -1730,7 +1949,7 @@ git commit -m "feat: error boundaries, request-id errors, DB-down degradation, c
 
 - [ ] **Step 3: Schema-drift guard** — CI runs `npm run db:generate` and fails if it produces a diff, meaning `drizzle/` was not committed alongside a schema change. Uncommitted migrations are how "works on my machine" becomes a production incident.
 
-- [ ] **Step 4: Preview per PR + required checks** — `preview.yml` on `pull_request`: migrate + seed the preview DB, build, deploy `--env preview`, run the Playwright smoke subset + LHCI against the preview URL, and comment the URL + LHCI deltas on the PR. Concurrency group cancels superseded runs. Branch protection: `main` requires CI + preview + migration-drift checks, 1 approving review, no direct pushes, no force-push; `CODEOWNERS` requires review on `db/schema.ts`, `auth.ts`, `middleware.ts`, `.github/**`, `wrangler.toml`.
+- [ ] **Step 4: Preview per PR + required checks** — `preview.yml` on `pull_request`: migrate + seed the preview DB, build, deploy `--env preview`, run the Playwright smoke subset + LHCI against the preview URL, and comment the URL + LHCI deltas on the PR. Concurrency group cancels superseded runs. Branch protection: `main` requires CI + preview + migration-drift checks, 1 approving review, no direct pushes, no force-push; `CODEOWNERS` requires review on `db/schema.ts`, `auth.ts`, `proxy.ts`, `.github/**`, `wrangler.toml`.
 
 - [ ] **Step 5: Monitoring + alerting** — external uptime monitor on `/api/health` and `/api/ready` (60s interval, alerts to email + the sales phone as fallback via a monitor service webhook into `lib/notify.ts`), Sentry alerts on new error types and on lead-submit failures (a silently failing lead form is a revenue incident, not a bug), Workers Logs retention 7 days. Documented threshold: alert if lead POST success rate drops below 95% over 15 minutes.
 
@@ -1753,4 +1972,5 @@ git commit -m "chore: env isolation, supply-chain CI gates, preview env, monitor
 2. **Placeholder scan:** no TBD/TODO. `PASTE_HYPERDRIVE_ID`, `PASTE_KV_ID`, `<paste-direct-5432-url>` are operator-supplied values with the exact producing command in Task 7 Step 1. Seed row content specified by source location (`src/db/index.ts:186-534`).
 3. **Type consistency:** `ok`/`fail(message, status, details?)` — `fail` gains an optional third arg in Task 17 and is used with it only from Task 17 onward. `getDb()`/`isPostgresConfigured()` from Task 3 unchanged throughout. `getDb().transaction(tx => ...)` (Task 3 §6) is the same API used by `lib/revisions.ts` (Task 19 §2). All mutation routes adopt `.strict()` Zod schemas (Task 17) and the Task 4-5 hand-rolled allowlists are deleted in the same step, so no two competing field lists survive. Cookie/session ownership stays with Auth.js; `trustHost` is env-gated (Task 9) and `AUTH_TRUST_HOST` is listed in `.env.example`/wrangler vars.
 4. **Ordering constraints:** Task 3 §5 must precede Task 7's first `migrate`; Task 9's `admin_users` precedes `admin_users` FKs in Tasks 16/19/20; Task 13's tracking columns precede Task 14's consent check on the same table; Task 20 §5 consent gates Task 13's pixel/CAPI firing, so the consent banner must ship with (or before) the pixel going live — flagged in Task 20 §5.
-5. **Residual risk stated honestly:** LHCI budgets are baseline-then-block (Task 18 §5), not magically met on first run; R2 image transformation is not included (paid Workers feature, costs money); MySQL support remains out of scope (spec §9); "100% secure/SEO" means every checklist item is implemented and verified, not that a breach is impossible.
+5. **Next.js 16 consistency:** every version pinned in the Tech Stack table was verified against the registry (next `latest` = 16.3.8; `@opennextjs/cloudflare` peer = `>=15.5.27 <16 || >=16.3.8`; `next-auth` beta peer includes `^16`). v16-specific conventions are applied everywhere they bite: `proxy.ts` (not `middleware.ts`) in Tasks 9/14/15/20, `params: Promise<...>` awaited in every dynamic handler, `cacheComponents: true` with `'use cache'` + `cacheTag`/`cacheLife` + `updateTag`/`revalidateTag` (no `fetch(next.tags)`, no `unstable_cache`, no `dynamic = 'force-dynamic'`), `next/font` in Task 2, `next/image` in Task 2 §3b, Zod 4 API (`z.strictObject`, `z.email`, `z.url`), Vitest 5, Node >= 24 in `engines`, `.node-version`, `.nvmrc` and both workflows. The Auth.js + Cloudflare Workers pairing is beta-on-unsupported-target and is flagged in Task 9 with a `better-auth` fallback rather than presented as certain.
+6. **Residual risk stated honestly:** LHCI budgets are baseline-then-block (Task 18 §5), not magically met on first run; R2 image transformation is not included (paid Workers feature, costs money); MySQL support remains out of scope (spec §9); "100% secure/SEO" means every checklist item is implemented and verified, not that a breach is impossible.

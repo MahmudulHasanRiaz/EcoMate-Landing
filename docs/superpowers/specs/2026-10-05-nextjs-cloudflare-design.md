@@ -3,7 +3,25 @@
 Date: 2026-10-05 | Approved approach: A (Next.js + Hyperdrive + Postgres + R2)
 
 ## 1. Goal
-Migrate Vite+Express prototype to full-stack Next.js (App Router), deploy Cloudflare Workers via `@opennextjs/cloudflare`. DB = any Postgres (Supabase/Neon) via Drizzle. Files = R2. No separate backend framework.
+Migrate Vite+Express prototype to full-stack **Next.js 16** (App Router), deploy Cloudflare Workers via `@opennextjs/cloudflare`. DB = any Postgres (Supabase/Neon) via Drizzle. Files = R2. No separate backend framework. Node.js >= 24 everywhere.
+
+## 22. Stack mandate (verified against the registry, 2026-10-06)
+| Package | Pinned | Basis |
+|---|---|---|
+| `next` | `16.3.8` | `latest` tag; lowest 16.x that `@opennextjs/cloudflare` officially supports |
+| `@opennextjs/cloudflare` | `^1.20.8` | peer `next: ">=15.5.27 <16 \|\| >=16.3.8"`, `wrangler ^4.125.0`, `rclone.js ^0.6.6` |
+| `wrangler` | `^4.147.0` | satisfies adapter peer |
+| `next-auth` | `5.0.0-beta.32` | peer range includes `^16` |
+| `@auth/drizzle-adapter` | `^1.11.3` | requires hand-written tables passed as an explicit map |
+| `drizzle-orm` / `drizzle-kit` | `^0.45.3` / `^0.31.11` | unchanged from repo |
+| `postgres` | `^3.4.9` | only Postgres driver that works on Workers |
+| `zod` | `^4` | v4 API: `z.strictObject`, `z.email`, `z.url` |
+| `vitest` | `^5` | current major |
+| Node.js | `>=24` | `.node-version`, `.nvmrc`, `engines`, CI floor assertion |
+
+**v16 conventions mandatory across the codebase:** `proxy.ts` (renamed from `middleware.ts`, exports `proxy()`); `params`/`searchParams` are Promises; Cache Components (`cacheComponents: true`, `'use cache'` + `cacheTag`/`cacheLife`, `updateTag`/`revalidateTag`) instead of `experimental.ppr` / `dynamic = 'force-dynamic'` / `fetch(next.tags)` / `unstable_cache`; `next/font` and `next/image`; Node runtime by default; Tailwind v4 via `@tailwindcss/postcss`.
+
+Known risk: Auth.js v5 is a beta and does not document Workers as a first-class target. It should work through `nodejs_compat`; `better-auth` is the recorded fallback if the adapter path breaks in preview.
 
 ## 2. Architecture
 ```

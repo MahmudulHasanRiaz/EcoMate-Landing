@@ -1,6 +1,19 @@
+/**
+ * Legacy prototype data layer.
+ *
+ * `db/schema.ts` is now the single source of truth for the schema (Task 3 of the
+ * Next.js/Cloudflare migration) and it lives at the repo root, so this module points at
+ * it instead of the deleted `./schema`.
+ *
+ * The in-memory `repository` below is no longer reachable from the server — every Express
+ * route that used it was replaced by an `app/api/**` Route Handler that talks to Drizzle
+ * through `db/client.ts`. What still consumes this file is the *type surface* used by the
+ * AdminPanel/api client in `src/`, which is repointed at the Drizzle-inferred types when
+ * the admin surface is ported. Nothing here should be extended.
+ */
 import { drizzle } from 'drizzle-orm/node-postgres';
 import pg from 'pg';
-import * as schema from './schema';
+import * as schema from '../../db/schema';
 
 const { Pool } = pg;
 

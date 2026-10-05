@@ -1,4 +1,15 @@
-import { pgTable, text, serial, timestamp, boolean, integer, jsonb } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+import {
+  pgTable,
+  text,
+  serial,
+  timestamp,
+  boolean,
+  integer,
+  jsonb,
+  check,
+  uniqueIndex,
+} from 'drizzle-orm/pg-core';
 
 // 1. Site Settings Table (Global config, branding, locale defaults, SEO)
 export const siteSettingsTable = pgTable('site_settings', {
@@ -59,7 +70,12 @@ export const pricingPlansTable = pgTable('pricing_plans', {
   sortOrder: integer('sort_order').notNull().default(0),
   isActive: boolean('is_active').notNull().default(true),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
+}, (t) => [
+  // Prices are money: enforce non-negativity in Postgres, not in hopeful JS. App-level
+  // validation is a courtesy; this is the guarantee.
+  check('pricing_plans_monthly_price_non_negative', sql`${t.monthlyPrice} >= 0`),
+  check('pricing_plans_annual_price_non_negative', sql`${t.annualPrice} >= 0`),
+]);
 
 // 4. Leads Management Table
 export const leadsTable = pgTable('leads', {
@@ -100,6 +116,7 @@ export const testimonialsTable = pgTable('testimonials', {
   metrics: jsonb('metrics').default([]), // [{ label, stat }]
   sortOrder: integer('sort_order').notNull().default(0),
   isPublished: boolean('is_published').notNull().default(true),
+  deletedAt: timestamp('deleted_at'), // soft delete (is_published only controls visibility)
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
@@ -126,7 +143,11 @@ export const caseStudiesTable = pgTable('case_studies', {
 // 7. Blog / SEO Articles Table
 export const blogPostsTable = pgTable('blog_posts', {
   id: serial('id').primaryKey(),
-  slug: text('slug').unique().notNull(),
+  // No plain UNIQUE here: uniqueness is enforced by a *partial* unique index on live
+  // slugs (see the table config below), so a soft-deleted post frees its slug for reuse
+  // while every non-deleted slug stays unique. A full unique constraint would make slug
+  // reuse after a soft delete impossible.
+  slug: text('slug').notNull(),
   title: text('title').notNull(),
   excerpt: text('excerpt').notNull(),
   content: text('content').notNull(),
@@ -135,14 +156,21 @@ export const blogPostsTable = pgTable('blog_posts', {
   tags: jsonb('tags').default([]),
   featuredImageUrl: text('featured_image_url').default(''),
   readTime: text('read_time').default('5 min read'),
-  status: text('status').notNull().default('published'), // draft, scheduled, published, archived
+  status: text('status').notNull().default('draft'), // draft, scheduled, published, archived
   seoTitle: text('seo_title').default(''),
   seoDescription: text('seo_description').default(''),
   canonicalUrl: text('canonical_url').default(''),
-  publishedAt: timestamp('published_at').defaultNow(),
+  deletedAt: timestamp('deleted_at'), // soft delete: hard-deleting a live URL is an SEO 404
+  publishedAt: timestamp('published_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
+}, (t) => [
+  uniqueIndex('blog_posts_slug_live_idx').on(t.slug).where(sql`${t.deletedAt} IS NULL`),
+  check(
+    'blog_posts_status_valid',
+    sql`${t.status} IN ('draft', 'scheduled', 'published', 'archived')`,
+  ),
+]);
 
 // 8. Media Library Assets Table
 export const mediaAssetsTable = pgTable('media_assets', {
@@ -152,6 +180,7 @@ export const mediaAssetsTable = pgTable('media_assets', {
   url: text('url').notNull(),
   altText: text('alt_text').default(''),
   category: text('category').notNull().default('general'), // logo, hero, product_ui, customer_logo, og_image
+  deletedAt: timestamp('deleted_at'), // soft delete: the R2 object is only purged when unreferenced
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
@@ -167,3 +196,22 @@ export const integrationLogsTable = pgTable('integration_logs', {
   attempts: integer('attempts').notNull().default(1),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
+
+// 10. Landing Content Table (whole-site, DB-driven, per-locale section payloads)
+// `version` exists for optimistic locking, `status` for draft/publish and `deletedAt` for
+// the soft-delete lifecycle every admin delete uses. The API upserts on
+// (section_key, locale), which is why that pair carries a unique index.
+export const landingContentTable = pgTable('landing_content', {
+  id: serial('id').primaryKey(),
+  sectionKey: text('section_key').notNull(),
+  locale: text('locale').notNull().default('en'),
+  content: jsonb('content').notNull().default({}),
+  status: text('status').notNull().default('published'), // draft | published
+  version: integer('version').notNull().default(1),
+  deletedAt: timestamp('deleted_at'),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('landing_content_section_locale_idx').on(t.sectionKey, t.locale),
+  check('landing_content_status_valid', sql`${t.status} IN ('draft', 'published')`),
+  check('landing_content_version_positive', sql`${t.version} >= 1`),
+]);

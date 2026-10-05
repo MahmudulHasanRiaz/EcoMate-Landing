@@ -96,6 +96,6 @@ Go to **GitHub Repo → Settings → Secrets and variables → Actions** and add
 
 | Secret Name | Value Description |
 |---|---|
-| `CLOUDFLARE_API_TOKEN` | Cloudflare API Token with `Cloudflare Pages: Edit` permissions |
+| `CLOUDFLARE_API_TOKEN` | Cloudflare API Token with Workers/Pages permissions |
 | `CLOUDFLARE_ACCOUNT_ID` | Your 32-character Cloudflare Account ID |
-| `CLOUDFLARE_PROJECT_NAME` | *(Optional, defaults to `ecomate-platform`)* |
+| `CLOUDFLARE_PROJECT_NAME` | *(Defaults to `ecomate-landing`)* |

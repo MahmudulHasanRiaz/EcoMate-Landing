@@ -11,9 +11,9 @@ export const ComplexitySection: React.FC<ComplexitySectionProps> = ({ content, l
   const [selectedProblem, setSelectedProblem] = useState<ProblemItem>(content.complexity.problems[0]);
 
   return (
-    <section id="growth-complexity" className="relative py-12 md:py-24 border-t border-slate-200 dark:border-white/[0.06] bg-slate-50/70 dark:bg-[#080910] transition-colors">
+    <section id="growth-complexity" className="relative py-14 md:py-24 border-t border-slate-200 dark:border-white/[0.06] bg-slate-50/70 dark:bg-[#080910] transition-colors">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        {/* Section Header */}
+        {/* Section Header with Integrated Friction Context */}
         <div className="max-w-3xl">
           <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-rose-600 dark:text-rose-400 mb-2 sm:mb-3">
             <ShieldAlert className="h-3.5 w-3.5" />
@@ -27,41 +27,8 @@ export const ComplexitySection: React.FC<ComplexitySectionProps> = ({ content, l
           </p>
         </div>
 
-        {/* Visual Problem Equation Banner */}
-        <div className="mt-8 sm:mt-10 p-4 sm:p-6 rounded-2xl bg-white dark:bg-[#0C0E1A] border border-slate-200/90 dark:border-white/10 shadow-sm">
-          <p className="text-[11px] sm:text-xs font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mb-3 sm:mb-4">
-            {locale === 'en' ? 'Why Scaling Businesses Hit Operational Walls:' : 'ব্যবসা বৃদ্ধির সাথে সাথে অপারেশন জটিল হওয়ার মূল কারণ:'}
-          </p>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-2 sm:gap-3 items-center text-center">
-            <div className="p-2.5 sm:p-3 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/[0.04]">
-              <span className="text-xs sm:text-sm font-bold text-slate-800 dark:text-white block">
-                {locale === 'en' ? 'Fragmented Tools' : 'আলাদা আলাদা টুলস'}
-              </span>
-              <span className="text-[10px] text-slate-500 mt-0.5 block">{locale === 'en' ? 'Apps do not talk' : 'সংযোগহীন সফটওয়্যার'}</span>
-            </div>
-
-            <div className="hidden md:flex items-center justify-center font-bold text-slate-400 text-lg">+</div>
-
-            <div className="p-2.5 sm:p-3 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/[0.04]">
-              <span className="text-xs sm:text-sm font-bold text-slate-800 dark:text-white block">
-                {locale === 'en' ? 'Manual Work' : 'ম্যানুয়াল কাজ'}
-              </span>
-              <span className="text-[10px] text-slate-500 mt-0.5 block">{locale === 'en' ? 'Paper & spreadsheets' : 'খাতা ও এক্সেল শিট'}</span>
-            </div>
-
-            <div className="hidden md:flex items-center justify-center font-bold text-slate-400 text-lg">+</div>
-
-            <div className="p-2.5 sm:p-3 rounded-xl bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-500/20 col-span-2 md:col-span-1">
-              <span className="text-xs sm:text-sm font-bold text-rose-700 dark:text-rose-400 block">
-                {locale === 'en' ? 'Costly Mistakes' : 'ভুল ও ডেলিভারি লস'}
-              </span>
-              <span className="text-[10px] text-rose-600/80 dark:text-rose-400/80 mt-0.5 block">{locale === 'en' ? 'Fake orders & packing' : 'ভুল সাইজ ও রিটার্ন'}</span>
-            </div>
-          </div>
-        </div>
-
         {/* Visual Architectural Contrast: Disconnected Chaos vs Unified Control */}
-        <div className="mt-8 sm:mt-12 rounded-2xl border border-slate-200 dark:border-white/10 bg-white/60 dark:bg-[#0B0D18]/80 backdrop-blur-xl p-5 sm:p-8 shadow-sm">
+        <div className="mt-8 sm:mt-12 rounded-2xl border border-slate-200 dark:border-white/10 bg-white/70 dark:bg-[#0B0D18]/90 backdrop-blur-xl p-5 sm:p-8 shadow-sm">
           <div className="text-center max-w-2xl mx-auto mb-6 sm:mb-8">
             <span className="text-[11px] sm:text-xs font-mono font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
               {locale === 'en' ? 'Operational Architecture Comparison' : 'অপারেশনাল আর্কিটেকচার তুলনা'}

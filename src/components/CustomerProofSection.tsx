@@ -51,16 +51,19 @@ export const CustomerProofSection: React.FC<CustomerProofProps> = ({ content, lo
                     {featuredStudy.businessName}
                   </h3>
 
-                  <blockquote className="text-sm sm:text-base text-slate-700 dark:text-slate-300 italic leading-relaxed">
-                    "{featuredStudy.quote}"
-                  </blockquote>
+                  <div className="relative pl-6 border-l-2 border-indigo-400 dark:border-indigo-500/60 my-2">
+                    <span className="absolute -left-2.5 -top-2 text-3xl font-serif text-indigo-400 dark:text-indigo-500 select-none">“</span>
+                    <blockquote className="text-base sm:text-lg text-slate-800 dark:text-slate-200 italic font-serif leading-relaxed">
+                      {featuredStudy.quote}
+                    </blockquote>
+                  </div>
 
-                  <div>
-                    <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                  <div className="pt-2">
+                    <p className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
                       {featuredStudy.founderName}
                     </p>
-                    <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
-                      {featuredStudy.role}, {featuredStudy.businessName}
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      {featuredStudy.role}, {featuredStudy.businessName} · Operating since 2021
                     </p>
                   </div>
 

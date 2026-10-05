@@ -30,7 +30,7 @@ export const FinalConversionSection: React.FC<FinalConversionProps> = ({ content
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
 
@@ -49,11 +49,31 @@ export const FinalConversionSection: React.FC<FinalConversionProps> = ({ content
     }
 
     setIsSubmitting(true);
-    // Simulate real network submission to lead API endpoint
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      const response = await fetch('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name.trim(),
+          phone: formData.phone.trim(),
+          email: formData.email.trim(),
+          dailyVolume: formData.volume,
+          note: formData.note.trim(),
+          source: 'landing_page_lead_form',
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || (locale === 'en' ? 'Submission error. Please try again or call directly.' : 'অনুরোধটি ব্যর্থ হয়েছে। আবার চেষ্টা করুন বা সরাসরি কল করুন।'));
+      }
+
       setIsSubmitted(true);
-    }, 900);
+    } catch (err: any) {
+      setFormError(err.message || (locale === 'en' ? 'Submission failed. Please call or WhatsApp us directly.' : 'অনুরোধটি পাঠানো সম্ভব হয়নি। সরাসরি ফোন বা হোয়াটসঅ্যাপে যোগাযোগ করুন।'));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

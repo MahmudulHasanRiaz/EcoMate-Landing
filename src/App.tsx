@@ -27,11 +27,13 @@ import { FinalConversionSection } from './components/FinalConversionSection';
 import { Footer } from './components/Footer';
 import { MobileStickyBar } from './components/MobileStickyBar';
 import { PrototypeController } from './components/PrototypeController';
+import { AdminPanel } from './components/admin/AdminPanel';
 
 export default function App() {
   const [locale, setLocale] = useState<Locale>('en');
   const [theme, setTheme] = useState<Theme>('light');
   const [isPricingVisible, setIsPricingVisible] = useState<boolean>(true);
+  const [isAdminOpen, setIsAdminOpen] = useState<boolean>(false);
 
   const content = landingContent[locale];
 
@@ -143,7 +145,17 @@ export default function App() {
         onTogglePricingMode={handleTogglePricingMode}
         theme={theme}
         onToggleTheme={handleToggleTheme}
+        onOpenAdmin={() => setIsAdminOpen(true)}
       />
+
+      {/* Full-Stack EcoMate CMS & Database Admin Modal */}
+      {isAdminOpen && (
+        <AdminPanel
+          onClose={() => setIsAdminOpen(false)}
+          locale={locale}
+          theme={theme}
+        />
+      )}
     </div>
   );
 }

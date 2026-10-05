@@ -2,14 +2,19 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-@layer base {
-  :root {
-    --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    --font-serif: 'Instrument Serif', Georgia, serif;
-    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    --font-bn: 'Hind Siliguri', 'Plus Jakarta Sans', sans-serif;
-  }
+/* next/font self-hosts the families and defines --font-sans / --font-serif /
+   --font-bangla / --font-mono as CSS variables on <html> (see app/layout.tsx).
+   `@theme inline` maps the Tailwind font utilities onto those variables with
+   system fallbacks, inlining the stack into each utility so there is no
+   second --font-sans declaration on :root competing with next/font's. */
+@theme inline {
+  --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-serif), ui-serif, Georgia, serif;
+  --font-bangla: var(--font-bangla), var(--font-sans), sans-serif;
+  --font-mono: var(--font-mono), ui-monospace, monospace;
+}
 
+@layer base {
   body {
     font-family: var(--font-sans);
     overflow-x: hidden;
@@ -21,11 +26,6 @@
   /* Floating header offset: anchors land below the glass pill, not under it */
   section[id] {
     scroll-margin-top: 84px;
-  }
-
-  /* Hard clip for any stray wide decoration on small viewports */
-  #root {
-    overflow-x: clip;
   }
 
   /* Designed light system: indigo-tinted paper, not flat inversion.
@@ -56,7 +56,7 @@ html.dark body {
 }
 
 .font-bangla {
-  font-family: var(--font-bn);
+  font-family: var(--font-bangla);
 }
 
 /* Custom scrollbars */
@@ -85,4 +85,3 @@ html.dark ::-webkit-scrollbar-thumb {
 html.dark ::-webkit-scrollbar-thumb:hover {
   background: #334155;
 }
-

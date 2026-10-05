@@ -29,13 +29,11 @@ import { FinalConversionSection } from '@/src/components/FinalConversionSection'
 import { Footer } from '@/src/components/Footer';
 import { MobileStickyBar } from '@/src/components/MobileStickyBar';
 import { PrototypeController } from '@/src/components/PrototypeController';
-import { AdminPanel } from '@/src/components/admin/AdminPanel';
 
 export default function App() {
   const [locale, setLocale] = useState<Locale>('en');
   const [theme, setTheme] = useState<Theme>('light');
   const [isPricingVisible, setIsPricingVisible] = useState<boolean>(true);
-  const [isAdminOpen, setIsAdminOpen] = useState<boolean>(false);
 
   const content = landingContent[locale];
 
@@ -139,7 +137,9 @@ export default function App() {
       {/* Mobile-Only Persistent Sticky Conversion Bar (< 15% Viewport Height) */}
       <MobileStickyBar content={content} locale={locale} />
 
-      {/* Floating Evaluation Controller for Prototype Reviewers */}
+      {/* Floating Evaluation Controller for Prototype Reviewers. Its admin entry point now
+          navigates to the session-gated /admin route (Auth.js) instead of opening the old
+          client-side modal. */}
       <PrototypeController
         locale={locale}
         onToggleLocale={handleToggleLocale}
@@ -147,17 +147,7 @@ export default function App() {
         onTogglePricingMode={handleTogglePricingMode}
         theme={theme}
         onToggleTheme={handleToggleTheme}
-        onOpenAdmin={() => setIsAdminOpen(true)}
       />
-
-      {/* Full-Stack EcoMate CMS & Database Admin Modal */}
-      {isAdminOpen && (
-        <AdminPanel
-          onClose={() => setIsAdminOpen(false)}
-          locale={locale}
-          theme={theme}
-        />
-      )}
     </div>
   );
 }

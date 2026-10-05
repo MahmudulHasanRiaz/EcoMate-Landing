@@ -8,6 +8,8 @@ import {
   integer,
   jsonb,
   check,
+  index,
+  primaryKey,
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
 
@@ -214,4 +216,90 @@ export const landingContentTable = pgTable('landing_content', {
   uniqueIndex('landing_content_section_locale_idx').on(t.sectionKey, t.locale),
   check('landing_content_status_valid', sql`${t.status} IN ('draft', 'published')`),
   check('landing_content_version_positive', sql`${t.version} >= 1`),
+]);
+
+// 12. Admin Users (operator identity + RBAC). Deliberately separate from Auth.js' `users`
+// table: this one owns email + password hash + role and is keyed by a serial id, while
+// Auth.js' `users` owns the session linkage and is keyed by text id. `auth.ts` joins the
+// two on email.
+export const adminUsersTable = pgTable('admin_users', {
+  id: serial('id').primaryKey(),
+  email: text('email').unique().notNull(),
+  passwordHash: text('password_hash').notNull(), // "pbkdf2$600000$salt$hash"
+  role: text('role').notNull().default('editor'), // superadmin | admin | editor
+  isActive: boolean('is_active').notNull().default(true),
+  lastLoginAt: timestamp('last_login_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  check('admin_users_role_valid', sql`${t.role} IN ('superadmin', 'admin', 'editor')`),
+]);
+
+// 13. Admin Audit Log (logins, lockouts and every user-management mutation). The actor FK
+// is SET NULL, never CASCADE: deleting an operator must not erase the history of what
+// they did.
+export const adminAuditLogsTable = pgTable('admin_audit_logs', {
+  id: serial('id').primaryKey(),
+  actorId: integer('actor_id').references(() => adminUsersTable.id, { onDelete: 'set null' }),
+  action: text('action').notNull(), // LOGIN_OK, LOGIN_FAIL, LOGIN_LOCKED, USER_CREATE, USER_DEACTIVATE, PASSWORD_RESET, ROLE_CHANGE, SETUP_SUPERADMIN, SESSION_REVOKE
+  target: text('target').default(''),
+  ip: text('ip').default(''),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  // Both login guards query `action = 'LOGIN_FAIL' AND <identity> AND created_at > now-n`:
+  // one by email (per-account lockout), one by ip (per-client throttle).
+  index('admin_audit_logs_target_created_idx').on(t.action, t.target, t.createdAt),
+  index('admin_audit_logs_ip_created_idx').on(t.action, t.ip, t.createdAt),
+]);
+
+// 14. Auth.js identity tables. Written by hand on purpose: `DrizzleAdapter` takes an
+// explicit table map and will not infer these. Column *names* must match what Auth.js
+// queries (camelCase, quoted) — renaming them silently breaks the adapter.
+//
+// `sessions` doubles as this application's session registry (auth.ts issues the opaque
+// token at sign-in), which is why it also records ip / userAgent / createdAt: the
+// `/api/admin/users/[id]/sessions` view needs them to show revocable sessions.
+export const usersTable = pgTable('users', {
+  id: text('id').primaryKey(),
+  name: text('name'),
+  email: text('email').unique(),
+  emailVerified: timestamp('emailVerified'),
+  image: text('image'),
+});
+
+export const accountsTable = pgTable('accounts', {
+  userId: text('userId').notNull().references(() => usersTable.id, { onDelete: 'cascade' }),
+  type: text('type').notNull(),
+  provider: text('provider').notNull(),
+  providerAccountId: text('providerAccountId').notNull(),
+  refresh_token: text('refresh_token'),
+  access_token: text('access_token'),
+  expires_at: integer('expires_at'),
+  token_type: text('token_type'),
+  scope: text('scope'),
+  id_token: text('id_token'),
+  session_state: text('session_state'),
+}, (t) => [
+  primaryKey({ columns: [t.provider, t.providerAccountId] }),
+]);
+
+export const sessionsTable = pgTable('sessions', {
+  sessionToken: text('sessionToken').primaryKey(),
+  userId: text('userId').notNull().references(() => usersTable.id, { onDelete: 'cascade' }),
+  expires: timestamp('expires').notNull(),
+  ip: text('ip').notNull().default(''),
+  userAgent: text('user_agent').notNull().default(''),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+}, (t) => [
+  // Task 16's retention cron sweeps on `expires`; the admin session list filters on userId.
+  index('sessions_expires_idx').on(t.expires),
+  index('sessions_user_idx').on(t.userId),
+]);
+
+export const verificationTokensTable = pgTable('verification_tokens', {
+  identifier: text('identifier').notNull(),
+  token: text('token').notNull(),
+  expires: timestamp('expires').notNull(),
+}, (t) => [
+  primaryKey({ columns: [t.identifier, t.token] }),
 ]);

@@ -53,6 +53,13 @@ declare global {
     NEXT_PUBLIC_DEFAULT_LOCALE?: string;
     NEXT_PUBLIC_META_PIXEL_ID?: string;
     NEXT_PUBLIC_TURNSTILE_SITE_KEY?: string;
+    /**
+     * Host-header trust switch for Auth.js. `"true"` only on our own deployments: Auth.js
+     * refuses to derive its origin from an untrusted Host header, and a bare
+     * `trustHost: true` in code would accept *any* Host (host-header injection /
+     * cache-poisoning primitive).
+     */
+    AUTH_TRUST_HOST?: string;
 
     // --- Secrets (`npx wrangler secret put <NAME>`) ---
     LICENSE_PORTAL_API_BASE_URL?: string;

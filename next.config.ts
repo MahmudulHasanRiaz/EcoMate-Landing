@@ -14,6 +14,27 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [{ protocol: 'https', hostname: 'media.ecomate.app' }],
   },
+  /**
+   * Admin HTML must never be stored by a browser or an intermediary: a cached `/admin`
+   * document handed to the next user on a shared machine is a credential leak.
+   *
+   * `proxy.ts` also sets this on the middleware response, but Next overwrites
+   * `Cache-Control` when it renders a dynamic page, so the router-level header is what
+   * actually lands on the response (verified: `/admin` and `/admin/login` both return
+   * `no-store, private`). The two together also cover API responses.
+   */
+  async headers() {
+    return [
+      {
+        source: '/admin/:path*',
+        headers: [{ key: 'Cache-Control', value: 'no-store, private' }],
+      },
+      {
+        source: '/api/admin/:path*',
+        headers: [{ key: 'Cache-Control', value: 'no-store, private' }],
+      },
+    ];
+  },
   typedRoutes: true,
 };
 export default nextConfig;

@@ -17,6 +17,9 @@ import { getCloudflareContext } from '@opennextjs/cloudflare';
 
 /** Every binding/secret this module is allowed to read. Extend when adding a new one. */
 export type CloudflareEnvKey =
+  | 'AUTH_SECRET'
+  | 'AUTH_TRUST_HOST'
+  | 'SETUP_TOKEN'
   | 'LICENSE_PORTAL_API_BASE_URL'
   | 'LICENSE_PORTAL_API_KEY'
   | 'NEXT_PUBLIC_SITE_URL'

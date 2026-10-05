@@ -9,7 +9,6 @@ interface PrototypeControllerProps {
   onTogglePricingMode: () => void;
   theme: Theme;
   onToggleTheme: () => void;
-  onOpenAdmin?: () => void;
 }
 
 export const PrototypeController: React.FC<PrototypeControllerProps> = ({
@@ -19,7 +18,6 @@ export const PrototypeController: React.FC<PrototypeControllerProps> = ({
   onTogglePricingMode,
   theme,
   onToggleTheme,
-  onOpenAdmin,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -95,21 +93,19 @@ export const PrototypeController: React.FC<PrototypeControllerProps> = ({
               </button>
             </div>
 
-            {/* EcoMate Full-Stack Admin CMS Launch Button */}
-            {onOpenAdmin && (
-              <div className="pt-2 border-t border-slate-200 dark:border-white/[0.08]">
-                <button
-                  onClick={() => {
-                    setIsOpen(false);
-                    onOpenAdmin();
-                  }}
-                  className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:brightness-105 text-white font-bold flex items-center justify-center gap-2 text-xs shadow-md shadow-indigo-300/40 cursor-pointer transition-all"
-                >
-                  <LayoutDashboard className="h-4 w-4" />
-                  <span>Open EcoMate Admin CMS</span>
-                </button>
-              </div>
-            )}
+            {/* EcoMate Admin — a real, session-gated route (Auth.js), not a client modal.
+                A plain <a> is deliberate: /admin is a separate document with its own
+                no-store headers, so a client-side transition buys nothing. */}
+            <div className="pt-2 border-t border-slate-200 dark:border-white/[0.08]">
+              <a
+                href="/admin"
+                onClick={() => setIsOpen(false)}
+                className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:brightness-105 text-white font-bold flex items-center justify-center gap-2 text-xs shadow-md shadow-indigo-300/40 cursor-pointer transition-all"
+              >
+                <LayoutDashboard className="h-4 w-4" />
+                <span>Open EcoMate Admin</span>
+              </a>
+            </div>
 
             <div className="pt-1 text-[10px] text-slate-500 dark:text-slate-400 leading-normal">
               Full-Stack PostgreSQL Drizzle ORM ready with persistent schema, lead pipeline & live CMS.

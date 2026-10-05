@@ -34,7 +34,7 @@ export const Hero: React.FC<HeroProps> = ({ content, locale }) => {
   };
 
   return (
-    <section className="relative overflow-hidden pt-6 pb-16 sm:pt-12 sm:pb-20 md:pt-20 md:pb-28">
+    <section className="relative overflow-hidden pt-4 pb-12 sm:pt-12 sm:pb-20 md:pt-20 md:pb-28">
       {/* Ambient background glows matching reference design with light/dark adaptability */}
       <div 
         className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 w-[700px] h-[550px] md:w-[1100px] md:h-[650px] rounded-full blur-[140px] opacity-20 dark:opacity-25"
@@ -51,10 +51,10 @@ export const Hero: React.FC<HeroProps> = ({ content, locale }) => {
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Editorial Pill Sub-badge */}
-        <div className="flex justify-center mb-3 sm:mb-6">
-          <div className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full border border-indigo-200 dark:border-indigo-500/30 bg-indigo-50/90 dark:bg-indigo-500/10 px-3.5 py-1 text-xs font-semibold text-indigo-700 dark:text-indigo-300 shadow-sm backdrop-blur-md">
-            <Sparkles className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
-            <span>{content.hero.badge}</span>
+        <div className="flex justify-center mb-2.5 sm:mb-6">
+          <div className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full border border-indigo-200 dark:border-indigo-500/30 bg-indigo-50/90 dark:bg-indigo-500/10 px-3 py-0.5 sm:py-1 text-[11px] sm:text-xs font-semibold text-indigo-700 dark:text-indigo-300 shadow-xs backdrop-blur-md">
+            <Sparkles className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+            <span className="truncate max-w-[280px] sm:max-w-none">{content.hero.badge}</span>
           </div>
         </div>
 
@@ -68,38 +68,41 @@ export const Hero: React.FC<HeroProps> = ({ content, locale }) => {
             {content.hero.headlinePart2}
           </h1>
 
-          <p className="mt-3.5 sm:mt-5 text-sm sm:text-lg md:text-xl text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl mx-auto text-balance">
+          <p className="mt-2.5 sm:mt-5 text-sm sm:text-lg md:text-xl text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl mx-auto text-balance">
             {content.hero.subtitle}
           </p>
 
-          {/* Primary & Secondary CTAs - Dedicated Elevated Layer for Mobile & Desktop */}
-          <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 relative z-30 isolate w-full max-w-md sm:max-w-none mx-auto">
+          {/* Primary & Secondary CTAs - Clean Mobile-First Layout */}
+          <div className="mt-5 sm:mt-8 flex flex-col sm:flex-row items-center justify-center gap-2.5 sm:gap-4 relative z-30 isolate w-full max-w-xs sm:max-w-none mx-auto">
             <a
               href="#lead-form"
               onClick={scrollToLead}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 via-indigo-600 to-purple-600 px-6 sm:px-8 py-3.5 text-sm sm:text-base font-semibold text-white shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer focus-visible:ring-2 focus-visible:ring-indigo-500 shrink-0"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 via-indigo-600 to-purple-600 px-6 sm:px-8 py-3 sm:py-3.5 text-sm sm:text-base font-semibold text-white shadow-md shadow-indigo-500/25 hover:shadow-indigo-500/40 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer focus-visible:ring-2 focus-visible:ring-indigo-500 shrink-0"
             >
               <span>{content.hero.primaryCta}</span>
               <ArrowRight className="h-4 w-4" />
             </a>
 
             <a
-              href="#tour"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 dark:border-white/15 bg-white dark:bg-white/[0.04] px-6 py-3.5 text-sm sm:text-base font-medium text-slate-700 dark:text-slate-200 shadow-sm backdrop-blur-md transition-all hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white cursor-pointer shrink-0"
+              href="https://wa.me/8801894828290?text=Hello%20EcoMate%20Team%2C%20I%20am%20interested%20in%20a%20demo%20for%20my%20ecommerce%20operation."
+              target="_blank"
+              rel="noreferrer"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 dark:border-white/15 bg-white dark:bg-white/[0.04] px-5 sm:px-7 py-3 sm:py-3.5 text-sm sm:text-base font-medium text-slate-700 dark:text-slate-200 shadow-xs backdrop-blur-md transition-all hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white cursor-pointer shrink-0"
             >
-              <span>{content.hero.secondaryCta}</span>
+              <MessageCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              <span>{locale === 'en' ? 'WhatsApp Sales' : 'হোয়াটসঅ্যাপে কথা বলুন'}</span>
             </a>
           </div>
 
           {/* Direct WhatsApp / Messenger / Phone Conversion Paths */}
-          <div className="mt-4 sm:mt-6 flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-xs text-slate-600 dark:text-slate-400">
+          <div className="mt-3.5 sm:mt-6 flex flex-wrap items-center justify-center gap-2.5 sm:gap-6 text-xs text-slate-600 dark:text-slate-400">
             <a
               href="https://wa.me/8801894828290?text=Hello%20EcoMate%20Team%2C%20I%20am%20interested%20in%20a%20demo%20for%20my%20ecommerce%20operation."
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 hover:underline transition-colors font-medium"
             >
-              <MessageCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              <MessageCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-600 dark:text-emerald-400" />
               <span>{content.hero.contactOptions.whatsappText}</span>
             </a>
             <span className="text-slate-300 dark:text-slate-600 hidden sm:inline">·</span>
@@ -107,34 +110,34 @@ export const Hero: React.FC<HeroProps> = ({ content, locale }) => {
               href="https://m.me/ecomate.app"
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1.5 text-indigo-700 dark:text-indigo-400 hover:underline transition-colors font-medium"
+              className="hidden sm:inline-flex items-center gap-1.5 text-indigo-700 dark:text-indigo-400 hover:underline transition-colors font-medium"
             >
               <span className="h-2 w-2 rounded-full bg-indigo-600 dark:bg-indigo-400" />
               <span>{content.hero.contactOptions.messengerText}</span>
             </a>
-            <span className="text-slate-300 dark:text-slate-600 hidden sm:inline">·</span>
+            <span className="text-slate-300 dark:text-slate-600">·</span>
             <a
               href="tel:+8801894828290"
               className="inline-flex items-center gap-1.5 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors"
             >
-              <PhoneCall className="h-4 w-4 text-slate-500 dark:text-slate-300" />
+              <PhoneCall className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-slate-500 dark:text-slate-300" />
               <span className="font-mono-numbers font-medium">{content.hero.contactOptions.callText}</span>
             </a>
           </div>
 
-          {/* Trust proof indicators */}
-          <div className="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-slate-200 dark:border-white/[0.06] grid grid-cols-3 gap-2 sm:gap-6 max-w-xl mx-auto text-center">
+          {/* Trust proof indicators - compact on mobile */}
+          <div className="mt-4 sm:mt-8 pt-3 sm:pt-6 border-t border-slate-200/80 dark:border-white/[0.06] grid grid-cols-3 gap-1 sm:gap-6 max-w-xl mx-auto text-center">
             <div>
-              <p className="text-base sm:text-2xl font-bold text-slate-900 dark:text-white font-mono-numbers">{content.hero.trustProof.stat1}</p>
-              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5">{content.hero.trustProof.stat1Label}</p>
+              <p className="text-sm sm:text-2xl font-bold text-slate-900 dark:text-white font-mono-numbers">{content.hero.trustProof.stat1}</p>
+              <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-tight">{content.hero.trustProof.stat1Label}</p>
             </div>
             <div className="border-x border-slate-200 dark:border-white/[0.08]">
-              <p className="text-base sm:text-2xl font-bold text-slate-900 dark:text-white font-mono-numbers">{content.hero.trustProof.stat2}</p>
-              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5">{content.hero.trustProof.stat2Label}</p>
+              <p className="text-sm sm:text-2xl font-bold text-slate-900 dark:text-white font-mono-numbers">{content.hero.trustProof.stat2}</p>
+              <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-tight">{content.hero.trustProof.stat2Label}</p>
             </div>
             <div>
-              <p className="text-base sm:text-2xl font-bold text-slate-900 dark:text-white font-mono-numbers">{content.hero.trustProof.stat3}</p>
-              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5">{content.hero.trustProof.stat3Label}</p>
+              <p className="text-sm sm:text-2xl font-bold text-slate-900 dark:text-white font-mono-numbers">{content.hero.trustProof.stat3}</p>
+              <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-tight">{content.hero.trustProof.stat3Label}</p>
             </div>
           </div>
         </div>

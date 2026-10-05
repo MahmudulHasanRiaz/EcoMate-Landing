@@ -20,114 +20,98 @@ export const LossPreventionSection: React.FC<LossPreventionProps> = ({ content, 
   const estimatedSavings = Math.round(estimatedMonthlyLoss * 0.82);
 
   return (
-    <section id="loss-prevention" className="relative py-20 md:py-28 border-t border-slate-200 dark:border-white/[0.06] bg-slate-50/50 dark:bg-[#080911] transition-colors">
+    <section id="loss-prevention" className="relative py-14 md:py-24 border-t border-slate-200 dark:border-white/[0.06] bg-slate-50/50 dark:bg-[#080911] transition-colors">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="max-w-3xl">
-          <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 mb-3">
+          <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 mb-2 sm:mb-3">
             <ShieldCheck className="h-3.5 w-3.5" />
             <span>{content.lossPrevention.eyebrow}</span>
           </div>
           <h2 className="text-2xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-white leading-tight text-balance">
             {content.lossPrevention.heading}
           </h2>
-          <p className="mt-4 text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed text-balance">
+          <p className="mt-2.5 sm:mt-4 text-sm sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed text-balance">
             {content.lossPrevention.subheading}
           </p>
         </div>
 
         {/* Two Concrete Business-Value Narratives */}
-        <div className="mt-12 grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="mt-8 sm:mt-12 grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
           {/* Packing Mistake Narrative */}
-          <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1A] p-6 sm:p-8 flex flex-col justify-between shadow-lg shadow-slate-200/50 dark:shadow-none">
+          <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1A] p-5 sm:p-8 flex flex-col justify-between shadow-sm">
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-semibold uppercase tracking-wider text-rose-700 dark:text-rose-400 flex items-center gap-1.5">
-                  <AlertTriangle className="h-4 w-4 text-rose-600 dark:text-rose-400" />
+              <div className="flex items-center justify-between mb-3.5">
+                <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-rose-700 dark:text-rose-400 flex items-center gap-1.5">
+                  <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-rose-600 dark:text-rose-400" />
                   <span>The Preventable Packing Leak</span>
                 </span>
-                <span className="font-mono text-xs text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-500/10 px-2.5 py-1 rounded-full border border-rose-200 dark:border-rose-500/20 font-semibold">
+                <span className="font-mono text-[11px] sm:text-xs text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-500/10 px-2.5 py-0.5 sm:py-1 rounded-full border border-rose-200 dark:border-rose-500/20 font-semibold">
                   {content.lossPrevention.packingStory.mistakeCost}
                 </span>
               </div>
 
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
+              <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mb-2">
                 {content.lossPrevention.packingStory.mistakeHeading}
               </h3>
 
-              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/[0.04] mb-4 text-xs text-slate-700 dark:text-slate-300 space-y-1.5">
-                <p className="text-slate-500 dark:text-slate-400 font-medium">The Anatomy of a Wrong Size Dispatch:</p>
-                <p className="flex items-center gap-2 text-rose-700 dark:text-rose-300">
-                  <span>1. Wrong SKU packed (Size 41 instead of 42)</span>
-                </p>
-                <p className="flex items-center gap-2 text-rose-700 dark:text-rose-300">
-                  <span>2. Customer rejects parcel at doorstep</span>
-                </p>
-                <p className="flex items-center gap-2 text-rose-700 dark:text-rose-300">
-                  <span>3. You pay forward delivery fee + return transit fee</span>
-                </p>
-                <p className="flex items-center gap-2 text-rose-700 dark:text-rose-300">
-                  <span>4. Capital blocked for 10-14 days while parcel returns</span>
-                </p>
+              <div className="p-3 sm:p-3.5 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/[0.04] mb-3.5 text-xs text-slate-700 dark:text-slate-300 space-y-1">
+                <p className="text-slate-500 dark:text-slate-400 font-medium text-[11px]">The Chain Reaction of a Wrong Size Dispatch:</p>
+                <p className="text-rose-700 dark:text-rose-300">1. Wrong SKU packed (Size 41 instead of 42)</p>
+                <p className="text-rose-700 dark:text-rose-300">2. Customer rejects parcel at doorstep</p>
+                <p className="text-rose-700 dark:text-rose-300">3. Merchant pays forward + return delivery fees</p>
+                <p className="text-rose-700 dark:text-rose-300">4. Capital blocked for 10-14 days while parcel returns</p>
               </div>
 
-              <h4 className="text-sm font-semibold text-emerald-700 dark:text-emerald-400 mt-4 flex items-center gap-2">
+              <h4 className="text-xs sm:text-sm font-semibold text-emerald-700 dark:text-emerald-400 mt-3 flex items-center gap-1.5">
                 <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                 <span>{content.lossPrevention.packingStory.solutionHeading}</span>
               </h4>
-              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+              <p className="mt-1 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
                 {content.lossPrevention.packingStory.solutionDetail}
               </p>
             </div>
 
-            <div className="mt-6 pt-4 border-t border-slate-100 dark:border-white/[0.06] text-xs text-slate-500 dark:text-slate-400 font-medium">
+            <div className="mt-5 pt-3.5 border-t border-slate-100 dark:border-white/[0.06] text-xs text-slate-500 dark:text-slate-400 font-medium">
               Outcome: Zero wrong shipments reach the courier truck.
             </div>
           </div>
 
           {/* Courier Return Fraud Narrative */}
-          <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1A] p-6 sm:p-8 flex flex-col justify-between shadow-lg shadow-slate-200/50 dark:shadow-none">
+          <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1A] p-5 sm:p-8 flex flex-col justify-between shadow-sm">
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-semibold uppercase tracking-wider text-rose-700 dark:text-rose-400 flex items-center gap-1.5">
-                  <AlertTriangle className="h-4 w-4 text-rose-600 dark:text-rose-400" />
+              <div className="flex items-center justify-between mb-3.5">
+                <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-rose-700 dark:text-rose-400 flex items-center gap-1.5">
+                  <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-rose-600 dark:text-rose-400" />
                   <span>The Serial Returner Drain</span>
                 </span>
-                <span className="font-mono text-xs text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-500/10 px-2.5 py-1 rounded-full border border-rose-200 dark:border-rose-500/20 font-semibold">
+                <span className="font-mono text-[11px] sm:text-xs text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-500/10 px-2.5 py-0.5 sm:py-1 rounded-full border border-rose-200 dark:border-rose-500/20 font-semibold">
                   {content.lossPrevention.fraudStory.fakeOrderCost}
                 </span>
               </div>
 
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
+              <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mb-2">
                 {content.lossPrevention.fraudStory.fakeOrderHeading}
               </h3>
 
-              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/[0.04] mb-4 text-xs text-slate-700 dark:text-slate-300 space-y-1.5">
-                <p className="text-slate-500 dark:text-slate-400 font-medium">The Cost of Blind Dispatch:</p>
-                <p className="flex items-center gap-2 text-rose-700 dark:text-rose-300">
-                  <span>1. Impulsive buyer places COD order with no intent to receive</span>
-                </p>
-                <p className="flex items-center gap-2 text-rose-700 dark:text-rose-300">
-                  <span>2. Dispatched blindly without delivery history check</span>
-                </p>
-                <p className="flex items-center gap-2 text-rose-700 dark:text-rose-300">
-                  <span>3. Customer phone switched off upon delivery attempt</span>
-                </p>
-                <p className="flex items-center gap-2 text-rose-700 dark:text-rose-300">
-                  <span>4. Merchant pays full courier return cost with zero sale</span>
-                </p>
+              <div className="p-3 sm:p-3.5 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/[0.04] mb-3.5 text-xs text-slate-700 dark:text-slate-300 space-y-1">
+                <p className="text-slate-500 dark:text-slate-400 font-medium text-[11px]">The Cost of Blind Dispatch:</p>
+                <p className="text-rose-700 dark:text-rose-300">1. Impulsive buyer places COD order without intent</p>
+                <p className="text-rose-700 dark:text-rose-300">2. Dispatched blindly without delivery history check</p>
+                <p className="text-rose-700 dark:text-rose-300">3. Customer phone switched off upon delivery attempt</p>
+                <p className="text-rose-700 dark:text-rose-300">4. Merchant absorbs full courier return cost with zero sale</p>
               </div>
 
-              <h4 className="text-sm font-semibold text-emerald-700 dark:text-emerald-400 mt-4 flex items-center gap-2">
+              <h4 className="text-xs sm:text-sm font-semibold text-emerald-700 dark:text-emerald-400 mt-3 flex items-center gap-1.5">
                 <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                 <span>{content.lossPrevention.fraudStory.solutionHeading}</span>
               </h4>
-              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+              <p className="mt-1 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
                 {content.lossPrevention.fraudStory.solutionDetail}
               </p>
             </div>
 
-            <div className="mt-6 pt-4 border-t border-slate-100 dark:border-white/[0.06] text-xs text-slate-500 dark:text-slate-400 font-medium">
+            <div className="mt-5 pt-3.5 border-t border-slate-100 dark:border-white/[0.06] text-xs text-slate-500 dark:text-slate-400 font-medium">
               Outcome: Mandatory advance delivery charge on serial cancelers.
             </div>
           </div>

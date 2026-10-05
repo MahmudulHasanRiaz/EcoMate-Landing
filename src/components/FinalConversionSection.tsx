@@ -77,7 +77,7 @@ export const FinalConversionSection: React.FC<FinalConversionProps> = ({ content
   };
 
   return (
-    <section id="lead-form" className="relative py-20 md:py-28 border-t border-slate-200 dark:border-white/[0.06] bg-slate-50/50 dark:bg-[#07080E] overflow-hidden transition-colors">
+    <section id="lead-form" className="relative py-14 md:py-24 border-t border-slate-200 dark:border-white/[0.06] bg-slate-50/50 dark:bg-[#07080E] overflow-hidden transition-colors">
       {/* Background glowing aura */}
       <div 
         className="pointer-events-none absolute -bottom-20 left-1/2 -translate-x-1/2 w-[700px] h-[500px] rounded-full blur-[140px] opacity-15 dark:opacity-25"
@@ -87,24 +87,24 @@ export const FinalConversionSection: React.FC<FinalConversionProps> = ({ content
       />
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 sm:gap-12 items-center">
           {/* Left Column: Direct Call & Conversions (col-span-5) */}
-          <div className="lg:col-span-5 space-y-6">
-            <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+          <div className="lg:col-span-5 space-y-4 sm:space-y-6">
+            <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
               <Sparkles className="h-3.5 w-3.5" />
               <span>{content.leadForm.eyebrow}</span>
             </div>
 
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-slate-900 dark:text-white leading-tight text-balance">
+            <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold tracking-tight text-slate-900 dark:text-white leading-tight text-balance">
               {content.leadForm.heading}
             </h2>
 
-            <p className="text-base text-slate-600 dark:text-slate-300 leading-relaxed text-balance">
+            <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed text-balance">
               {content.leadForm.subheading}
             </p>
 
-            <div className="pt-4 space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            <div className="pt-2 sm:pt-4 space-y-2.5 sm:space-y-3">
+              <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Direct Channels Available Now:
               </p>
 
@@ -113,15 +113,15 @@ export const FinalConversionSection: React.FC<FinalConversionProps> = ({ content
                 href="https://wa.me/8801894828290?text=Hello%20EcoMate%20Team%2C%20I%20would%20like%20to%20schedule%20a%20walkthrough."
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center justify-between p-3.5 rounded-xl border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-950/20 hover:bg-emerald-100/70 dark:hover:bg-emerald-950/30 transition-all text-xs shadow-2xs cursor-pointer"
+                className="flex items-center justify-between p-3 sm:p-3.5 rounded-xl border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-950/20 hover:bg-emerald-100/70 dark:hover:bg-emerald-950/30 transition-all text-xs shadow-2xs cursor-pointer"
               >
-                <div className="flex items-center gap-3">
-                  <span className="h-8 w-8 rounded-lg bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 flex items-center justify-center font-bold">
+                <div className="flex items-center gap-2.5 sm:gap-3">
+                  <span className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 flex items-center justify-center font-bold text-xs">
                     WA
                   </span>
                   <div>
                     <span className="font-bold text-slate-900 dark:text-white block">WhatsApp Live Chat</span>
-                    <span className="text-slate-500 dark:text-slate-400 text-[11px]">Chat with an operations specialist</span>
+                    <span className="text-slate-500 dark:text-slate-400 text-[10px] sm:text-[11px]">Chat with an operations specialist</span>
                   </div>
                 </div>
                 <ArrowRight className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
@@ -132,15 +132,15 @@ export const FinalConversionSection: React.FC<FinalConversionProps> = ({ content
                 href="https://m.me/ecomate.app"
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center justify-between p-3.5 rounded-xl border border-indigo-200 dark:border-indigo-500/30 bg-indigo-50 dark:bg-indigo-950/20 hover:bg-indigo-100/70 dark:hover:bg-indigo-950/30 transition-all text-xs shadow-2xs cursor-pointer"
+                className="flex items-center justify-between p-3 sm:p-3.5 rounded-xl border border-indigo-200 dark:border-indigo-500/30 bg-indigo-50 dark:bg-indigo-950/20 hover:bg-indigo-100/70 dark:hover:bg-indigo-950/30 transition-all text-xs shadow-2xs cursor-pointer"
               >
-                <div className="flex items-center gap-3">
-                  <span className="h-8 w-8 rounded-lg bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 flex items-center justify-center font-bold">
+                <div className="flex items-center gap-2.5 sm:gap-3">
+                  <span className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 flex items-center justify-center font-bold text-xs">
                     FB
                   </span>
                   <div>
                     <span className="font-bold text-slate-900 dark:text-white block">Facebook Messenger</span>
-                    <span className="text-slate-500 dark:text-slate-400 text-[11px]">Direct message EcoMate page</span>
+                    <span className="text-slate-500 dark:text-slate-400 text-[10px] sm:text-[11px]">Direct message EcoMate page</span>
                   </div>
                 </div>
                 <ArrowRight className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
@@ -149,36 +149,36 @@ export const FinalConversionSection: React.FC<FinalConversionProps> = ({ content
               {/* Direct Phone Call */}
               <a
                 href="tel:+8801894828290"
-                className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.02] hover:bg-slate-50 dark:hover:bg-white/[0.05] transition-all text-xs shadow-2xs cursor-pointer"
+                className="flex items-center justify-between p-3 sm:p-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.02] hover:bg-slate-50 dark:hover:bg-white/[0.05] transition-all text-xs shadow-2xs cursor-pointer"
               >
-                <div className="flex items-center gap-3">
-                  <span className="h-8 w-8 rounded-lg bg-slate-100 dark:bg-white/10 text-slate-800 dark:text-white flex items-center justify-center">
-                    <PhoneCall className="h-4 w-4" />
+                <div className="flex items-center gap-2.5 sm:gap-3">
+                  <span className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg bg-slate-100 dark:bg-white/10 text-slate-800 dark:text-white flex items-center justify-center">
+                    <PhoneCall className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   </span>
                   <div>
                     <span className="font-bold text-slate-900 dark:text-white block">Direct Phone Line</span>
-                    <span className="text-slate-600 dark:text-slate-400 text-[11px] font-mono-numbers">+880 1894-828290</span>
+                    <span className="text-slate-600 dark:text-slate-400 text-[10px] sm:text-[11px] font-mono-numbers">+880 1894-828290</span>
                   </div>
                 </div>
-                <span className="text-slate-500 font-mono text-[11px]">Sun-Thu 9am-8pm</span>
+                <span className="text-slate-500 font-mono text-[10px] sm:text-[11px]">Sun-Thu 9am-8pm</span>
               </a>
             </div>
           </div>
 
           {/* Right Column: High-Converting Streamlined Demo Booking Form (col-span-7) */}
-          <div className="lg:col-span-7 rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1C] p-6 sm:p-10 shadow-xl shadow-slate-200/50 dark:shadow-2xl relative">
+          <div className="lg:col-span-7 rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1C] p-5 sm:p-10 shadow-md dark:shadow-2xl relative">
             {isSubmitted ? (
-              <div className="py-8 text-center space-y-4 animate-in fade-in duration-300">
-                <div className="h-16 w-16 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center shadow-md shadow-emerald-200">
-                  <CheckCircle2 className="h-8 w-8" />
+              <div className="py-6 sm:py-8 text-center space-y-3 sm:space-y-4 animate-in fade-in duration-300">
+                <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center shadow-md shadow-emerald-200">
+                  <CheckCircle2 className="h-7 w-7 sm:h-8 sm:w-8" />
                 </div>
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">
+                <h3 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
                   {content.leadForm.successHeading}
                 </h3>
-                <p className="text-sm text-slate-600 dark:text-slate-300 max-w-md mx-auto leading-relaxed">
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 max-w-md mx-auto leading-relaxed">
                   {content.leadForm.successMessage}
                 </p>
-                <div className="pt-4">
+                <div className="pt-3">
                   <button
                     onClick={() => {
                       setIsSubmitted(false);
@@ -197,7 +197,7 @@ export const FinalConversionSection: React.FC<FinalConversionProps> = ({ content
                 </div>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
                 {formError && (
                   <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 dark:bg-rose-500/10 dark:border-rose-500/30 dark:text-rose-300 text-xs">
                     {formError}
@@ -206,7 +206,7 @@ export const FinalConversionSection: React.FC<FinalConversionProps> = ({ content
 
                 {/* Name Field (Required) */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1">
                     {content.leadForm.nameLabel} <span className="text-rose-500">*</span>
                   </label>
                   <input
@@ -215,13 +215,13 @@ export const FinalConversionSection: React.FC<FinalConversionProps> = ({ content
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     placeholder={content.leadForm.namePlaceholder}
-                    className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+                    className="w-full px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
                   />
                 </div>
 
                 {/* Phone Field (Required) */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1">
                     {content.leadForm.phoneLabel} <span className="text-rose-500">*</span>
                   </label>
                   <input
@@ -230,13 +230,13 @@ export const FinalConversionSection: React.FC<FinalConversionProps> = ({ content
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     placeholder={content.leadForm.phonePlaceholder}
-                    className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm font-mono-numbers focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+                    className="w-full px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm font-mono-numbers focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
                   />
                 </div>
 
                 {/* Email Field (Optional) */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     {content.leadForm.emailLabel}
                   </label>
                   <input
@@ -244,19 +244,19 @@ export const FinalConversionSection: React.FC<FinalConversionProps> = ({ content
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     placeholder={content.leadForm.emailPlaceholder}
-                    className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+                    className="w-full px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
                   />
                 </div>
 
                 {/* Daily Order Volume Select */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     {content.leadForm.volumeLabel}
                   </label>
                   <select
                     value={formData.volume}
                     onChange={(e) => setFormData({ ...formData, volume: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-[#090B14] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+                    className="w-full px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-xl bg-slate-50 dark:bg-[#090B14] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
                   >
                     {content.leadForm.volumeOptions.map((opt, idx) => (
                       <option key={idx} value={opt} className="bg-white dark:bg-[#090B14] text-slate-900 dark:text-white">
@@ -268,7 +268,7 @@ export const FinalConversionSection: React.FC<FinalConversionProps> = ({ content
 
                 {/* Operational Note (Optional) */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     {content.leadForm.noteLabel}
                   </label>
                   <textarea
@@ -276,7 +276,7 @@ export const FinalConversionSection: React.FC<FinalConversionProps> = ({ content
                     value={formData.note}
                     onChange={(e) => setFormData({ ...formData, note: e.target.value })}
                     placeholder={content.leadForm.notePlaceholder}
-                    className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors resize-none"
+                    className="w-full px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors resize-none"
                   />
                 </div>
 
@@ -301,7 +301,7 @@ export const FinalConversionSection: React.FC<FinalConversionProps> = ({ content
                   </button>
                 </div>
 
-                <div className="pt-2 flex items-center justify-center gap-1.5 text-[11px] text-slate-500">
+                <div className="pt-1.5 flex items-center justify-center gap-1.5 text-[11px] text-slate-500">
                   <ShieldCheck className="h-3.5 w-3.5 text-slate-400" />
                   <span>{content.leadForm.privacyNote}</span>
                 </div>

@@ -48,33 +48,33 @@ export const ProductInActionSection: React.FC<ProductInActionProps> = ({
   };
 
   return (
-    <section id="tour" className="relative py-20 md:py-28 border-t border-slate-200 dark:border-white/[0.06] bg-slate-50/50 dark:bg-[#07080E] transition-colors">
+    <section id="tour" className="relative py-14 md:py-24 border-t border-slate-200 dark:border-white/[0.06] bg-slate-50/50 dark:bg-[#07080E] transition-colors">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="max-w-3xl">
-          <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-3">
+          <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-2 sm:mb-3">
             <Sparkles className="h-3.5 w-3.5" />
             <span>{content.productShowcase.eyebrow}</span>
           </div>
           <h2 className="text-2xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-white leading-tight text-balance">
             {content.productShowcase.heading}
           </h2>
-          <p className="mt-4 text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed text-balance">
+          <p className="mt-2.5 sm:mt-4 text-sm sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed text-balance">
             {content.productShowcase.subheading}
           </p>
         </div>
 
         {/* Module Selector Pill Bar */}
-        <div className="mt-10 flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+        <div className="mt-8 sm:mt-10 flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
           {content.productShowcase.modules.map((m) => {
             const isActive = activeModule.id === m.id;
             return (
               <button
                 key={m.id}
                 onClick={() => setActiveModuleId(m.id)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                className={`flex items-center gap-1.5 sm:gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                   isActive
-                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200 dark:shadow-[0_0_20px_rgba(99,102,241,0.4)]'
+                    ? 'bg-indigo-600 text-white shadow-xs'
                     : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:text-slate-900 dark:bg-white/[0.03] dark:text-slate-300 dark:border-white/[0.06] dark:hover:bg-white/[0.06]'
                 }`}
               >
@@ -86,14 +86,14 @@ export const ProductInActionSection: React.FC<ProductInActionProps> = ({
         </div>
 
         {/* Cinematic Product UI Presentation Frame */}
-        <div className="mt-6 rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1B] p-6 sm:p-10 shadow-xl shadow-slate-200/50 dark:shadow-2xl relative overflow-hidden">
+        <div className="mt-6 rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1B] p-5 sm:p-10 shadow-md dark:shadow-2xl relative overflow-hidden">
           {/* Ambient luminous glow */}
           <div className="pointer-events-none absolute top-0 right-0 w-96 h-96 bg-indigo-600/5 dark:bg-indigo-600/10 rounded-full blur-3xl" />
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-center">
             {/* Left 5 Cols: "What Problem Does This Solve?" Explanation */}
-            <div className="lg:col-span-5 space-y-5">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/20">
+            <div className="lg:col-span-5 space-y-4 sm:space-y-5">
+              <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/20">
                 {getModuleIcon(activeModule.id)}
                 <span>EcoMate Module: {activeModule.name}</span>
               </div>

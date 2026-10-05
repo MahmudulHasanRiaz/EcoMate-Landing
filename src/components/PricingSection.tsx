@@ -18,19 +18,19 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
   const [annualBilling, setAnnualBilling] = useState<boolean>(true);
 
   return (
-    <section id="pricing" className="relative py-20 md:py-28 border-t border-slate-200 dark:border-white/[0.06] bg-slate-50/50 dark:bg-[#080910] transition-colors">
+    <section id="pricing" className="relative py-14 md:py-24 border-t border-slate-200 dark:border-white/[0.06] bg-slate-50/50 dark:bg-[#080910] transition-colors">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6 mb-8 sm:mb-12">
           <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-3">
+            <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-2 sm:mb-3">
               <Sparkles className="h-3.5 w-3.5" />
               <span>{content.pricing.eyebrow}</span>
             </div>
             <h2 className="text-2xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-white leading-tight text-balance">
               {content.pricing.heading}
             </h2>
-            <p className="mt-4 text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed text-balance">
+            <p className="mt-2.5 sm:mt-4 text-sm sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed text-balance">
               {content.pricing.subheading}
             </p>
           </div>
@@ -38,12 +38,12 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
           {/* Prototype Mode Switcher (Visible vs Contact Sales Architecture) */}
           {onTogglePricingMode && (
             <div className="flex items-center gap-2 self-start md:self-auto p-1.5 rounded-xl bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-xs text-slate-600 dark:text-slate-400 shadow-2xs">
-              <span className="text-[11px] font-mono px-2 font-medium">Admin Setting:</span>
+              <span className="text-[11px] font-mono px-2 font-medium">Mode:</span>
               <button
                 onClick={onTogglePricingMode}
                 className="px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-600/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/40 hover:bg-indigo-100 dark:hover:bg-indigo-600/40 transition-colors font-semibold cursor-pointer"
               >
-                {isPricingVisible ? 'Toggle to Hidden / Contact Mode' : 'Toggle to Visible Tiered Mode'}
+                {isPricingVisible ? 'Toggle to Hidden Mode' : 'Toggle to Visible Tiered Mode'}
               </button>
             </div>
           )}
@@ -53,11 +53,11 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
         {isPricingVisible ? (
           <div>
             {/* Monthly / Annual Toggle */}
-            <div className="flex justify-center mb-12">
+            <div className="flex justify-center mb-8 sm:mb-12">
               <div className="inline-flex items-center p-1 rounded-full bg-slate-100 dark:bg-black/50 border border-slate-200 dark:border-white/10 shadow-xs">
                 <button
                   onClick={() => setAnnualBilling(false)}
-                  className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all cursor-pointer ${
+                  className={`px-3.5 sm:px-4 py-1.5 text-xs font-semibold rounded-full transition-all cursor-pointer ${
                     !annualBilling
                       ? 'bg-white text-slate-900 shadow-sm'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -67,7 +67,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
                 </button>
                 <button
                   onClick={() => setAnnualBilling(true)}
-                  className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all flex items-center gap-1.5 cursor-pointer ${
+                  className={`px-3.5 sm:px-4 py-1.5 text-xs font-semibold rounded-full transition-all flex items-center gap-1.5 cursor-pointer ${
                     annualBilling
                       ? 'bg-indigo-600 text-white shadow-sm'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -82,7 +82,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
             </div>
 
             {/* 3 Tier Cards Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
               {content.pricing.visiblePricing.plans.map((plan: PricingPlan) => {
                 const price = annualBilling ? plan.annualPrice : plan.monthlyPrice;
                 const isPopular = plan.popular;
@@ -90,10 +90,10 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
                 return (
                   <div
                     key={plan.id}
-                    className={`rounded-2xl sm:rounded-3xl border p-6 sm:p-8 flex flex-col justify-between transition-all relative ${
+                    className={`rounded-2xl sm:rounded-3xl border p-5 sm:p-8 flex flex-col justify-between transition-all relative ${
                       isPopular
-                        ? 'border-indigo-500 bg-gradient-to-b from-indigo-50/70 to-white dark:from-[#111327] dark:to-[#0C0E1B] shadow-xl shadow-indigo-100/60 dark:shadow-[0_0_50px_rgba(99,102,241,0.25)] scale-[1.02] ring-1 ring-indigo-500/20'
-                        : 'border-slate-200 bg-white dark:border-white/[0.08] dark:bg-[#0C0E1B] hover:border-slate-300 dark:hover:border-white/20 shadow-md shadow-slate-100 dark:shadow-none'
+                        ? 'border-indigo-500 bg-gradient-to-b from-indigo-50/70 to-white dark:from-[#111327] dark:to-[#0C0E1B] shadow-lg dark:shadow-[0_0_50px_rgba(99,102,241,0.25)] lg:scale-[1.02] ring-1 ring-indigo-500/20'
+                        : 'border-slate-200 bg-white dark:border-white/[0.08] dark:bg-[#0C0E1B] hover:border-slate-300 dark:hover:border-white/20 shadow-xs'
                     }`}
                   >
                     {isPopular && (

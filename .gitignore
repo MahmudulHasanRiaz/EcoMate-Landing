@@ -9,3 +9,15 @@ coverage/
 
 # Lockfile governance (use npm package-lock.json for CI/CD)
 bun.lock
+
+# Next.js / opennext build artifacts
+.next/
+.open-next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# Playwright / test output
+test-results/
+playwright-report/
+blob-report/

@@ -43,7 +43,7 @@
 |---|---|---|
 | `package.json` | Modify | Next.js scripts + deps, remove `express`, `vite`, `@vitejs/plugin-react` |
 | `next.config.ts` | Create | Minimal Next config (no custom webpack) |
-| `opennext.config.ts` | Create | Empty default config for the Cloudflare adapter |
+| `open-next.config.ts` | Create | Empty default config for the Cloudflare adapter |
 | `wrangler.toml` | Modify | Worker + Hyperdrive + R2 bindings (replaces static `assets` only config) |
 | `vite.config.ts` | Delete | Vite no longer used |
 | `server.ts` | Delete | Replaced by Route Handlers (deleted in Task 5 after port verified) |
@@ -87,7 +87,7 @@
 **Files:**
 - Modify: `package.json`
 - Create: `next.config.ts`
-- Create: `opennext.config.ts`
+- Create: `open-next.config.ts`
 - Create: `app/layout.tsx` (skeleton only, full content in Task 2)
 
 - [ ] **Step 1: Install Next.js + adapter, remove Vite/Express server deps**
@@ -154,9 +154,9 @@ const nextConfig: NextConfig = {
 export default nextConfig;
 ```
 
-- [ ] **Step 4: Write `opennext.config.ts`** and the Tailwind PostCSS bridge
+- [ ] **Step 4: Write `open-next.config.ts`** and the Tailwind PostCSS bridge
 
-`opennext.config.ts`:
+`open-next.config.ts`:
 ```ts
 import { defineCloudflareConfig } from '@opennextjs/cloudflare';
 export default defineCloudflareConfig({});
@@ -190,7 +190,7 @@ Expected: proves the PostCSS toolchain resolves.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add package.json package-lock.json next.config.ts opennext.config.ts postcss.config.mjs tsconfig.json
+git add package.json package-lock.json next.config.ts open-next.config.ts postcss.config.mjs tsconfig.json
 git commit -m "feat: scaffold Next.js 16 + opennext Cloudflare adapter with Cache Components"
 ```
 

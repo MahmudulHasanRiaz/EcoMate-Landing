@@ -50,7 +50,7 @@ Never commit `.env*`. Never prefix secrets with `NEXT_PUBLIC_`.
 2. Replace `src/services/api.ts` fetches (relative `/api`) → same paths work via Route Handlers; swap to server actions later if wanted.
 3. Move Express routes (`server.ts` sections 1–9) → `app/api/*/route.ts` one by one.
 4. Swap `src/db/index.ts` Pool → Hyperdrive `postgres-js` singleton per-request. Delete in-memory repository after seed.
-5. Add `opennext.config.ts`, update `wrangler.toml` (Worker + hyperdrive + r2 + compatibility_date), update `deploy.yml` to `opennextjs-cloudflare build + wrangler deploy`.
+5. Add `open-next.config.ts`, update `wrangler.toml` (Worker + hyperdrive + r2 + compatibility_date), update `deploy.yml` to `opennextjs-cloudflare build + wrangler deploy`.
 6. Verify: `npm run build`, `/api/health` returns `postgresConfigured:true`, AdminPanel shows Supabase rows.
 
 ## 7. Error handling

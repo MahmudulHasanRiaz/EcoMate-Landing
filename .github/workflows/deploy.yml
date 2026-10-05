@@ -77,16 +77,17 @@ jobs:
           name: cloudflare-dist-bundle
           path: dist
 
-      - name: Deploy to Cloudflare Pages via Wrangler
-        id: deploy_step
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages project list
+      - name: Inspect Existing Cloudflare Projects
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          response=$(curl -s "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/pages/projects" \
+            -H "Authorization: Bearer ${CF_TOKEN}" \
+            -H "Content-Type: application/json")
+          echo "Cloudflare API response success: $(echo "$response" | jq -r '.success')"
+          echo "Existing project names:"
+          echo "$response" | jq -r '.result[]?.name // "No projects found"'
 
       - name: Output Deployment Confirmation
         run: |

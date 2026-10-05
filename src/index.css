@@ -18,6 +18,16 @@
     transition: background-color 0.2s ease, color 0.2s ease;
   }
 
+  /* Floating header offset: anchors land below the glass pill, not under it */
+  section[id] {
+    scroll-margin-top: 84px;
+  }
+
+  /* Hard clip for any stray wide decoration on small viewports */
+  #root {
+    overflow-x: clip;
+  }
+
   /* Designed light system: indigo-tinted paper, not flat inversion.
      Dark navy stays for dark mode. Light gets its own depth cues:
      tinted borders, indigo-washed shadows, warmer slate text. */

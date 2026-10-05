@@ -82,14 +82,17 @@ jobs:
           CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          script_res=$(curl -s "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/workers/scripts/ecomate-landing" \
-            -H "Authorization: Bearer ${CF_TOKEN}")
-          echo "Worker script info:"
-          echo "$script_res" | jq -r '{id: .result.id, etag: .result.etag, created_on: .result.created_on, modified_on: .result.modified_on}'
+          sub_name=$(curl -s "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/workers/subdomain" \
+            -H "Authorization: Bearer ${CF_TOKEN}" | jq -r '.result.subdomain')
+          echo "Worker subdomain: ${sub_name}.workers.dev"
           
-          subdomain_res=$(curl -s "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/workers/scripts/ecomate-landing/subdomain" \
+          routes_res=$(curl -s "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/workers/scripts/ecomate-landing/routes" \
             -H "Authorization: Bearer ${CF_TOKEN}")
-          echo "Subdomain info: $subdomain_res"
+          echo "Routes: $(echo "$routes_res" | jq -r '.result')"
+          
+          domains_res=$(curl -s "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/workers/domains/records?service=ecomate-landing" \
+            -H "Authorization: Bearer ${CF_TOKEN}")
+          echo "Custom domains: $(echo "$domains_res" | jq -r '.result')"
 
       - name: Output Deployment Confirmation
         run: |

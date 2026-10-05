@@ -140,6 +140,11 @@ const nextConfig: NextConfig = {
   // Next 16: replaces the old `experimental.ppr`. Enables Partial Prerendering so the
   // marketing page ships static shell + cached content, with only genuinely fresh parts
   // (consent state, locale) rendering per request.
+  //
+  // REQUIREMENT: with this on, `next build` prerenders the shell and runs every
+  // `'use cache'` function at BUILD time, where there is no request and therefore no
+  // Hyperdrive binding. `db/client.ts` (Task 3) handles that with a `DIRECT_URL`
+  // fallback, and CI must expose `DIRECT_URL` to the build step (Task 8).
   cacheComponents: true,
   images: {
     remotePatterns: [{ protocol: 'https', hostname: 'media.ecomate.app' }],
@@ -314,31 +319,64 @@ git commit -m "feat: port landing UI to Next.js App Router with next/font and ne
 
 Run: `git mv src/db/schema.ts db/schema.ts`
 
-Write `db/client.ts` exactly:
+Write `db/client.ts`. This file has three non-obvious requirements, all forced by Cache Components + Workers, and getting any of them wrong breaks the **build** rather than a request:
+
 ```ts
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { getRequestContext } from '@opennextjs/cloudflare';
 import * as schema from './schema';
 
+let cached: ReturnType<typeof drizzle<typeof schema>> | null = null;
+let cachedUrl = '';
+
+function resolveUrl(): string {
+  // 1. Runtime: the Hyperdrive binding. Only exists inside a real request.
+  try {
+    const { env } = getRequestContext();
+    const bound = (env as any).HYPERDRIVE?.connectionString as string | undefined;
+    if (bound) return bound;
+  } catch {
+    // no request context -> we are at BUILD time, not request time
+  }
+  // 2. Build time: `next build` prerenders the static shell and executes every
+  //    `'use cache'` function once. That happens with no request, so the binding
+  //    is unreachable and getRequestContext() throws. Without this fallback the
+  //    very first prerender fails with HYPERDRIVE_NOT_BOUND.
+  const buildUrl = process.env.DIRECT_URL || process.env.DATABASE_URL || '';
+  if (buildUrl) return buildUrl;
+  throw new Error('DB_UNAVAILABLE');
+}
+
 export function getDb() {
-  const { env } = getRequestContext();
-  const connectionString = (env as any).HYPERDRIVE?.connectionString as string | undefined;
-  if (!connectionString) throw new Error('HYPERDRIVE_NOT_BOUND');
-  const client = postgres(connectionString, { prepare: false, max: 1 });
-  return drizzle(client, { schema });
+  const url = resolveUrl();
+  // Module-scoped singleton: a fresh Pool per call leaks a connection per
+  // invocation for the isolate's whole lifetime. Reuse unless the URL changed
+  // (preview vs production env swap).
+  if (!cached || cachedUrl !== url) {
+    // prepare:false  -> transaction-pooler safe (Supabase 6543 / Hyperdrive)
+    // max:1          -> Workers isolates are single-request; Hyperdrive multiplexes
+    cached = drizzle(postgres(url, { prepare: false, max: 1 }), { schema });
+    cachedUrl = url;
+  }
+  return cached;
 }
 
 export function isPostgresConfigured(): boolean {
   try {
-    const { env } = getRequestContext();
-    return Boolean((env as any).HYPERDRIVE?.connectionString);
+    resolveUrl();
+    return true;
   } catch {
     return false;
   }
 }
 ```
-Why `max: 1` + `prepare: false`: Workers are single-request isolates; pooled Hyperdrive string already multiplexes. This is the only sanctioned Postgres pattern on Workers.
+
+Why each piece matters:
+- `prepare: false` — transaction-pooler compatibility (Supabase 6543, Hyperdrive). Prepared statements break behind PgBouncer in transaction mode.
+- `max: 1` — a Workers isolate serves one request at a time; Hyperdrive already multiplexes across the fleet.
+- Module-scoped singleton — `getDb()` is called by many routes; a per-call Pool would accumulate open connections and eventually exhaust the database's `max_connections`.
+- Build-time fallback — mandatory under `cacheComponents: true` (Task 1). CI must therefore expose `DIRECT_URL` to the **build** step, not only to the migration step; Task 8 adds that.
 
 - [ ] **Step 2: Point drizzle-kit at new schema path**
 
@@ -356,6 +394,8 @@ export default defineConfig({
 });
 ```
 (`dotenv` import removed — Next loads `.env.local` automatically; `DIRECT_URL` lives in `.env.local`, never committed.)
+
+Task 1 enabled `cacheComponents: true`, which means `next build` executes cached data functions at build time. Before running any generate/push/build step, confirm `DIRECT_URL` is exported in that shell, or the client resolves to `DB_UNAVAILABLE` and the prerender fails.
 
 - [ ] **Step 3: Write `db/seed.ts`** — inserts the current prototype seed rows (site settings 1 row, 10 landing sections, 3 pricing plans, 2 demo leads, 3 testimonials, 1 case study, 2 blog posts, 3 media assets, 1 integration log) using the same literal values in `src/db/index.ts:186-534`. Use `tsx` + `postgres` with `DIRECT_URL`:
 
@@ -990,7 +1030,18 @@ git commit -m "chore: bind Hyperdrive Postgres and R2, document env"
 - Modify: `.github/workflows/deploy.yml`
 - Modify: `.github/workflows/ci.yml` (build command only)
 
-- [ ] **Step 1: Update `ci.yml` build step** — `npm run build` now runs `opennextjs-cloudflare build`; artifact check changes from `dist/index.html` to `.opennext/` output:
+- [ ] **Step 1: Update `ci.yml` build step** — `npm run build` now runs `opennextjs-cloudflare build`; artifact check changes from `dist/index.html` to `.opennext/` output.
+
+Also give the build step a database URL in **both** `ci.yml` and `deploy.yml`. This is not optional: `cacheComponents: true` (Task 1) executes every `'use cache'` data function during the build, with no request context and therefore no Hyperdrive binding, so `db/client.ts` (Task 3) falls back to this env var. Without it the build dies with `DB_UNAVAILABLE` on the first prerender.
+
+```yaml
+      - name: Execute production build
+        run: npm run build
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+```
+
+Keep the existing artifact verification block:
 
 Replace the verify block with:
 ```yaml
@@ -1441,7 +1492,26 @@ export async function GET(req: Request) {
 
 - [ ] **Step 4: Make `app/page.tsx` server-driven with static fallback** — convert to an async Server Component that reads through the cached `lib/content.ts` helper (Task 15 §5 defines it; define it here if Task 15 has not landed yet — same signature). Deep-merge the DB payload over static `landingContent.en` (DB wins per `sectionKey`, static fills gaps); on `HYPERDRIVE_NOT_BOUND` or any DB error, fall back to static only and log server-side without alerting the visitor (Task 20 §3 makes this the documented outage behaviour). Pass the assembled object to the existing client section components unchanged — they already take a `content` prop, so zero component rewrites are needed. Locale toggle fetches `/api/content?locale=bn` client-side.
 
-Do **not** add `'use client'` to `app/page.tsx` for the data read; wrap only the interactive shell. Data read stays on the server, interactivity stays on the client.
+Cache Components rules that apply to this page specifically:
+
+1. **No `'use client'` on the page for the data read.** Wrap only the interactive shell (theme + locale toggles, AdminPanel trigger). Data read stays on the server.
+2. **The static shell must not touch the DB.** With `cacheComponents: true`, anything not wrapped in `'use cache'` is treated as dynamic and must sit inside a `<Suspense>` boundary or the whole route becomes dynamic and loses PPR. Structure it as:
+```tsx
+// app/page.tsx — server component
+export default function Page() {
+  return (
+    <>
+      <StaticHero />                                  {/* prerendered at build, no DB */}
+      <Suspense fallback={<SectionsSkeleton />}>
+        <DbSections locale="en" />                    {/* 'use cache' inside */}
+      </Suspense>
+    </>
+  );
+}
+```
+3. **`cookies()` / `headers()` / `searchParams` cannot be read inside `'use cache'`.** The consent banner (Task 20 §5) reads a cookie — so it must live in its own dynamic component wrapped in Suspense, and any value it needs must be **extracted outside** and passed in as an argument.
+4. **Non-deterministic values freeze at build.** Inside `'use cache'`, `Date.now()` and `Math.random()` execute once and are cached forever. So `landing_content.updatedAt`, `lastLoginAt`, "3 days ago" relative labels and any nonce must **not** be computed inside a cached function — select the raw timestamp and format it in the component, or give that function a short `cacheLife`.
+5. **`isPostgresConfigured()` must never be called inside `'use cache'`** — it is a request/binding probe, not content.
 
 - [ ] **Step 5: Admin sections tab edits payload** — extend existing sections editor (Task 4 API already supports PUT by id for order/visibility): add per-sectionKey locale JSON textarea + save via `PUT /api/content/[sectionKey]` + social-links manager rows. Verify: edit hero headline in admin → reload landing → headline changed without redeploy.
 
@@ -1711,6 +1781,10 @@ import { updateTag, revalidateTag } from 'next/cache';
 ```
 Same pattern per domain: `pricing`, `blog`, `menus`, `social`, `testimonials`, `casestudies`.
 
+Two boundaries worth stating explicitly:
+- **Route Handlers are unaffected.** `app/api/*` is dynamic by definition; Cache Components governs pages, layouts and `'use cache'` data functions only. The `/api/content`, `/api/blog` GET routes stay uncached unless you deliberately add `'use cache'` to them.
+- **`'use cache: private'`** is the escape hatch when a cached read depends on the requester's identity (an admin previewing unpublished content). Reach for it only for genuine compliance requirements — it opts out of the shared cache. Unpublished-draft previews are the one legitimate use here; normal public reads must use plain `'use cache'`.
+
 Verify: edit the hero in admin → the admin screen and a fresh public request both show the change with **no rebuild**; `x-nextjs-cache` reflects the revalidation.
 
 - [ ] **Step 6: Side-by-side locale editor + missing-translation report** — AdminPanel content editor shows EN and BN fields adjacent; `/api/admin/i18n-report` lists `landing_content` keys where `bn` row missing or equal to seed-empty; dashboard badge counts gaps. Fallback chain documented: `bn` missing → `en` rendered (page never blank).
@@ -1966,11 +2040,116 @@ git commit -m "chore: env isolation, supply-chain CI gates, preview env, monitor
 
 ---
 
+---
+
+### Task 22: Cache Components adoption audit (spec §23)
+
+**Files:**
+- Create: `lib/content.ts` (consolidate every cached public read here — the single place `'use cache'` is allowed)
+- Modify: every `app/**/page.tsx` + `app/**/layout.tsx` that performs I/O
+- Modify: `next.config.ts` (only if a finding requires it)
+- Create: `docs/CACHE.md` (tag inventory + invalidation map)
+
+Runs **after** every page exists, because the audit needs the full route tree to be real. Tasks 1/3/12/15 establish the pattern; this task proves the adoption is complete and correct, and is where the remaining gaps surface.
+
+- [ ] **Step 1: Enforce one caching boundary**
+
+`'use cache'` must appear in exactly one file — `lib/content.ts`. Grep and move anything else:
+
+Run: `rg -n "use cache|cacheTag|cacheLife|unstable_cache|revalidateTag|updateTag" app lib --type ts --type tsx`
+Expected after cleanup: every hit is in `lib/content.ts`, `app/api/admin/*` (invalidations only), or the cron routes. A `'use cache'` inside a component file is the thing this prevents — it works, but it scatters invalidation targets and makes "did we tag this?" unanswerable.
+
+`lib/content.ts` exports one tagged function per domain, each with an explicit `cacheTag` **and** `cacheLife`:
+```ts
+// lib/content.ts
+import { cacheLife, cacheTag } from 'next/cache';
+import { eq, desc } from 'drizzle-orm';
+import { getDb } from '@/db/client';
+import { landingContentTable, blogPostsTable, pricingPlansTable } from '@/db/schema';
+
+const PROFILE = { stale: 300, revalidate: 3600, expire: 86400 };
+
+export async function getLandingContent(locale: 'en' | 'bn') {
+  'use cache';
+  cacheTag(`content:${locale}`);
+  cacheLife(PROFILE);
+  return getDb().select().from(landingContentTable)
+    .where(eq(landingContentTable.locale, locale));
+}
+
+export async function getPublishedBlog() {
+  'use cache';
+  cacheTag('blog');
+  cacheLife(PROFILE);
+  return getDb().select().from(blogPostsTable)
+    .where(eq(blogPostsTable.status, 'published')).orderBy(desc(blogPostsTable.publishedAt));
+}
+
+export async function getActivePricing() {
+  'use cache';
+  cacheTag('pricing');
+  cacheLife(PROFILE);
+  return getDb().select().from(pricingPlansTable).where(eq(pricingPlansTable.isActive, true));
+}
+```
+Longer content gets its own profile (blog body: `{ stale: 3600, revalidate: 86400, expire: 604800 }`) — a blog post changing is a rare event, and caching it for 5 minutes serves stale prose to visitors for no reason.
+
+- [ ] **Step 2: Verify every dynamic read is inside a Suspense boundary**
+
+With `cacheComponents: true`, any I/O not wrapped in `'use cache'` becomes a dynamic hole. If it is not inside `<Suspense>`, the whole route silently loses Partial Prerendering and the PPR win disappears — no error, just a slower site.
+
+Run: `rg -n "cookies\(\)|headers\(\)|searchParams" app --type ts --type tsx`
+For every hit, confirm it is (a) in a component wrapped by a `<Suspense>` above it, or (b) inside `'use cache: private'` with a stated reason. The consent banner (Task 20 §5), theme/locale state, and any draft-preview path are the expected hits.
+
+- [ ] **Step 3: Verify no build-time-frozen nondeterminism**
+
+Inside `'use cache'`, `Date.now()`, `new Date()` and `Math.random()` execute once at build and are cached indefinitely. Search for them inside cached scopes:
+
+Run: `rg -n "Date\.now\(\)|Math\.random\(\)" lib/content.ts app`
+Expected: none inside `lib/content.ts` functions. Timestamps are selected raw from the DB and formatted in the component; anything that genuinely must be fresh (relative "updated 3m ago" labels, request ids, nonces) lives outside the cached scope. `landingContent.updatedAt` is the classic trap — select it, do not compute it.
+
+- [ ] **Step 4: Prove invalidation actually works (not just that it compiles)**
+
+Manual, on the preview environment:
+1. Load `/`, note the hero headline and the response `x-nextjs-cache` value (`HIT`).
+2. In admin, edit the hero headline, save.
+3. Reload `/` **twice**. First reload must already show the new headline (same-request `updateTag`), second must also be `HIT` — not `MISS` forever, which would mean the tag never attached.
+4. Repeat with `/bn` and confirm the `content:bn` tag is what got invalidated, not `content:en` — cross-locale leakage here means editing Bangla silently overwrites English.
+5. Confirm the **blog** tag is untouched by a hero edit, i.e. tags are per-domain and not one global catch-all.
+
+Record the observed header values in the commit body. "It seemed to update" is not evidence.
+
+- [ ] **Step 5: Verify the build-time fallback is real, not theoretical**
+
+Delete `DIRECT_URL` from the build environment and run `npm run build`. Expected: the build fails with `DB_UNAVAILABLE`, not with a confusing hydration or connection error. Restore the variable and confirm a green build. This proves the fallback path in `db/client.ts` (Task 3) is the thing actually being exercised at prerender time — an untested fallback is a latent outage.
+
+- [ ] **Step 6: Measure the PPR win (otherwise the feature is unproven)**
+
+Compare before/after on the same commit:
+```bash
+npm run build 2>&1 | grep -A2 -i "ppr\|prerender"
+```
+and check the served HTML for a streamed shell (`<!--$-->` Suspense markers with cached content present). If the landing route shows no partial-prerender output, a dynamic read is leaking above the Suspense boundary — go back to Step 2. Then confirm via LHCI (Task 18) that LCP did not regress.
+
+- [ ] **Step 7: Document the cache map**
+
+`docs/CACHE.md`: one table of `tag → function → invalidated by which admin action → revalidation method (updateTag vs revalidateTag) → cacheLife profile`. Plus the rule that adding a new cached read requires registering its tag here and adding the matching invalidation to the admin mutation — otherwise the next person ships a change that never appears live.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add lib/content.ts app docs/CACHE.md
+git commit -m "perf: consolidate Cache Components into lib/content with verified invalidation"
+```
+
+---
+
 ## Self-review
 
-1. **Spec coverage:** architecture (§2) → Tasks 1-2; DB flow (§3) → Tasks 3,5,7; R2 (§4) → Tasks 6-7; ENV map (§5) → Task 7 + deploy secrets Task 8; migration path (§6) → Tasks 1-8; error handling (§7) → `fail()` helper + `HYPERDRIVE_NOT_BOUND`/`R2_NOT_BOUND` + Task 20 §3 degradation; testing (§8 — rewritten, see spec) → Task 18; admin auth (§10) → Task 9 + §9 session hardening; SEO (§11) → Tasks 10, 15; design corrections (§12) → Task 11; whole-site content (§13) → Task 12; bilingual parity (§14) → Task 15 (§3 Intl formatting + §6 gap report); Meta tracking (§15) → Task 13 (+ consent prerequisite Task 20 §5, `waitUntil` correctness, retry queue Task 20 §4); enterprise hardening (§16) → Tasks 14, 16, 17, 19, 20, 21. New spec sections §17-21 map to Tasks 17-21 one-to-one.
+1. **Spec coverage:** architecture (§2) → Tasks 1-2; DB flow (§3) → Tasks 3,5,7; R2 (§4) → Tasks 6-7; ENV map (§5) → Task 7 + deploy secrets Task 8; migration path (§6) → Tasks 1-8; error handling (§7) → `fail()` helper + `HYPERDRIVE_NOT_BOUND`/`R2_NOT_BOUND` + Task 20 §3 degradation; testing (§8 — rewritten, see spec) → Task 18; admin auth (§10) → Task 9 + §9 session hardening; SEO (§11) → Tasks 10, 15; design corrections (§12) → Task 11; whole-site content (§13) → Task 12; bilingual parity (§14) → Task 15 (§3 Intl formatting + §6 gap report); Meta tracking (§15) → Task 13 (+ consent prerequisite Task 20 §5, `waitUntil` correctness, retry queue Task 20 §4); enterprise hardening (§16) → Tasks 14, 16, 17, 19, 20, 21. New spec sections §17-21 map to Tasks 17-21 one-to-one; Cache Components adoption (§23) → mechanics in Tasks 1 (`cacheComponents: true`), 3 (build-time `DIRECT_URL` fallback + singleton client), 12 (Suspense + nondeterminism rules), 15 (tagged `lib/content.ts` + `updateTag`/`revalidateTag`), and the full audit in Task 22.
 2. **Placeholder scan:** no TBD/TODO. `PASTE_HYPERDRIVE_ID`, `PASTE_KV_ID`, `<paste-direct-5432-url>` are operator-supplied values with the exact producing command in Task 7 Step 1. Seed row content specified by source location (`src/db/index.ts:186-534`).
 3. **Type consistency:** `ok`/`fail(message, status, details?)` — `fail` gains an optional third arg in Task 17 and is used with it only from Task 17 onward. `getDb()`/`isPostgresConfigured()` from Task 3 unchanged throughout. `getDb().transaction(tx => ...)` (Task 3 §6) is the same API used by `lib/revisions.ts` (Task 19 §2). All mutation routes adopt `.strict()` Zod schemas (Task 17) and the Task 4-5 hand-rolled allowlists are deleted in the same step, so no two competing field lists survive. Cookie/session ownership stays with Auth.js; `trustHost` is env-gated (Task 9) and `AUTH_TRUST_HOST` is listed in `.env.example`/wrangler vars.
 4. **Ordering constraints:** Task 3 §5 must precede Task 7's first `migrate`; Task 9's `admin_users` precedes `admin_users` FKs in Tasks 16/19/20; Task 13's tracking columns precede Task 14's consent check on the same table; Task 20 §5 consent gates Task 13's pixel/CAPI firing, so the consent banner must ship with (or before) the pixel going live — flagged in Task 20 §5.
-5. **Next.js 16 consistency:** every version pinned in the Tech Stack table was verified against the registry (next `latest` = 16.3.8; `@opennextjs/cloudflare` peer = `>=15.5.27 <16 || >=16.3.8`; `next-auth` beta peer includes `^16`). v16-specific conventions are applied everywhere they bite: `proxy.ts` (not `middleware.ts`) in Tasks 9/14/15/20, `params: Promise<...>` awaited in every dynamic handler, `cacheComponents: true` with `'use cache'` + `cacheTag`/`cacheLife` + `updateTag`/`revalidateTag` (no `fetch(next.tags)`, no `unstable_cache`, no `dynamic = 'force-dynamic'`), `next/font` in Task 2, `next/image` in Task 2 §3b, Zod 4 API (`z.strictObject`, `z.email`, `z.url`), Vitest 5, Node >= 24 in `engines`, `.node-version`, `.nvmrc` and both workflows. The Auth.js + Cloudflare Workers pairing is beta-on-unsupported-target and is flagged in Task 9 with a `better-auth` fallback rather than presented as certain.
-6. **Residual risk stated honestly:** LHCI budgets are baseline-then-block (Task 18 §5), not magically met on first run; R2 image transformation is not included (paid Workers feature, costs money); MySQL support remains out of scope (spec §9); "100% secure/SEO" means every checklist item is implemented and verified, not that a breach is impossible.
+5. **Cache Components build-time dependency:** `cacheComponents: true` means the build executes every `'use cache'` function with no request context. This is a real cross-task coupling — `db/client.ts` (Task 3) falls back to `DIRECT_URL`, CI exposes it to the build step (Task 8), and Task 22 §5 proves the failure mode is loud. Removing `cacheComponents` or removing that env var silently breaks the build, so both are asserted.
+6. **Next.js 16 consistency:** every version pinned in the Tech Stack table was verified against the registry (next `latest` = 16.3.8; `@opennextjs/cloudflare` peer = `>=15.5.27 <16 || >=16.3.8`; `next-auth` beta peer includes `^16`). v16-specific conventions are applied everywhere they bite: `proxy.ts` (not `middleware.ts`) in Tasks 9/14/15/20, `params: Promise<...>` awaited in every dynamic handler, `cacheComponents: true` with `'use cache'` + `cacheTag`/`cacheLife` + `updateTag`/`revalidateTag` (no `fetch(next.tags)`, no `unstable_cache`, no `dynamic = 'force-dynamic'`), `next/font` in Task 2, `next/image` in Task 2 §3b, Zod 4 API (`z.strictObject`, `z.email`, `z.url`), Vitest 5, Node >= 24 in `engines`, `.node-version`, `.nvmrc` and both workflows. The Auth.js + Cloudflare Workers pairing is beta-on-unsupported-target and is flagged in Task 9 with a `better-auth` fallback rather than presented as certain.
+7. **Residual risk stated honestly:** LHCI budgets are baseline-then-block (Task 18 §5), not magically met on first run; R2 image transformation is not included (paid Workers feature, costs money); MySQL support remains out of scope (spec §9); "100% secure/SEO" means every checklist item is implemented and verified, not that a breach is impossible.

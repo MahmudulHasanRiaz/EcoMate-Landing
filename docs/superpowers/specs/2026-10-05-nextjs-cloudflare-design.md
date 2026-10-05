@@ -152,3 +152,13 @@ Never commit `.env*`. Never prefix secrets with `NEXT_PUBLIC_`.
 - Preview deploy per PR with Playwright smoke + LHCI comment; branch protection + CODEOWNERS on `db/schema.ts`, `auth.ts`, `middleware.ts`, `wrangler.toml`, `.github/**`.
 - External uptime monitoring on `/api/health` + `/api/ready`, alerting on lead-submit success rate (< 95% over 15 min = revenue incident).
 - Runbook covers deploy/rollback, secret rotation, PITR restore drill (executed once, dated), plus `docs/SECURITY.md` with data-flow diagram and threat model.
+
+## 23. Cache Components adoption
+- `cacheComponents: true` (Task 1). PPR enabled so the marketing page ships a prerendered shell plus cached content, with only genuinely fresh parts streaming.
+- **All `'use cache'` lives in `lib/content.ts`** — one tagged function per domain (`content:en`, `content:bn`, `blog`, `pricing`, `menus`, `social`, `testimonials`, `casestudies`). No component-level caching.
+- **Build-time DB access is mandatory:** prerendering executes cached functions with no request context, so `db/client.ts` falls back to `DIRECT_URL` and CI exposes it to the build step. Without it the build fails with `DB_UNAVAILABLE`.
+- Every uncached I/O must sit inside a `<Suspense>` boundary or the route silently loses PPR.
+- `cookies()`/`headers()`/`searchParams` are illegal inside `'use cache'` — extract and pass as arguments; `use cache: private` is reserved for draft-preview and similar identity-dependent reads.
+- `Date.now()` / `new Date()` / `Math.random()` freeze at build inside a cached scope — timestamps are selected raw and formatted in the component.
+- Invalidation: `updateTag` for same-request admin visibility, `revalidateTag` from cron/background jobs. Route Handlers are unaffected by Cache Components.
+- Adoption is audited in Task 22: single boundary enforced, Suspense coverage checked, nondeterminism scanned, invalidation proven on preview (including per-locale tag isolation), build-time fallback proven to fail loudly, and the PPR win measured with LHCI.

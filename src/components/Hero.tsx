@@ -34,10 +34,10 @@ export const Hero: React.FC<HeroProps> = ({ content, locale }) => {
   };
 
   return (
-    <section className="relative overflow-hidden pt-4 pb-12 sm:pt-12 sm:pb-20 md:pt-20 md:pb-28">
+    <section id="hero" className="relative overflow-hidden pt-6 pb-10 sm:pt-12 sm:pb-20 md:pt-20 md:pb-28">
       {/* Ambient background glows matching reference design with light/dark adaptability */}
       <div 
-        className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 w-[700px] h-[550px] md:w-[1100px] md:h-[650px] rounded-full blur-[140px] opacity-20 dark:opacity-25"
+        className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 w-[700px] h-[550px] md:w-[1100px] md:h-[650px] rounded-full blur-[140px] opacity-30 dark:opacity-25"
         style={{
           background: 'radial-gradient(circle, rgba(99, 102, 241, 0.45) 0%, rgba(139, 92, 246, 0.25) 45%, rgba(67, 56, 202, 0.08) 80%, transparent 100%)',
         }}
@@ -60,7 +60,7 @@ export const Hero: React.FC<HeroProps> = ({ content, locale }) => {
 
         {/* Hero Headline with Editorial Italic Distinction */}
         <div className="text-center max-w-4xl mx-auto">
-          <h1 className="text-2xl xs:text-3xl sm:text-5xl md:text-6xl font-bold tracking-tight text-slate-900 dark:text-white leading-[1.2] sm:leading-[1.15] text-balance">
+          <h1 className="text-[1.7rem] sm:text-5xl lg:text-6xl font-bold tracking-tight text-slate-900 dark:text-white leading-[1.15] sm:leading-[1.12] text-balance">
             {content.hero.headlinePart1}
             <span className="font-serif-italic font-normal text-transparent bg-clip-text bg-gradient-to-r from-indigo-700 via-indigo-600 to-purple-700 dark:from-indigo-200 dark:via-indigo-100 dark:to-purple-200 underline decoration-indigo-300 dark:decoration-indigo-400/40 underline-offset-4 sm:underline-offset-8">
               {content.hero.headlineHighlight}
@@ -73,7 +73,7 @@ export const Hero: React.FC<HeroProps> = ({ content, locale }) => {
           </p>
 
           {/* Primary & Secondary CTAs - Clean Mobile-First Layout */}
-          <div className="mt-5 sm:mt-8 flex flex-col sm:flex-row items-center justify-center gap-2.5 sm:gap-4 relative z-30 isolate w-full max-w-xs sm:max-w-none mx-auto">
+          <div id="hero-primary-cta" className="mt-5 sm:mt-8 flex flex-col sm:flex-row items-center justify-center gap-2.5 sm:gap-4 relative z-30 isolate w-full max-w-xs sm:max-w-none mx-auto">
             <a
               href="#lead-form"
               onClick={scrollToLead}
@@ -125,18 +125,18 @@ export const Hero: React.FC<HeroProps> = ({ content, locale }) => {
             </a>
           </div>
 
-          {/* Trust proof indicators - compact on mobile */}
-          <div className="mt-4 sm:mt-8 pt-3 sm:pt-6 border-t border-slate-200/80 dark:border-white/[0.06] grid grid-cols-3 gap-1 sm:gap-6 max-w-xl mx-auto text-center">
-            <div>
-              <p className="text-sm sm:text-2xl font-bold text-slate-900 dark:text-white font-mono-numbers">{content.hero.trustProof.stat1}</p>
+          {/* Trust proof indicators - compact on mobile, wraps cleanly at 360px */}
+          <div className="mt-4 sm:mt-8 pt-3 sm:pt-6 border-t border-slate-200/80 dark:border-white/[0.06] grid grid-cols-3 gap-2 sm:gap-6 max-w-xl mx-auto text-center px-1">
+            <div className="min-w-0">
+              <p className="text-[13px] sm:text-2xl font-bold text-slate-900 dark:text-white font-mono-numbers leading-tight break-words">{content.hero.trustProof.stat1}</p>
               <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-tight">{content.hero.trustProof.stat1Label}</p>
             </div>
-            <div className="border-x border-slate-200 dark:border-white/[0.08]">
-              <p className="text-sm sm:text-2xl font-bold text-slate-900 dark:text-white font-mono-numbers">{content.hero.trustProof.stat2}</p>
+            <div className="border-x border-slate-200 dark:border-white/[0.08] px-1 min-w-0">
+              <p className="text-[13px] sm:text-2xl font-bold text-slate-900 dark:text-white font-mono-numbers leading-tight break-words">{content.hero.trustProof.stat2}</p>
               <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-tight">{content.hero.trustProof.stat2Label}</p>
             </div>
-            <div>
-              <p className="text-sm sm:text-2xl font-bold text-slate-900 dark:text-white font-mono-numbers">{content.hero.trustProof.stat3}</p>
+            <div className="min-w-0">
+              <p className="text-[13px] sm:text-2xl font-bold text-slate-900 dark:text-white font-mono-numbers leading-tight break-words">{content.hero.trustProof.stat3}</p>
               <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-tight">{content.hero.trustProof.stat3Label}</p>
             </div>
           </div>
@@ -147,7 +147,7 @@ export const Hero: React.FC<HeroProps> = ({ content, locale }) => {
           {/* Subtle perimeter glow around dashboard container */}
           <div className="pointer-events-none absolute -inset-1.5 rounded-3xl bg-gradient-to-b from-indigo-500/15 via-purple-500/10 to-transparent dark:from-indigo-500/25 dark:via-purple-500/15 blur-2xl opacity-60" />
 
-          <div className="relative rounded-2xl sm:rounded-3xl border border-slate-200/90 dark:border-white/10 bg-white/95 dark:bg-[#0B0D18]/95 shadow-xl shadow-slate-200/50 dark:shadow-[0_25px_80px_rgba(0,0,0,0.8)] backdrop-blur-2xl overflow-hidden">
+          <div className="relative rounded-2xl sm:rounded-3xl border border-[#DDE1F0] dark:border-white/10 bg-white dark:bg-[#0B0D18]/95 shadow-xl shadow-indigo-200/60 dark:shadow-[0_25px_80px_rgba(0,0,0,0.8)] backdrop-blur-2xl overflow-hidden">
             {/* Unified Convergence Strip: Feeding Real-Time Signals into EcoMate Engine */}
             <div className="border-b border-slate-200/80 dark:border-white/[0.08] bg-slate-50/80 dark:bg-white/[0.02] p-3.5 sm:p-5">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-2 mb-3.5">
@@ -158,7 +158,7 @@ export const Hero: React.FC<HeroProps> = ({ content, locale }) => {
                   </span>
                 </div>
                 <span className="text-[10px] sm:text-[11px] font-mono text-emerald-700 dark:text-emerald-400 bg-emerald-100/70 dark:bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-500/20 font-semibold">
-                  ● 4/4 Sales & Fulfillment Nodes Connected
+                  Sales and fulfillment nodes connected
                 </span>
               </div>
 
@@ -283,12 +283,12 @@ export const Hero: React.FC<HeroProps> = ({ content, locale }) => {
                     <div className="rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50/80 dark:bg-white/[0.02] p-4">
                       <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
                         <span>{locale === 'en' ? 'Fulfillment Accuracy' : 'প্যাকিং নির্ভুলতা'}</span>
-                        <span className="text-indigo-600 dark:text-indigo-400 font-medium">100% Barcode</span>
+                        <span className="text-indigo-600 dark:text-indigo-400 font-medium">Scan-checked</span>
                       </div>
                       <p className="mt-2 text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400 font-mono-numbers">
-                        99.96%
+                        Blocked at scan
                       </p>
-                      <p className="text-[11px] text-slate-500 mt-1">0 mismatch errors today</p>
+                      <p className="text-[11px] text-slate-500 mt-1">Mismatches stopped before labels print</p>
                     </div>
 
                     <div className="rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50/80 dark:bg-white/[0.02] p-4">
@@ -310,7 +310,7 @@ export const Hero: React.FC<HeroProps> = ({ content, locale }) => {
                       <p className="mt-2 text-xl sm:text-2xl font-bold text-indigo-700 dark:text-indigo-300 font-mono-numbers">
                         ৳ 14,20,500
                       </p>
-                      <p className="text-[11px] text-slate-500 mt-1">100% matched to bank deposit</p>
+                      <p className="text-[11px] text-slate-500 mt-1">Matched line by line to bank deposits</p>
                     </div>
                   </div>
 
@@ -333,8 +333,9 @@ export const Hero: React.FC<HeroProps> = ({ content, locale }) => {
                         </span>
                       </div>
 
-                      {/* Simulated elegant bar chart */}
-                      <div className="h-44 flex items-end gap-2 sm:gap-3 pt-6 pb-2 px-2 border-b border-slate-200 dark:border-white/[0.06]">
+                      {/* Simulated elegant bar chart - horizontal scroll on 360px so bars never crush */}
+                      <div className="overflow-x-auto -mx-1 px-1">
+                      <div className="h-44 flex items-end gap-2 sm:gap-3 pt-6 pb-2 px-2 border-b border-slate-200 dark:border-white/[0.06] min-w-[480px] sm:min-w-0">
                         {[
                           { time: '9 AM', count: 42, height: '35%' },
                           { time: '10 AM', count: 78, height: '58%' },
@@ -354,6 +355,7 @@ export const Hero: React.FC<HeroProps> = ({ content, locale }) => {
                           </div>
                         ))}
                       </div>
+                      </div>
 
                       <div className="mt-4 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
                         <div className="flex items-center gap-4">
@@ -366,7 +368,7 @@ export const Hero: React.FC<HeroProps> = ({ content, locale }) => {
                             Courier Handover
                           </span>
                         </div>
-                        <span className="text-slate-700 dark:text-slate-300 font-mono-numbers font-medium">Average packing: 22s / order</span>
+                        <span className="text-slate-700 dark:text-slate-300 font-mono-numbers font-medium">Timed packing flow per order</span>
                       </div>
                     </div>
 
@@ -375,7 +377,7 @@ export const Hero: React.FC<HeroProps> = ({ content, locale }) => {
                       <div>
                         <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-3 flex items-center justify-between">
                           <span>{locale === 'en' ? 'Active Commerce Nodes' : 'সক্রিয় সেলস নোড'}</span>
-                          <span className="text-[11px] text-indigo-600 dark:text-indigo-400 font-mono font-medium">3 / 3 Synchronized</span>
+                          <span className="text-[11px] text-indigo-600 dark:text-indigo-400 font-mono font-medium">All synchronized</span>
                         </h4>
 
                         <div className="space-y-3">

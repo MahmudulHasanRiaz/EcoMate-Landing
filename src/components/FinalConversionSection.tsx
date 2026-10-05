@@ -22,7 +22,7 @@ export const FinalConversionSection: React.FC<FinalConversionProps> = ({ content
     name: '',
     phone: '',
     email: '',
-    volume: content.leadForm.volumeOptions[1] || '150 – 500 orders / day',
+                        volume: content.leadForm.volumeOptions[1] || '150-500 orders / day',
     note: '',
   });
 
@@ -77,7 +77,7 @@ export const FinalConversionSection: React.FC<FinalConversionProps> = ({ content
   };
 
   return (
-    <section id="lead-form" className="relative py-14 md:py-24 border-t border-slate-200 dark:border-white/[0.06] bg-slate-50/50 dark:bg-[#07080E] overflow-hidden transition-colors">
+    <section id="lead-form" className="relative py-14 md:py-24 border-t border-[#DDE1F0] dark:border-white/[0.06] bg-[#EDEEF6] dark:bg-[#07080E] overflow-hidden transition-colors">
       {/* Background glowing aura */}
       <div 
         className="pointer-events-none absolute -bottom-20 left-1/2 -translate-x-1/2 w-[700px] h-[500px] rounded-full blur-[140px] opacity-15 dark:opacity-25"
@@ -186,7 +186,7 @@ export const FinalConversionSection: React.FC<FinalConversionProps> = ({ content
                         name: '',
                         phone: '',
                         email: '',
-                        volume: content.leadForm.volumeOptions[1] || '150 – 500 orders / day',
+    volume: content.leadForm.volumeOptions[1] || '150-500 orders / day',
                         note: '',
                       });
                     }}
@@ -215,7 +215,7 @@ export const FinalConversionSection: React.FC<FinalConversionProps> = ({ content
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     placeholder={content.leadForm.namePlaceholder}
-                    className="w-full px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+                    className="w-full px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
                   />
                 </div>
 
@@ -230,7 +230,7 @@ export const FinalConversionSection: React.FC<FinalConversionProps> = ({ content
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     placeholder={content.leadForm.phonePlaceholder}
-                    className="w-full px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm font-mono-numbers focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+                    className="w-full px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 text-sm font-mono-numbers focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
                   />
                 </div>
 
@@ -244,7 +244,7 @@ export const FinalConversionSection: React.FC<FinalConversionProps> = ({ content
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     placeholder={content.leadForm.emailPlaceholder}
-                    className="w-full px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+                    className="w-full px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
                   />
                 </div>
 
@@ -276,7 +276,7 @@ export const FinalConversionSection: React.FC<FinalConversionProps> = ({ content
                     value={formData.note}
                     onChange={(e) => setFormData({ ...formData, note: e.target.value })}
                     placeholder={content.leadForm.notePlaceholder}
-                    className="w-full px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors resize-none"
+                    className="w-full px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors resize-none"
                   />
                 </div>
 

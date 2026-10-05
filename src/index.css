@@ -13,9 +13,19 @@
   body {
     font-family: var(--font-sans);
     overflow-x: hidden;
-    background-color: #f8fafc;
+    background-color: #f2f3f9;
     color: #0f172a;
     transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  /* Designed light system: indigo-tinted paper, not flat inversion.
+     Dark navy stays for dark mode. Light gets its own depth cues:
+     tinted borders, indigo-washed shadows, warmer slate text. */
+  :root {
+    --surface-light: #ffffff;
+    --surface-sunken-light: #eceef7;
+    --border-light: #dde1f0;
+    --shadow-tint-light: 99 102 241;
   }
 }
 

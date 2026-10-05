@@ -29,12 +29,12 @@ export const landingContent: Record<Locale, LandingContent> = {
         callText: '+880 1894-828290',
       },
       trustProof: {
-        stat1: '100%',
-        stat1Label: 'Barcode verified packing',
-        stat2: '< 0.05%',
-        stat2Label: 'Fulfillment error rate',
+        stat1: 'Scan-locked',
+        stat1Label: 'Checked before dispatch',
+        stat2: 'Scan-blocked',
+        stat2Label: 'Wrong items stopped',
         stat3: 'Real-time',
-        stat3Label: 'Multi-store & POS sync',
+        stat3Label: 'Stores and POS in sync',
       },
     },
     complexity: {
@@ -248,7 +248,7 @@ export const landingContent: Record<Locale, LandingContent> = {
         'E-commerce profitability is not only about top-line sales. Preventing avoidable packing errors and fake orders directly safeguards your net profit.',
       packingStory: {
         mistakeHeading: 'The True Cost of a Packing Mistake',
-        mistakeCost: '৳ 350 – ৳ 600 per incident',
+        mistakeCost: '৳ 350-600 per incident (example range)',
         solutionHeading: 'EcoMate Smart Packing Verification',
         solutionDetail:
           'Packing operators scan each SKU barcode before a shipping label can generate. If someone grabs a Red Medium instead of Red Large, the screen flashes red with a loud warning sound.',
@@ -406,9 +406,9 @@ export const landingContent: Record<Locale, LandingContent> = {
         },
         {
           label: 'Fulfillment Accuracy',
-          value: '99.94%',
+          value: 'Sample dashboard',
           subtext: 'Verified by smart barcode scanning',
-          trend: '0.06% packing mistake rate',
+          trend: 'Illustrative figures, not a guarantee',
         },
         {
           label: 'Courier Delivery Success',
@@ -419,7 +419,7 @@ export const landingContent: Record<Locale, LandingContent> = {
         {
           label: 'Reconciled COD Cash',
           value: '৳ 34,12,450',
-          subtext: '100% matched to bank deposits',
+          subtext: 'Matched line by line to bank deposits',
           trend: '৳ 0 unallocated funds',
         },
       ],
@@ -441,7 +441,7 @@ export const landingContent: Record<Locale, LandingContent> = {
           quote:
             'Before EcoMate, our biggest nightmare was packing the wrong shoe size. A size 41 sent as 42 meant double courier charges and an upset customer. Since installing the Smart Packing barcode station, our packing error rate dropped to near zero across 800+ daily orders.',
           metrics: [
-            { stat: '99.9%', label: 'Packing Accuracy' },
+            { stat: 'Near zero', label: 'Packing errors reported' },
             { stat: '-74%', label: 'Avoidable Return Costs' },
             { stat: '3 Outlets', label: 'Synced in Real-time' },
           ],
@@ -463,7 +463,7 @@ export const landingContent: Record<Locale, LandingContent> = {
           metrics: [
             { stat: '18 hrs/wk', label: 'Accounting Time Saved' },
             { stat: '৳ 1.2M', label: 'Disputed Claims Recovered' },
-            { stat: '100%', label: 'Audit Compliance' },
+            { stat: 'Audit-ready', label: 'Traceable settlements' },
           ],
           challenge: 'Untracked courier deductions, delayed COD reconciliation, and fragmented Meta ad tracking.',
           solution: 'Automated courier settlement parsing and server-side Meta Conversions API (CAPI).',
@@ -668,7 +668,7 @@ export const landingContent: Record<Locale, LandingContent> = {
       eyebrow: 'Take Control',
       heading: 'Book a Free Operational Demo.',
       subheading:
-        'See EcoMate live with your own order volume and workflow. No generic sales pitch — an operational specialist will walk through your exact setup.',
+        'See EcoMate live with your own order volume and workflow. No generic sales pitch. An operational specialist will walk through your exact setup.',
       nameLabel: 'Your Full Name',
       namePlaceholder: 'e.g. Asif Mahmud',
       phoneLabel: 'Phone Number',
@@ -677,10 +677,10 @@ export const landingContent: Record<Locale, LandingContent> = {
       emailPlaceholder: 'e.g. asif@yourbrand.com',
       volumeLabel: 'Current Daily Order Volume',
       volumeOptions: [
-        '50 – 150 orders / day',
-        '150 – 500 orders / day',
-        '500 – 1,500 orders / day',
-        '1,500+ orders / day (High Volume)',
+        '50-150 orders / day',
+        '150-500 orders / day',
+        '500-1500 orders / day',
+        '1500+ orders / day (High Volume)',
       ],
       noteLabel: 'Key Operational Challenges (Optional)',
       notePlaceholder: 'Tell us about your outlets, packing challenges, or courier reconciliation needs...',
@@ -1379,10 +1379,10 @@ export const landingContent: Record<Locale, LandingContent> = {
       emailPlaceholder: 'যেমন: asif@yourbrand.com',
       volumeLabel: 'দৈনিক বর্তমান গড় অর্ডার',
       volumeOptions: [
-        '৫০ – ১৫০ অর্ডার / দিন',
-        '১৫০ – ৫০০ অর্ডার / দিন',
-        '৫০০ – ১,৫০০ অর্ডার / দিন',
-        '১,৫০০+ অর্ডার / দিন (হাই ভলিউম)',
+        '৫০-১৫০ অর্ডার / দিন',
+        '১৫০-৫০০ অর্ডার / দিন',
+        '৫০০-১৫০০ অর্ডার / দিন',
+        '১৫০০+ অর্ডার / দিন (হাই ভলিউম)',
       ],
       noteLabel: 'প্রধান অপারেশনাল চ্যালেঞ্জ (ঐচ্ছিক)',
       notePlaceholder: 'আপনার শোরুম সংখ্যা, প্যাকিংয়ের সমস্যা বা কুরিয়ার রিকনসিলিয়েশন সম্পর্কে লিখুন...',

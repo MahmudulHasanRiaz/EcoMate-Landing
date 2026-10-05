@@ -44,7 +44,7 @@ export const EcosystemSection: React.FC<EcosystemSectionProps> = ({ content, loc
   const activeNode = content.ecosystem.nodes.find((n) => n.id === activeNodeId) || content.ecosystem.nodes[0];
 
   return (
-    <section id="ecosystem" className="relative py-14 md:py-24 bg-white dark:bg-[#07080E] border-t border-slate-200 dark:border-transparent overflow-hidden transition-colors">
+    <section id="ecosystem" className="relative py-14 md:py-24 bg-[#EDEEF6] dark:bg-[#07080E] border-t border-[#DDE1F0] dark:border-transparent overflow-hidden transition-colors">
       {/* Background ambient center radial light */}
       <div 
         className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[500px] rounded-full blur-[160px] opacity-15 dark:opacity-20"
@@ -84,8 +84,8 @@ export const EcosystemSection: React.FC<EcosystemSectionProps> = ({ content, loc
             <div className="w-0.5 h-4 sm:h-6 bg-gradient-to-b from-indigo-500 to-transparent" />
           </div>
 
-          {/* 6 Peripheral Pillars - Responsive scroll on small mobile, compact grid on tablet/desktop */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
+          {/* 6 Peripheral Pillars - single column at 360px, 2-col from 480px up */}
+          <div className="grid grid-cols-1 min-[480px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
             {content.ecosystem.nodes.map((node) => {
               const isActive = activeNode.id === node.id;
               return (
@@ -99,10 +99,10 @@ export const EcosystemSection: React.FC<EcosystemSectionProps> = ({ content, loc
                   }`}
                 >
                   <div className="mb-1.5 sm:mb-2">{getIcon(node.iconName)}</div>
-                  <h4 className={`text-xs font-bold line-clamp-1 ${isActive ? 'text-indigo-950 dark:text-white' : 'text-slate-800 dark:text-white'}`}>
+                  <h4 className={`text-[13px] font-bold leading-snug ${isActive ? 'text-indigo-950 dark:text-white' : 'text-slate-800 dark:text-white'}`}>
                     {node.title}
                   </h4>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1">{node.subtitle}</p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">{node.subtitle}</p>
 
                   {isActive && (
                     <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-6 sm:w-8 h-1 bg-indigo-600 dark:bg-indigo-500 rounded-full" />
@@ -127,7 +127,7 @@ export const EcosystemSection: React.FC<EcosystemSectionProps> = ({ content, loc
                 </div>
               </div>
               <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
-                100% Core Engine Integrated
+                Core Engine Integrated
               </span>
             </div>
 

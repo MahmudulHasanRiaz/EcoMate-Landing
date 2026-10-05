@@ -64,7 +64,7 @@ export default function App() {
   }, [theme]);
 
   return (
-    <div className={`min-h-screen bg-[#F8FAFC] dark:bg-[#07080E] text-slate-900 dark:text-slate-100 selection:bg-indigo-600 selection:text-white transition-colors duration-200 ${locale === 'bn' ? 'font-bangla' : ''}`}>
+    <div className={`min-h-screen bg-[#F2F3F9] dark:bg-[#07080E] text-slate-900 dark:text-slate-100 selection:bg-indigo-600 selection:text-white transition-colors duration-200 ${locale === 'bn' ? 'font-bangla' : ''}`}>
       {/* Top Bar Navigation */}
       <Header
         content={content}

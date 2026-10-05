@@ -93,7 +93,7 @@ export const ComplexitySection: React.FC<ComplexitySectionProps> = ({ content, l
                     {locale === 'en' ? 'Disciplined Pipeline (With EcoMate)' : 'একীভূত ডিসিপ্লিনড অপারেশন (ইকোমেট)'}
                   </span>
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-semibold">
-                    100% SYNCHRONIZED
+                    SYNCHRONIZED
                   </span>
                 </div>
 
@@ -119,7 +119,7 @@ export const ComplexitySection: React.FC<ComplexitySectionProps> = ({ content, l
 
                   <div className="flex items-center justify-between p-2.5 rounded-lg bg-white/80 dark:bg-black/30 border border-emerald-200/60 dark:border-white/[0.04] text-xs">
                     <span className="font-medium text-slate-800 dark:text-slate-200">Automated Courier COD Reconciliation</span>
-                    <span className="font-mono text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">100% Bank Matched ✓</span>
+                    <span className="font-mono text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">Bank Matched ✓</span>
                   </div>
                 </div>
               </div>

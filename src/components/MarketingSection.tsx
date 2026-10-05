@@ -58,7 +58,7 @@ export const MarketingSection: React.FC<MarketingSectionProps> = ({ content, loc
               <span className="text-[10px] font-mono text-rose-700 dark:text-rose-400 font-bold block mb-1">DATA STAGE 03</span>
               <p className="font-bold text-slate-900 dark:text-white">Server-Side CAPI Event</p>
               <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5">Dispatched directly from backend</p>
-              <div className="mt-2 text-[10px] font-mono text-emerald-700 dark:text-emerald-400 font-bold">100% PURCHASE MATCHED</div>
+              <div className="mt-2 text-[10px] font-mono text-emerald-700 dark:text-emerald-400 font-bold">PURCHASE MATCHED</div>
             </div>
 
             {/* Stage 4: Net Real Cash ROAS */}

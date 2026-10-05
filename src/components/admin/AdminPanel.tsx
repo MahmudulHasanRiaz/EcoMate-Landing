@@ -503,7 +503,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                           </td>
                           <td className="px-4 py-3">
                             <span className="font-mono font-medium text-slate-800 dark:text-slate-200 block">{lead.phone}</span>
-                            <span className="text-[11px] text-slate-500">{lead.email || '—'}</span>
+                            <span className="text-[11px] text-slate-500">{lead.email || 'N/A'}</span>
                           </td>
                           <td className="px-4 py-3">
                             <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">

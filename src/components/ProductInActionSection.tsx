@@ -150,7 +150,7 @@ export const ProductInActionSection: React.FC<ProductInActionProps> = ({
                       <p className="text-slate-900 dark:text-white font-semibold">SKU: DRK-DENIM-34 (Verified)</p>
                       <p className="text-slate-500 dark:text-slate-400 text-[11px]">Barcode: 89014299104 · Audio Chime OK</p>
                     </div>
-                    <span className="font-mono text-emerald-700 dark:text-emerald-400 font-bold">[100% MATCH]</span>
+                    <span className="font-mono text-emerald-700 dark:text-emerald-400 font-bold">[MATCH]</span>
                   </div>
 
                   <div className="p-3.5 rounded-lg bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.06] flex items-center justify-between shadow-2xs">
@@ -217,7 +217,7 @@ export const ProductInActionSection: React.FC<ProductInActionProps> = ({
                     </div>
                     <div className="p-2.5 rounded bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.06] shadow-2xs">
                       <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Bin Locations</span>
-                      <p className="text-base font-bold text-emerald-600 dark:text-emerald-400 font-mono-numbers mt-0.5">100%</p>
+                      <p className="text-base font-bold text-emerald-600 dark:text-emerald-400 font-mono-numbers mt-0.5">Mapped</p>
                     </div>
                     <div className="p-2.5 rounded bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.06] shadow-2xs">
                       <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Low Stock SKUs</span>

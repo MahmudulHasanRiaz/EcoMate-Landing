@@ -62,7 +62,7 @@ export const InventoryFinanceSection: React.FC<InventoryFinanceProps> = ({ conte
                   <h4 className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white">Central Warehouse Bin Architecture</h4>
                   <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400">Tejgaon Industrial Hub · Zone B</p>
                 </div>
-                <span className="text-[11px] sm:text-xs font-mono text-emerald-700 dark:text-emerald-400 font-bold">● 100% Located</span>
+                <span className="text-[11px] sm:text-xs font-mono text-emerald-700 dark:text-emerald-400 font-bold">● Bin-located</span>
               </div>
 
               <div className="grid grid-cols-3 gap-2 text-xs font-mono">

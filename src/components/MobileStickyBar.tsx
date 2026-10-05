@@ -12,19 +12,21 @@ export const MobileStickyBar: React.FC<MobileStickyBarProps> = ({ content, local
   const [hasScrolledPastHero, setHasScrolledPastHero] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => {
-      // Reveal sticky bar only after the visitor has scrolled past the hero CTA block (~260px)
-      // This guarantees the Hero CTA has 100% unobstructed visibility on smaller mobile devices
-      if (window.scrollY > 260) {
-        setHasScrolledPastHero(true);
-      } else {
-        setHasScrolledPastHero(false);
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll();
-    return () => window.removeEventListener('scroll', handleScroll);
+    // Show bar once hero CTA scrolls out of view. IntersectionObserver
+    // avoids per-frame scroll handlers that jank on low-end mobile.
+    const heroCta = document.querySelector('#hero-primary-cta');
+    const sentinel = document.querySelector('#hero');
+    const target = heroCta ?? sentinel;
+    if (!target) {
+      setHasScrolledPastHero(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => setHasScrolledPastHero(!entry.isIntersecting),
+      { threshold: 0, rootMargin: '-80px 0px 0px 0px' }
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
   }, []);
 
   if (isDismissed || !hasScrolledPastHero) return null;

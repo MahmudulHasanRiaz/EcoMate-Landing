@@ -80,7 +80,7 @@ export const FulfillmentPipelineSection: React.FC<FulfillmentPipelineProps> = ({
                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                 <span>Audio Chime</span>
               </p>
-              <p className="text-[11px] text-emerald-700 dark:text-emerald-300 mt-0.5">100% SKU match verified</p>
+              <p className="text-[11px] text-emerald-700 dark:text-emerald-300 mt-0.5">SKU match verified at scan</p>
               <div className="mt-2 text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">WRONG SIZE BLOCKED</div>
             </div>
 
@@ -210,7 +210,7 @@ export const FulfillmentPipelineSection: React.FC<FulfillmentPipelineProps> = ({
                     <div className="p-3 rounded-lg bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-500/30">
                       <p className="font-bold text-slate-900 dark:text-white">Courier COD Reconciliation</p>
                       <p className="text-slate-600 dark:text-slate-300 mt-1">Parsed Steadfast Settlement Statement #ST-4829.</p>
-                      <p className="mt-2 text-sky-700 dark:text-sky-300 font-mono text-[11px] font-semibold">842 parcels reconciled to Bank A/C: 100% matched</p>
+                      <p className="mt-2 text-sky-700 dark:text-sky-300 font-mono text-[11px] font-semibold">842 sample parcels reconciled to Bank A/C: matched</p>
                     </div>
                   </div>
                 ) : (

@@ -18,7 +18,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
   const [annualBilling, setAnnualBilling] = useState<boolean>(true);
 
   return (
-    <section id="pricing" className="relative py-14 md:py-24 border-t border-slate-200 dark:border-white/[0.06] bg-slate-50/50 dark:bg-[#080910] transition-colors">
+    <section id="pricing" className="relative py-14 md:py-24 border-t border-[#DDE1F0] dark:border-white/[0.06] bg-[#E9EBF5] dark:bg-[#080910] transition-colors">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6 mb-8 sm:mb-12">
@@ -155,7 +155,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
                     <div>
                       <a
                         href="#lead-form"
-                        className={`w-full py-3.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                        className={`w-full py-3.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 whitespace-nowrap text-center transition-all cursor-pointer ${
                           isPopular
                             ? 'bg-gradient-to-r from-indigo-600 via-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-300/50 hover:brightness-105'
                             : 'bg-white border border-slate-300 text-slate-900 hover:bg-slate-50 dark:bg-white/[0.05] dark:border-white/10 dark:text-white dark:hover:bg-white/10'

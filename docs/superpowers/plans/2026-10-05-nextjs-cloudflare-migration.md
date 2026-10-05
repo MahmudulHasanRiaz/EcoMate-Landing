@@ -952,7 +952,11 @@ Expected: each prints an `id` (Hyperdrive, KV) / success. Copy the Hyperdrive id
 
 ```toml
 name = "ecomate-landing"
-compatibility_date = "2025-09-01"
+# Current date, not a stale one: Cloudflare enables new platform behaviour on/after
+# this date, and opennext + Next 16 rely on it. 2025-09-01 was already 13 months
+# behind at the time of writing. Verify with `npx wrangler deploy --dry-run`
+# before the first real deploy, and bump it whenever wrangler warns.
+compatibility_date = "2026-06-01"
 compatibility_flags = ["nodejs_compat"]
 
 [[hyperdrive]]
@@ -1054,7 +1058,19 @@ Replace the verify block with:
           echo "Production build verified successfully. Ready for manual deployment."
 ```
 
-- [ ] **Step 2: Update `deploy.yml`** — build job uploads `.opennext` instead of `dist`; deploy job runs `opennextjs-cloudflare deploy` (needs `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` secrets, unchanged). Both workflows already pin `actions/setup-node@v4` with `node-version: 24`; keep that and add an explicit floor assertion right after the checkout step in **both** `ci.yml` and `deploy.yml` so a silent runner-image downgrade cannot slip through:
+- [ ] **Step 2: Update `deploy.yml`** — build job uploads `.opennext` instead of `dist`. **Replace the `cloudflare/wrangler-action@v3` step.** That action issues a plain `wrangler deploy`, which does not carry the opennext build output/args and silently deploys a broken or empty Worker. The opennext CLI must drive the deploy:
+
+```yaml
+      - name: Deploy to Cloudflare via opennext
+        run: npx opennextjs-cloudflare deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          NODE_ENV: production
+```
+Keep the `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` secrets unchanged. If you prefer the action, it must be `cloudflare/wrangler-action` with `command: deploy` **plus** the opennext-generated config — but the CLI form above is the documented path and has no such caveat.
+
+ Both workflows already pin `actions/setup-node@v4` with `node-version: 24`; keep that and add an explicit floor assertion right after the checkout step in **both** `ci.yml` and `deploy.yml` so a silent runner-image downgrade cannot slip through:
 
 ```yaml
       - name: Assert Node floor (24)
@@ -1489,6 +1505,56 @@ export async function GET(req: Request) {
 }
 ```
 `app/api/content/[sectionKey]/route.ts`: PUT upserts `{sectionKey, locale}` payload (admin save; replaces static slice). `app/api/social-links/route.ts`: GET visible list + POST/PUT/DELETE CRUD, same `ok`/`fail` pattern as Task 6 Step 1.
+
+- [ ] **Step 3b: Add the two helpers the test suite (Task 18) depends on**
+
+Task 18 tests `mergeContent` and slug generation; they must exist before then, and both are used by the page, so they belong here rather than in Task 18.
+
+`lib/merge.ts` — the EN/BN fallback merge, which is what makes a missing Bangla row render English instead of blank:
+```ts
+// lib/merge.ts
+type Json = Record<string, unknown>;
+
+function isPlainObject(v: unknown): v is Json {
+  return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
+/**
+ * Deep merge where `db` wins per key and `fallback` fills the gaps.
+ * Arrays are replaced wholesale, never merged element-wise: a partially-merged
+ * feature list is worse than either version, because it reads as intentional.
+ */
+export function mergeContent<T extends Json>(db: Json | null, fallback: T): T {
+  if (!db) return fallback;
+  const out: Json = { ...fallback };
+  for (const [key, value] of Object.entries(db)) {
+    const base = fallback[key];
+    out[key] = isPlainObject(value) && isPlainObject(base) ? mergeContent(value, base) : value;
+  }
+  return out as T;
+}
+```
+
+`lib/slug.ts` — stable ASCII slugs, including from Bangla titles (which have no ASCII form, so they transliterate via the existing static seed's slugs or fall back to a short id):
+```ts
+// lib/slug.ts
+const BANLA_TO_ASCII: Record<string, string> = {
+  'অ': 'o', 'আ': 'a', 'ই': 'i', 'উ': 'u', 'এ': 'e', 'ক': 'k', 'গ': 'g', 'চ': 'c',
+  'জ': 'j', 'ট': 't', 'ড': 'd', 'ত': 't', 'দ': 'd', 'ন': 'n', 'প': 'p', 'ব': 'b',
+  'ম': 'm', 'য': 'j', 'র': 'r', 'ল': 'l', 'শ': 's', 'স': 's', 'হ': 'h', 'া': 'a',
+  'ি': 'i', 'ী': 'i', 'ু': 'u', 'ে': 'e', 'ো': 'o', 'ৌ': 'o', ' ': '-',
+};
+
+export function slugify(input: string): string {
+  const ascii = [...input.toLowerCase()]
+    .map((ch) => BANLA_TO_ASCII[ch] ?? (/[a-z0-9]/.test(ch) ? ch : /[\s]/.test(ch) ? '-' : ''))
+    .join('')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+  return ascii || `post-${Date.now().toString(36)}`;
+}
+```
+For a Bangla title that yields nothing usable, prefer an explicit English slug typed in admin rather than a transliteration nobody can read — the admin form keeps a read-only slug field with a "edit" override.
 
 - [ ] **Step 4: Make `app/page.tsx` server-driven with static fallback** — convert to an async Server Component that reads through the cached `lib/content.ts` helper (Task 15 §5 defines it; define it here if Task 15 has not landed yet — same signature). Deep-merge the DB payload over static `landingContent.en` (DB wins per `sectionKey`, static fills gaps); on `HYPERDRIVE_NOT_BOUND` or any DB error, fall back to static only and log server-side without alerting the visitor (Task 20 §3 makes this the documented outage behaviour). Pass the assembled object to the existing client section components unchanged — they already take a `content` prop, so zero component rewrites are needed. Locale toggle fetches `/api/content?locale=bn` client-side.
 
@@ -2144,12 +2210,224 @@ git commit -m "perf: consolidate Cache Components into lib/content with verified
 
 ---
 
+---
+
+### Task 23: App Shell extraction (prerequisite for instant navigation)
+
+**Files:**
+- Create: `components/shell/LocaleThemeProvider.tsx`, `components/shell/useLanding.ts`
+- Modify: `app/layout.tsx` (render the shell around `{children}`)
+- Modify: `app/page.tsx` (sections only)
+- Modify: all 16 section components in `src/components/` (prop → context)
+
+Partial Prefetching (Task 24) only pays off if there **is** a shared App Shell worth prefetching. Today the entire page — header, 16 sections, footer, sticky CTA bar — renders inside `app/page.tsx`, so the shell is the bare `<html>/<body>` and every navigation would re-render everything. That has to be fixed first.
+
+- [ ] **Step 1: One client provider for locale + theme + resolved content**
+
+The locale/theme toggles are client state that `Header`, `Footer`, `MobileStickyBar` and all 16 sections currently read from props. Move it to a single context in the shell:
+
+```tsx
+// components/shell/LocaleThemeProvider.tsx
+'use client';
+import { createContext, useMemo, useState } from 'react';
+import type { LandingContent, Locale, Theme } from '@/src/types/landing';
+
+interface ShellValue {
+  locale: Locale;
+  setLocale: (l: Locale) => void;
+  theme: Theme;
+  setTheme: (t: Theme) => void;
+  content: LandingContent;      // already merged EN-fallback + DB (Task 12 mergeContent)
+  setContent: (c: LandingContent) => void;
+}
+
+const ShellContext = createContext<ShellValue | null>(null);
+
+export function LocaleThemeProvider({ initialContent, children }: {
+  initialContent: LandingContent;
+  children: React.ReactNode;
+}) {
+  const [locale, setLocale] = useState<Locale>('en');
+  const [theme, setTheme] = useState<Theme>('light');
+  const [content, setContent] = useState<LandingContent>(initialContent);
+  const value = useMemo(
+    () => ({ locale, setLocale, theme, setTheme, content, setContent }),
+    [locale, theme, content],
+  );
+  return <ShellContext.Provider value={value}>{children}</ShellContext.Provider>;
+}
+```
+```tsx
+// components/shell/useLanding.ts
+'use client';
+import { useContext } from 'react';
+import { ShellContext } from './LocaleThemeProvider';
+
+export function useLanding() {
+  const ctx = useContext(ShellContext);
+  if (!ctx) throw new Error('useLanding must be used inside LocaleThemeProvider');
+  return ctx;
+}
+```
+`locale`/`theme` stay client state on purpose — they are interaction state, not data. Only **content** is server-fetched (Task 12) and handed in as `initialContent`.
+
+- [ ] **Step 2: Move the persistent chrome into `app/layout.tsx`**
+
+```tsx
+// app/layout.tsx (body)
+<body className="...">
+  <LocaleThemeProvider initialContent={initialContent}>
+    <SiteHeader />          {/* from src/components/Header.tsx */}
+    {children}               {/* only the sections */}
+    <SiteFooter />          {/* from src/components/Footer.tsx */}
+    <MobileStickyBar />     {/* from src/components/MobileStickyBar.tsx */}
+  </LocaleThemeProvider>
+</body>
+```
+`Header` receives `content` from `useLanding()` instead of props; same for `Footer` and `MobileStickyBar`. `PrototypeController` and `AdminPanel` stay **out** of the shell — they are admin-only chrome and must never appear in a prefetched shell.
+
+- [ ] **Step 3: Convert the 16 section components from props to context**
+
+Run: `rg -n "content: LandingContent" src/components` — each match drops the prop and calls `useLanding()`:
+```tsx
+// before
+export function Hero({ content, locale }: { content: LandingContent; locale: Locale }) { ... }
+// after
+export function Hero() {
+  const { content, locale } = useLanding();
+  ...
+}
+```
+Keep each section's own `'use client'` if it has interactivity; a purely presentational section can drop it and become a Server Component — fewer client boundaries means a smaller prerendered shell, which is the entire point of Task 24. Audit with `rg -c "useState|useEffect|onClick" src/components` and drop the directive where nothing matches.
+
+- [ ] **Step 4: Verify the shell is actually shared**
+
+Run: `npm run build`
+Expected: `app/layout.tsx` shows the shell prerendered (`◐` or `●`), and `next build` output lists the sections under the page, not the layout. Then confirm on a production run that navigating `/` → `/blog` repaints header/footer instantly with no network request for them.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add app/layout.tsx app/page.tsx components/shell src/components
+git commit -m "refactor: extract shared App Shell with locale/theme/content context"
+```
+
+---
+
+### Task 24: Partial Prefetching + instant navigation regression suite
+
+**Files:**
+- Modify: `next.config.ts` (add `partialPrefetching: true`)
+- Create: `instant-nav.rig.md`, `e2e/instant-nav.spec.ts`
+- Modify: `package.json` (`@next/playwright`)
+- Create: `docs/CACHE.md` additions (shell boundaries)
+
+Runs **after** Task 23 (a shell must exist) and **after** Task 22 (Cache Components must be green). Requires Next.js >= 16.3 — satisfied by the `16.3.8` pin.
+
+- [ ] **Step 1: Install the test helper**
+
+Run: `npm i -D @next/playwright`
+Expected: exit 0. The `instant()` helper comes from `@next/playwright`, **not** from `next/experimental/testmode/playwright` and not from bare `@playwright/test` (Task 18 uses the latter for behavioural flows; this task needs the former for navigation timing).
+
+- [ ] **Step 2: Audit every `<Link prefetch={true}>` with the flag still OFF**
+
+Run: `rg -n '\bprefetch\b|router\.prefetch' -g '*.tsx' -g '*.jsx' .`
+Include `src/components` and any shared wrapper — wrapper components are where `prefetch` usually hides. Inspect conditional and forwarded props to find the *effective production value*, not just the literal text.
+
+Expected at this point: `/blog` and `/blog/[slug]` and `/case-studies` links (Task 15's locale routes + Task 10's blog). Record the list in `instant-nav.rig.md`. If a link resolves to the default (`auto`/`undefined`) it is excluded — the legacy full-prefetch contract only covers explicit `true`.
+
+- [ ] **Step 3: Build the flag-OFF baseline suite (the preservation gate)**
+
+This is the step most people skip, and skipping it means adopting blind. Write the suite and **run it to green before touching the flag**:
+
+```ts
+// e2e/instant-nav.spec.ts
+import { expect, test } from '@next/playwright';
+
+test('landing -> blog list keeps header, footer and sticky CTA instant', async ({ page, browser }) => {
+  await page.goto('/');
+  await page.getByRole('link', { name: /blog/i }).first().hover();
+  const prepared = await page.waitForNavigation(() => page.getByRole('link', { name: /blog/i }).first().click(), { instant: true });
+  // These must come from the prefetched App Shell, not from a network round-trip
+  await expect(prepared.getByRole('banner')).toBeVisible();
+  await expect(prepared.getByRole('contentinfo')).toBeVisible();
+  await expect(prepared.getByRole('link', { name: /book.*demo/i }).first()).toBeVisible();
+});
+```
+Run against a **production-mode** rig (`npm run build && npm run opennextjs-cloudflare preview`) — automatic prefetching does not run in `next dev`, so a dev-server run proves nothing.
+Expected: PASS with `partialPrefetching` absent from `next.config.ts`. Record the command and exit status in `instant-nav.rig.md`. **Do not continue until this passes.**
+
+- [ ] **Step 4: Adopt each destination, re-running the unchanged suite**
+
+Per destination, add the temporary route export, then re-run the suite **without editing the tests** — failures are the work queue:
+```tsx
+// app/[locale]/blog/page.tsx
+export const prefetch = 'partial'
+```
+Keep any future per-link candidate flagged, exactly as:
+```tsx
+// TODO(per-link-prefetch): decide with the user whether blog post bodies should resolve before click.
+export const prefetch = 'partial'
+```
+That exact `TODO(per-link-prefetch)` prefix is what Task 24 §7 greps back.
+
+- [ ] **Step 5: Enable the flag globally, then strip the redundant exports**
+
+```bash
+# next.config.ts
+partialPrefetching: true,   // alongside cacheComponents: true
+```
+Then remove the now-redundant per-route exports with the first-party codemod — not find-and-replace:
+```bash
+npx @next/codemod@canary remove-partial-prefetch ./app
+```
+Check the reported file count matches the number of exports added in Step 4. The codemod refuses to run on a dirty tree, so commit first. It removes the exports and its generated guide comment but **keeps** the `TODO(per-link-prefetch)` markers for Step 7.
+
+Re-run the **unchanged** suite. Expected: PASS with the flag on.
+
+- [ ] **Step 6: Sweep for URL-data insights in `next dev`**
+
+```bash
+npx skills add https://github.com/vercel/next.js/tree/canary/skills/next-dev-loop
+npm run dev
+```
+Drive each route and read the dev log for `Next.js encountered … data` lines plus the amber Insights tab. The signal is **`params`/`searchParams` read too high** in a suspended subtree, which ties the shell to one URL and defeats prefetching. Fix per `instant-shell-url-data` by moving the read down to a new `<Suspense>` boundary.
+
+Expect this pass to also surface `blocking-prerender-*` errors (`cookies()`, `headers()`, uncached DB calls, `Date.now()`) on routes that built clean under Cache Components — that is new validation reaching a path the build never exercised, not an incomplete Task 22. Fix each the same way.
+
+An empty sweep is a pass. Do not go hunting for the Insights tab on a quiet route.
+
+- [ ] **Step 7: Resolve the `TODO(per-link-prefetch)` list with the user**
+
+Grep: `rg -n "TODO\(per-link-prefetch\)" app`
+Walk the list with the user and decide per route whether the URL-specific content (e.g. a blog post body, a case study) should be prefetched before the click or allowed to stream in. Each opted-in link costs one server invocation per prefetchable link — that is the trade-off to state. Where the answer is no, delete the marker. Where yes, add `prefetch={true}` to that specific `<Link>` and confirm on a production run before deleting the marker.
+
+**No `TODO(per-link-prefetch)` marker survives this task.** Keep this as its own commit, separate from the flag adoption.
+
+- [ ] **Step 8: Review `prefetch={false}` links**
+
+List every effective `prefetch={false}` in a `Navigation | Why it may no longer be needed` table. `false` disables prefetching entirely; Partial Prefetching's default `auto` already prefetches only the shared shell, so a `false` added to avoid legacy full-route prefetching is probably obsolete now. Do not change them in this task — hand them to the user as a separate decision.
+
+- [ ] **Step 9: Verify, then commit**
+
+Production-mode run: `npm run build && npm run opennextjs-cloudflare preview`. Click a link and confirm the shell paints instantly while the URL-specific region streams. On Workers the preview server is the production-equivalent — there is no `next start`.
+
+Also confirm nothing broke: `npm run build` passes, Task 18's suite still passes, and Task 22's invalidation checks are unaffected (`prefetch` changes navigation caching, not content caching).
+
+```bash
+git add next.config.ts e2e/instant-nav.spec.ts instant-nav.rig.md package.json app
+git commit -m "perf: enable Partial Prefetching with instant-navigation regression suite"
+```
+
+---
+
 ## Self-review
 
-1. **Spec coverage:** architecture (§2) → Tasks 1-2; DB flow (§3) → Tasks 3,5,7; R2 (§4) → Tasks 6-7; ENV map (§5) → Task 7 + deploy secrets Task 8; migration path (§6) → Tasks 1-8; error handling (§7) → `fail()` helper + `HYPERDRIVE_NOT_BOUND`/`R2_NOT_BOUND` + Task 20 §3 degradation; testing (§8 — rewritten, see spec) → Task 18; admin auth (§10) → Task 9 + §9 session hardening; SEO (§11) → Tasks 10, 15; design corrections (§12) → Task 11; whole-site content (§13) → Task 12; bilingual parity (§14) → Task 15 (§3 Intl formatting + §6 gap report); Meta tracking (§15) → Task 13 (+ consent prerequisite Task 20 §5, `waitUntil` correctness, retry queue Task 20 §4); enterprise hardening (§16) → Tasks 14, 16, 17, 19, 20, 21. New spec sections §17-21 map to Tasks 17-21 one-to-one; Cache Components adoption (§23) → mechanics in Tasks 1 (`cacheComponents: true`), 3 (build-time `DIRECT_URL` fallback + singleton client), 12 (Suspense + nondeterminism rules), 15 (tagged `lib/content.ts` + `updateTag`/`revalidateTag`), and the full audit in Task 22.
+1. **Spec coverage:** architecture (§2) → Tasks 1-2; DB flow (§3) → Tasks 3,5,7; R2 (§4) → Tasks 6-7; ENV map (§5) → Task 7 + deploy secrets Task 8; migration path (§6) → Tasks 1-8; error handling (§7) → `fail()` helper + `HYPERDRIVE_NOT_BOUND`/`R2_NOT_BOUND` + Task 20 §3 degradation; testing (§8 — rewritten, see spec) → Task 18; admin auth (§10) → Task 9 + §9 session hardening; SEO (§11) → Tasks 10, 15; design corrections (§12) → Task 11; whole-site content (§13) → Task 12; bilingual parity (§14) → Task 15 (§3 Intl formatting + §6 gap report); Meta tracking (§15) → Task 13 (+ consent prerequisite Task 20 §5, `waitUntil` correctness, retry queue Task 20 §4); enterprise hardening (§16) → Tasks 14, 16, 17, 19, 20, 21. New spec sections §17-21 map to Tasks 17-21 one-to-one; Cache Components adoption (§23) → mechanics in Tasks 1 (`cacheComponents: true`), 3 (build-time `DIRECT_URL` fallback + singleton client), 12 (Suspense + nondeterminism rules), 15 (tagged `lib/content.ts` + `updateTag`/`revalidateTag`), and the full audit in Task 22. App Shell & instant navigation (§24) → Task 23 (shell extraction + context) then Task 24 (`partialPrefetching`, flag-off `instant()` baseline, per-route adoption, codemod strip, insight sweep, per-link decisions).
 2. **Placeholder scan:** no TBD/TODO. `PASTE_HYPERDRIVE_ID`, `PASTE_KV_ID`, `<paste-direct-5432-url>` are operator-supplied values with the exact producing command in Task 7 Step 1. Seed row content specified by source location (`src/db/index.ts:186-534`).
 3. **Type consistency:** `ok`/`fail(message, status, details?)` — `fail` gains an optional third arg in Task 17 and is used with it only from Task 17 onward. `getDb()`/`isPostgresConfigured()` from Task 3 unchanged throughout. `getDb().transaction(tx => ...)` (Task 3 §6) is the same API used by `lib/revisions.ts` (Task 19 §2). All mutation routes adopt `.strict()` Zod schemas (Task 17) and the Task 4-5 hand-rolled allowlists are deleted in the same step, so no two competing field lists survive. Cookie/session ownership stays with Auth.js; `trustHost` is env-gated (Task 9) and `AUTH_TRUST_HOST` is listed in `.env.example`/wrangler vars.
 4. **Ordering constraints:** Task 3 §5 must precede Task 7's first `migrate`; Task 9's `admin_users` precedes `admin_users` FKs in Tasks 16/19/20; Task 13's tracking columns precede Task 14's consent check on the same table; Task 20 §5 consent gates Task 13's pixel/CAPI firing, so the consent banner must ship with (or before) the pixel going live — flagged in Task 20 §5.
 5. **Cache Components build-time dependency:** `cacheComponents: true` means the build executes every `'use cache'` function with no request context. This is a real cross-task coupling — `db/client.ts` (Task 3) falls back to `DIRECT_URL`, CI exposes it to the build step (Task 8), and Task 22 §5 proves the failure mode is loud. Removing `cacheComponents` or removing that env var silently breaks the build, so both are asserted.
 6. **Next.js 16 consistency:** every version pinned in the Tech Stack table was verified against the registry (next `latest` = 16.3.8; `@opennextjs/cloudflare` peer = `>=15.5.27 <16 || >=16.3.8`; `next-auth` beta peer includes `^16`). v16-specific conventions are applied everywhere they bite: `proxy.ts` (not `middleware.ts`) in Tasks 9/14/15/20, `params: Promise<...>` awaited in every dynamic handler, `cacheComponents: true` with `'use cache'` + `cacheTag`/`cacheLife` + `updateTag`/`revalidateTag` (no `fetch(next.tags)`, no `unstable_cache`, no `dynamic = 'force-dynamic'`), `next/font` in Task 2, `next/image` in Task 2 §3b, Zod 4 API (`z.strictObject`, `z.email`, `z.url`), Vitest 5, Node >= 24 in `engines`, `.node-version`, `.nvmrc` and both workflows. The Auth.js + Cloudflare Workers pairing is beta-on-unsupported-target and is flagged in Task 9 with a `better-auth` fallback rather than presented as certain.
-7. **Residual risk stated honestly:** LHCI budgets are baseline-then-block (Task 18 §5), not magically met on first run; R2 image transformation is not included (paid Workers feature, costs money); MySQL support remains out of scope (spec §9); "100% secure/SEO" means every checklist item is implemented and verified, not that a breach is impossible.
+7. **Ordering is load-bearing for the performance work:** Task 22 (Cache Components audit) → Task 23 (App Shell) → Task 24 (Partial Prefetching). Partial Prefetching needs `cacheComponents: true` with a green build, and it needs a shell worth prefetching — enabling it before Task 23 would prefetch an empty layout and buy nothing. Task 24's flag-off `instant()` baseline must pass before any route adopts `prefetch = 'partial'`, otherwise adoption is unverifiable.
+8. **Residual risk stated honestly:** LHCI budgets are baseline-then-block (Task 18 §5), not magically met on first run; R2 image transformation is not included (paid Workers feature, costs money); MySQL support remains out of scope (spec §9); "100% secure/SEO" means every checklist item is implemented and verified, not that a breach is impossible.

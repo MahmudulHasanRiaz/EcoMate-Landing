@@ -162,3 +162,13 @@ Known risk: Auth.js v5 is a beta and does not document Workers as a first-class 
 - `Date.now()` / `new Date()` / `Math.random()` freeze at build inside a cached scope — timestamps are selected raw and formatted in the component.
 - Invalidation: `updateTag` for same-request admin visibility, `revalidateTag` from cron/background jobs. Route Handlers are unaffected by Cache Components.
 - Adoption is audited in Task 22: single boundary enforced, Suspense coverage checked, nondeterminism scanned, invalidation proven on preview (including per-locale tag isolation), build-time fallback proven to fail loudly, and the PPR win measured with LHCI.
+
+## 24. App Shell & instant navigation
+- **App Shell is a real component, not a bare layout.** `Header`, `Footer` and `MobileStickyBar` render in `app/layout.tsx` around `{children}`; the 16 sections stay in `app/page.tsx`. Admin-only chrome (`PrototypeController`, `AdminPanel`) is excluded from the shell so it never prefetches.
+- Locale, theme and resolved content live in one client context (`LocaleThemeProvider` / `useLanding`); locale/theme are interaction state (client), content is server-fetched data (`initialContent`). Sections read context instead of props, which lets purely presentational sections drop `'use client'` and shrink the prerendered shell.
+- `partialPrefetching: true` alongside `cacheComponents: true` (Next >= 16.3). A default link then warms the shared App Shell; `<Link prefetch={true}>` additionally resolves cached URL-specific content for `params`/`searchParams` routes.
+- Adoption is preservation-first: audit effective `prefetch={true}` links, write the `instant()` suite from `@next/playwright`, get it **green with the flag off** (production-mode rig — automatic prefetching does not run in `next dev`), adopt destinations via temporary `export const prefetch = 'partial'`, then enable the flag and strip the exports with the `remove-partial-prefetch` codemod. No test edits during adoption; failures are the work queue.
+- Post-flag: sweep for URL-data insights in `next dev` (`params`/`searchParams` read above a Suspense boundary ties the shell to one URL) and for `blocking-prerender-*` errors that the build never exercised.
+- Per-link prefetching is a separate decision and commit; every `TODO(per-link-prefetch)` marker is resolved with the user and none survives. `prefetch={false}` links are reviewed separately, since Partial Prefetching's `auto` default makes many opt-outs obsolete.
+- On Workers, `opennextjs-cloudflare preview` (or a deployed preview URL) is the production-equivalent rig; there is no `next start`.
+

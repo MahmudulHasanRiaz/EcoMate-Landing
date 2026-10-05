@@ -13,6 +13,17 @@
 export {};
 
 declare global {
+  /**
+   * The Worker request's execution context, reachable as
+   * `getCloudflareContext().ctx`. Declared here (the adapter's own declaration references
+   * it but `@cloudflare/workers-types` is not installed) so background work can be handed
+   * to `waitUntil` with a real type instead of an unresolved one.
+   */
+  interface ExecutionContext {
+    waitUntil(promise: Promise<unknown>): void;
+    passThroughOnException(): void;
+  }
+
   interface R2Bucket {
     put(
       key: string,

@@ -30,7 +30,7 @@ function resolveUrl(): string {
     // No Cloudflare context: build-time prerender, `next dev` without the wrangler
     // proxy, or a plain Node script. Fall through to the direct-connection fallback.
   }
-  const buildUrl = process.env.DIRECT_URL ?? process.env.DATABASE_URL ?? '';
+  const buildUrl = process.env.DIRECT_URL || process.env.DATABASE_URL || '';
   if (buildUrl) return buildUrl;
   throw new Error('HYPERDRIVE_NOT_BOUND');
 }

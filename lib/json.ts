@@ -29,6 +29,20 @@ export function logServerError(scope: string, e: unknown): void {
   console.error(`[api] ${scope} failed:`, e);
 }
 
+/**
+ * Postgres unique-constraint violation (SQLSTATE 23505), surfaced by postgres-js as
+ * `error.code`. Drizzle wraps driver errors, so the whole `cause` chain is inspected.
+ * Lets a handler answer 409 instead of leaking a raw driver message as a 500.
+ */
+export function isUniqueViolation(e: unknown): boolean {
+  let current: unknown = e;
+  for (let depth = 0; depth < 4 && typeof current === 'object' && current !== null; depth++) {
+    if ((current as { code?: unknown }).code === '23505') return true;
+    current = (current as { cause?: unknown }).cause;
+  }
+  return false;
+}
+
 export type JsonObject = Record<string, unknown>;
 
 export function asObject(value: unknown): JsonObject {

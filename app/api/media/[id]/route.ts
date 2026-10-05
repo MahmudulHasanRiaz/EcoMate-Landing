@@ -1,0 +1,84 @@
+import { and, eq, gte, isNull, ne, or } from 'drizzle-orm';
+import { getCloudflareContext } from '@opennextjs/cloudflare';
+import { getDb } from '@/db/client';
+import { mediaAssetsTable } from '@/db/schema';
+import { errorMessage, fail, logServerError, ok, parseId } from '@/lib/json';
+
+/** Soft-deleted rows younger than this still count as references to their R2 key. */
+const REFERENCE_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+
+/**
+ * DELETE /api/media/[id]
+ *
+ * Hard-deleting the DB row while the R2 object stays reachable is how a "removed" asset
+ * keeps appearing in search and on old links, so removal is two steps with a guard:
+ *
+ *  1. Soft-delete the DB row (`deleted_at`) so it disappears from every live read.
+ *  2. Purge the R2 object only when no other row — including soft-deleted rows from the
+ *     last 30 days — still references the same key. Shared keys are common (a logo reused
+ *     by several assets), and deleting the object out from under a sibling would break a
+ *     live page.
+ *
+ * The R2 delete runs *before* the row is soft-deleted. If the object store fails, the row
+ * stays live and the request returns 500, so the state is retryable and can never end up
+ * as a soft-deleted row with an object still publicly served.
+ */
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id: rawId } = await params;
+    const id = parseId(rawId);
+    if (id === null) return fail('Invalid media id', 400);
+
+    const db = getDb();
+    const [asset] = await db
+      .select()
+      .from(mediaAssetsTable)
+      .where(eq(mediaAssetsTable.id, id))
+      .limit(1);
+    if (!asset) return fail('Media asset not found', 404);
+
+    const cutoff = new Date(Date.now() - REFERENCE_RETENTION_MS);
+    const [stillReferenced] = await db
+      .select({ id: mediaAssetsTable.id })
+      .from(mediaAssetsTable)
+      .where(
+        and(
+          eq(mediaAssetsTable.key, asset.key),
+          ne(mediaAssetsTable.id, asset.id),
+          or(isNull(mediaAssetsTable.deletedAt), gte(mediaAssetsTable.deletedAt, cutoff)),
+        ),
+      )
+      .limit(1);
+
+    let r2Deleted = false;
+    if (!stillReferenced) {
+      const bucket = resolveBucket();
+      if (!bucket) return fail('R2_NOT_BOUND', 500);
+      try {
+        await bucket.delete(asset.key);
+        r2Deleted = true;
+      } catch (e) {
+        logServerError('DELETE /api/media/[id] (R2)', e);
+        return fail(`R2_DELETE_FAILED: ${errorMessage(e)}`, 500);
+      }
+    }
+
+    await db
+      .update(mediaAssetsTable)
+      .set({ deletedAt: new Date() })
+      .where(eq(mediaAssetsTable.id, asset.id));
+
+    return ok({ success: true, r2Deleted });
+  } catch (e) {
+    logServerError('DELETE /api/media/[id]', e);
+    return fail(errorMessage(e));
+  }
+}
+
+function resolveBucket(): R2Bucket | undefined {
+  try {
+    return getCloudflareContext().env.R2_BUCKET;
+  } catch {
+    return undefined;
+  }
+}

@@ -8,6 +8,6 @@ export { sectionUpdate } from './sections';
 export { socialLinkCreate, socialLinkUpdate, SOCIAL_PLATFORMS } from './socialLinks';
 export { menuCreate, menuReplace, MENU_KEYS } from './menus';
 export { redirectCreate, redirectUpdate, redirectDelete } from './redirects';
-export { operatorCreate, operatorUpdate, setupCreate, setupTotp } from './users';
+export { operatorCreate, operatorUpdate, setupCreate, setupTotp, totpAction } from './users';
 export { testimonialCreate, testimonialUpdate } from './testimonials';
 export { caseStudyCreate, caseStudyUpdate } from './caseStudies';

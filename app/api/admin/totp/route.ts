@@ -14,7 +14,8 @@ import { eq } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { adminAuditLogsTable, adminUsersTable } from '@/db/schema';
 import { requireAdminRole } from '@/lib/authz';
-import { asObject, errorMessage, fail, logServerError, ok, readString } from '@/lib/json';
+import { errorMessage, fail, logServerError, ok, readString } from '@/lib/json';
+import { totpAction } from '@/lib/validation';
 import { clientIp } from '@/lib/request';
 import { createTotpEnrollment, storedTotpMatches } from '@/lib/totp';
 
@@ -25,8 +26,9 @@ export async function POST(request: Request): Promise<Response> {
   if (actorId === null) return fail('Session is missing an operator id', 401);
 
   try {
-    const body = asObject(await request.json().catch(() => null));
-    const action = readString(body.action, 'enroll');
+    const parsed = totpAction.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) return fail('Validation failed', 400, { issues: parsed.error.issues });
+    const { action } = parsed.data;
 
     const db = getDb();
     const [operator] = await db
@@ -63,7 +65,7 @@ export async function POST(request: Request): Promise<Response> {
       if (operator.totpEnabled) {
         return fail('Two-factor authentication is already enabled.', 409);
       }
-      const code = readString(body.code).trim();
+      const code = parsed.data.code ?? '';
       if (!(await storedTotpMatches(operator.totpSecret, code))) {
         return fail('That code is not valid. Check your device clock and try again.', 400);
       }

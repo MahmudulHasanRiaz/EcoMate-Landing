@@ -28,6 +28,11 @@ export const setupCreate = z.strictObject({
   password: z.string().min(MIN_PASSWORD_LENGTH).max(256),
 });
 
+export const totpAction = z.strictObject({
+  action: z.enum(['enroll', 'verify']),
+  code: z.string().regex(/^\d{6}$/).optional(),
+});
+
 export const setupTotp = z.strictObject({
   token: z.string().min(1).max(512),
   email: normalizedEmail,

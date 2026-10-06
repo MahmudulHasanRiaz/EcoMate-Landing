@@ -40,8 +40,32 @@ jobs:
       - name: Validate TypeScript code
         run: npm run lint
 
+      # Regression guard for a build-killing recursion.
+      #
+      # `opennextjs-cloudflare build` resolves the Next build command as
+      # `config.buildCommand ?? "npm run build"` (@opennextjs/aws build/buildNextApp.js).
+      # If package.json's `build` script itself calls `opennextjs-cloudflare build`, the
+      # CLI re-invokes itself without bound — each nested npm/node process consumes
+      # hundreds of MB until the machine swaps to death. This asserts the script stays
+      # pointed at the Next.js build. See open-next.config.ts.
+      - name: Assert no opennext build recursion
+        run: |
+          node -e "
+            const pkg = require('./package.json');
+            const script = String((pkg.scripts && pkg.scripts.build) || '');
+            if (/opennextjs-cloudflare\s+build/.test(script)) {
+              console.error('::error::package.json \"build\" calls opennextjs-cloudflare build, which recurses without bound. It must run the Next.js build (\"next build\").');
+              process.exit(1);
+            }
+            console.log('package.json build script is recursion-safe:', script);
+          "
+
+      # The opennext CLI is what produces the deployable Worker bundle (`.open-next`).
+      # It internally runs `npm run build` (`next build`), which is why the package.json
+      # build script must NEVER point back at `opennextjs-cloudflare build` — that
+      # recurses without bound.
       - name: Execute production build
-        run: npm run build
+        run: npx opennextjs-cloudflare build
         env:
           # `cacheComponents: true` (next.config.ts) executes every `'use cache'` data
           # function during the build, where there is no request context and therefore no
@@ -51,8 +75,8 @@ jobs:
 
       - name: Verify build artifacts
         run: |
-          if [ ! -d .opennext ]; then
-            echo "::error::Build verification failed: .opennext directory does not exist!"
+          if [ ! -d .open-next ]; then
+            echo "::error::Build verification failed: .open-next directory does not exist!"
             exit 1
           fi
           echo "Production build verified successfully. Ready for manual deployment."

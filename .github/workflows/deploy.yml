@@ -45,8 +45,26 @@ jobs:
       - name: TypeScript typecheck & lint
         run: npm run lint
 
+      # See .github/workflows/ci.yml for the full explanation: `opennextjs-cloudflare
+      # build` runs `npm run build` internally, so the package.json build script must
+      # never call `opennextjs-cloudflare build` (unbounded recursion).
+      - name: Assert no opennext build recursion
+        run: |
+          node -e "
+            const pkg = require('./package.json');
+            const script = String((pkg.scripts && pkg.scripts.build) || '');
+            if (/opennextjs-cloudflare\s+build/.test(script)) {
+              console.error('::error::package.json \"build\" calls opennextjs-cloudflare build, which recurses without bound. It must run the Next.js build (\"next build\").');
+              process.exit(1);
+            }
+            console.log('package.json build script is recursion-safe:', script);
+          "
+
+      # The opennext CLI produces the deployable Worker bundle (`.open-next`); it runs
+      # `npm run build` (`next build`) internally. The package.json build script must
+      # never point back at `opennextjs-cloudflare build` — that recurses without bound.
       - name: Build production bundle
-        run: npm run build
+        run: npx opennextjs-cloudflare build
         env:
           # Required at build time under `cacheComponents: true`: cached data functions
           # run during the build with no Hyperdrive binding, and `db/client.ts` falls back
@@ -55,17 +73,17 @@ jobs:
 
       - name: Verify build artifact integrity
         run: |
-          if [ ! -d .opennext ]; then
-            echo "::error::CRITICAL: .opennext build output missing! Aborting deployment."
+          if [ ! -d .open-next ]; then
+            echo "::error::CRITICAL: .open-next build output missing! Aborting deployment."
             exit 1
           fi
-          echo "Build integrity confirmed. .opennext bundle ready for Cloudflare."
+          echo "Build integrity confirmed. .open-next bundle ready for Cloudflare."
 
       - name: Archive build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: opennext-bundle
-          path: .opennext
+          path: .open-next
           retention-days: 2
           if-no-files-found: error
 
@@ -98,7 +116,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: opennext-bundle
-          path: .opennext
+          path: .open-next
 
       # `migrate` (journaled SQL), never `push` (live schema diff) in a deploy workflow.
       - name: Apply DB migrations

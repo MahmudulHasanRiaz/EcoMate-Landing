@@ -44,6 +44,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const entries: MetadataRoute.Sitemap = [...staticEntries];
 
+  // Legal pages (Task 20 §6): static routes under every locale, always listed —
+  // they render from the static fallback even when the DB is unreachable.
+  for (const locale of LOCALES) {
+    const prefix = localeRoutePrefix(locale);
+    for (const page of ['privacy', 'terms'] as const) {
+      entries.push({
+        url: `${SITE_URL}${prefix}/${page}`,
+        changeFrequency: 'yearly',
+        priority: 0.3,
+      });
+    }
+  }
+
   for (const locale of LOCALES) {
     // The *route* prefix, not the canonical home path: `/blog/<slug>` is not a route in this
     // app (only `/en/blog/<slug>` and `/bn/blog/<slug>` are), so building sub-page entries

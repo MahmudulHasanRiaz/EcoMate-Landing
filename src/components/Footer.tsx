@@ -128,8 +128,10 @@ export const Footer: React.FC<FooterProps> = ({ content, locale, menu, onToggleL
         <div className="mt-12 pt-8 border-t border-slate-200 dark:border-white/[0.06] flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-600 dark:text-slate-300">
           <p>{content.footer.copyright}</p>
           <div className="flex items-center gap-5">
-            <a href="#" className="hover:text-slate-800 dark:hover:text-slate-400 transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-slate-800 dark:hover:text-slate-400 transition-colors">Terms of Service</a>
+            {/* Legal pages (Task 20 §6): locale-routed in both languages. Sub-pages
+                always use the explicit `/{locale}` prefix — `/privacy` is not a route. */}
+            <a href={`/${locale}/privacy`} className="hover:text-slate-800 dark:hover:text-slate-400 transition-colors">Privacy Policy</a>
+            <a href={`/${locale}/terms`} className="hover:text-slate-800 dark:hover:text-slate-400 transition-colors">Terms of Service</a>
             <a href="#" className="hover:text-slate-800 dark:hover:text-slate-400 transition-colors">Security & RBAC</a>
             <a href="#" className="hover:text-slate-800 dark:hover:text-slate-400 transition-colors">System Status</a>
           </div>

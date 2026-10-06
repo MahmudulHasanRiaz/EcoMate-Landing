@@ -54,7 +54,40 @@ function contentLanguageFor(pathname: string): string {
   return localeFromPathname(pathname) ?? DEFAULT_LOCALE;
 }
 
+/**
+ * Mint the per-request correlation id (Task 20 §2).
+ *
+ * Prefers an inbound `cf-ray` so Worker logs join to the Cloudflare dashboard,
+ * reuses a well-formed inbound `x-request-id` from a trusted caller, and mints
+ * `crypto.randomUUID()` otherwise. The same value is set on the downstream
+ * request (best effort — `NextRequest` headers may be read-only in some
+ * runtimes, in which case handlers mint an equivalent id via `lib/request.ts`)
+ * and echoed on every response as `x-request-id`.
+ */
+function mintRequestId(request: NextRequest): string {
+  const inbound = (
+    request.headers.get('cf-ray') ??
+    request.headers.get('x-request-id') ??
+    ''
+  ).trim().slice(0, 120);
+  if (inbound !== '' && /^[A-Za-z0-9._:-]+$/.test(inbound)) return inbound;
+  try {
+    return crypto.randomUUID();
+  } catch {
+    return `req-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+}
+
 export async function proxy(request: NextRequest, event: Parameters<NextMiddleware>[1]) {
+  const requestId = mintRequestId(request);
+  // Best-effort propagation so `lib/request.ts#requestId()` downstream reads the
+  // same value. A read-only Headers implementation throws here — that is fine,
+  // the handler falls back to its own equivalent id.
+  try {
+    request.headers.set('x-request-id', requestId);
+  } catch {
+    // Read-only headers in this runtime: ignore.
+  }
   const { pathname } = request.nextUrl;
 
   // Document requests only, and never for a mutating verb.
@@ -74,6 +107,7 @@ export async function proxy(request: NextRequest, event: Parameters<NextMiddlewa
       applySecurityHeaders(response.headers);
       response.headers.set('Content-Language', contentLanguageFor(pathname));
       response.headers.set('Cache-Control', 'no-store');
+      response.headers.set('x-request-id', requestId);
       return response;
     }
   }
@@ -89,6 +123,7 @@ export async function proxy(request: NextRequest, event: Parameters<NextMiddlewa
   // annotate in that case, and it is never a content document.
   if (response instanceof Response) {
     response.headers.set('Content-Language', contentLanguageFor(pathname));
+    response.headers.set('x-request-id', requestId);
   }
 
   return response;

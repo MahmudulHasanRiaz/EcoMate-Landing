@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Hind_Siliguri, Instrument_Serif, JetBrains_Mono, Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
+import { ConsentBanner } from '@/components/ConsentBanner';
 import { MetaPixel } from '@/components/MetaPixel';
 import {
   SITE_DESCRIPTION,
@@ -101,6 +102,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             the Lead event it fires shares its event_id with the server-side CAPI call so
             Meta deduplicates the pair (Task 13). */}
         <MetaPixel />
+        {/* Consent gate (Task 20 §5): renders above the mobile sticky CTA, keyboard
+            accessible, no tracking fires until Accept-all. */}
+        <ConsentBanner />
         {children}
       </body>
     </html>

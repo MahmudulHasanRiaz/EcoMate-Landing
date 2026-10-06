@@ -83,6 +83,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [isLoading, setIsLoading] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  /**
+   * Maintenance state (Task 20 §3): when the initial load fails (DB outage),
+   * the console shows this banner with a retry instead of empty panels.
+   */
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Loaded Entities
   const [settings, setSettings] = useState<SiteSettings | null>(null);
@@ -162,6 +167,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
   // Load all data
   const loadData = async () => {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const [
         sData,
@@ -209,6 +215,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
         .catch(() => setI18nReport(null));
     } catch (err: any) {
       console.error('Failed to load admin data:', err);
+      // Maintenance state: the panels below render empty on a DB outage, so say
+      // so explicitly and offer the retry. The message stays generic — the raw
+      // driver error is in the console, not in front of the operator.
+      setLoadError('The database could not be reached. Showing cached/empty data.');
     } finally {
       setIsLoading(false);
     }
@@ -762,6 +772,51 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                 </ol>
               )}
             </section>
+
+            {/* Dispatch state + manual retry (Task 20 §4). Extends this drawer —
+                no second drawer: the statuses below are the same `metaCapiStatus` /
+                `licensePortalStatus` the table shows, with the retry actions the
+                table buttons call. A failed first attempt additionally lands in
+                `dispatch_queue` for the drain cron; retrying here re-runs the same
+                `dispatchLeadIntegrations` path the cron uses. */}
+            <section>
+              <h4 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
+                <Share2 className="h-3.5 w-3.5" />
+                Dispatch
+              </h4>
+              <dl className="mt-2 space-y-2 rounded-xl border border-slate-200 p-3 text-xs dark:border-white/10">
+                <div className="flex items-center justify-between gap-2">
+                  <dt className="font-semibold text-slate-600 dark:text-slate-400">Meta CAPI</dt>
+                  <dd className="font-mono font-bold text-slate-900 dark:text-white">{lead.metaCapiStatus}</dd>
+                </div>
+                {lead.metaCapiError ? (
+                  <p className="text-[11px] text-slate-600 dark:text-slate-300">{lead.metaCapiError}</p>
+                ) : null}
+                <div className="flex items-center justify-between gap-2">
+                  <dt className="font-semibold text-slate-600 dark:text-slate-400">License Portal</dt>
+                  <dd className="font-mono font-bold text-slate-900 dark:text-white">{lead.licensePortalStatus}</dd>
+                </div>
+                {lead.licensePortalError ? (
+                  <p className="text-[11px] text-slate-600 dark:text-slate-300">{lead.licensePortalError}</p>
+                ) : null}
+                <div className="flex gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => void handleRetryMetaSync(lead.id)}
+                    className="rounded-lg bg-slate-100 px-3 py-1.5 text-[11px] font-semibold text-slate-700 transition-colors hover:bg-slate-200 dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/20"
+                  >
+                    Retry CAPI
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleRetryLicenseSync(lead.id)}
+                    className="rounded-lg bg-indigo-50 px-3 py-1.5 text-[11px] font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 dark:bg-indigo-500/20 dark:text-indigo-300"
+                  >
+                    Retry Portal
+                  </button>
+                </div>
+              </dl>
+            </section>
           </div>
         </div>
       </div>
@@ -813,6 +868,23 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
           </button>
         </div>
       </header>
+
+      {/* Maintenance state (Task 20 §3): DB outage shows here with a retry. */}
+      {loadError && (
+        <div
+          role="alert"
+          className="flex shrink-0 items-center justify-between gap-3 border-b border-amber-300 bg-amber-50 px-4 py-2.5 text-xs text-amber-900 sm:px-6 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200"
+        >
+          <span className="font-medium">{loadError}</span>
+          <button
+            type="button"
+            onClick={() => void loadData()}
+            className="shrink-0 rounded-lg bg-amber-600 px-3 py-1.5 font-semibold text-white transition-colors hover:bg-amber-700"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* Main Admin Layout: Sidebar + Body */}
       <div className="flex-1 flex overflow-hidden">

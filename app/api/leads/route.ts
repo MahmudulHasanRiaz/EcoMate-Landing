@@ -51,6 +51,21 @@ const KV_LIMIT_WINDOW_SEC = 600;
 
 /** Version identifier stored on every consented lead (Task 13 §5, Task 20 §5). */
 const PRIVACY_POLICY_VERSION = 'privacy-v1';
+
+/**
+ * DB-down detector (Task 20 §3).
+ *
+ * A lead POST during an outage must fail loudly with 503 + "try again" — never
+ * a fake success, never a raw driver message. Anything matching a connectivity
+ * signature maps to 503; anything else keeps its 500 so real bugs stay visible
+ * as bugs instead of hiding behind a retry message.
+ */
+function isDbOutage(e: unknown): boolean {
+  const message = errorMessage(e).toLowerCase();
+  return /hyperdrive|not_bound|not bound|econn|enotfound|etimedout|timeout|connection|connect|unreachable|too many clients|dns|getaddrinfo|socket|pool|57p|53300|network|fetch failed/i.test(
+    message,
+  );
+}
 const MAX_TRACKING_VALUE = 200;
 const MAX_USER_AGENT = 512;
 
@@ -63,6 +78,32 @@ function newEventId(): string {
     const random = Math.random().toString(36).slice(2, 10);
     return `lead-${Date.now().toString(36)}-${random}`;
   }
+}
+
+/**
+ * Tracking consent from the `ecomate_consent` cookie (Task 20 §5).
+ *
+ * The per-lead `consentGiven` (contact consent) is a separate legal basis from
+ * tracking consent: a visitor can ask to be contacted (Essential-only) while
+ * refusing Meta Pixel/CAPI. Only an explicit `accepted` choice authorises the
+ * conversion events — anything else (missing, malformed, `essential`) means the
+ * server must not send them, end to end.
+ */
+function readTrackingConsent(req: Request): boolean {
+  const header = req.headers.get('cookie') ?? '';
+  const match = header.match(/(?:^|;\s*)ecomate_consent=([^;]*)/);
+  if (!match) return false;
+  let raw = '';
+  try {
+    raw = decodeURIComponent(match[1] ?? '');
+  } catch {
+    raw = match[1] ?? '';
+  }
+  const value = raw.trim().toLowerCase();
+  if (value === 'accepted') return true;
+  if (value.includes('"choice":"accepted"') || value.includes('"choice": "accepted"')) return true;
+  if (value.includes('accept')) return value.includes('essential') ? false : true;
+  return false;
 }
 
 /** Event ids come from the client; they are opaque identifiers, so constrain their shape. */
@@ -154,7 +195,7 @@ export async function POST(req: Request) {
     const now = Date.now();
     const rec = hits.get(ip);
     if (rec && rec.expiresAt > now && rec.count >= MAX_PER_WINDOW) {
-      return fail('Too many requests. Please try again in a few minutes or call us directly.', 429);
+      return fail('Too many requests. Please try again in a few minutes or call us directly.', 429, undefined, reqId);
     }
     hits.set(
       ip,
@@ -172,12 +213,12 @@ export async function POST(req: Request) {
     // burst inside one isolate is rejected without a KV round-trip, and before any body
     // parsing so an abusive caller never reaches Turnstile or the database.
     if (await hitLimit(`lead:${ip}`, KV_LIMIT_MAX, KV_LIMIT_WINDOW_SEC)) {
-      return fail('Too many requests. Please try again in a few minutes or call us directly.', 429);
+      return fail('Too many requests. Please try again in a few minutes or call us directly.', 429, undefined, reqId);
     }
 
     const parsed = leadCreate.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
-      return fail('Validation failed', 400, { issues: parsed.error.issues });
+      return fail('Validation failed', 400, { issues: parsed.error.issues }, reqId);
     }
     // Trimmed after validation: the shape/length bounds already held on the raw input.
     const name = parsed.data.name.trim();
@@ -204,10 +245,14 @@ export async function POST(req: Request) {
         : await verifyTurnstile(rawToken, ip);
     if (!turnstile.ok) {
       console.warn(`[leads] turnstile rejected a submission: ${turnstile.reason}`);
-      return fail('Human verification failed. Please refresh the page and try again.', 400);
+      return fail('Human verification failed. Please refresh the page and try again.', 400, undefined, reqId);
     }
 
     const source = parsed.data.source ?? 'landing_page_lead_form';
+    // Task 20 §5: tracking consent gates Meta CAPI end to end. Contact consent
+    // (`consentGiven: true`) authorises storing the lead; only this cookie
+    // authorises sending the conversion to Meta.
+    const trackingAccepted = readTrackingConsent(req);
 
     /**
      * The lead row and its opening timeline entry commit together.
@@ -231,15 +276,22 @@ export async function POST(req: Request) {
           source,
           utmSource: parsed.data.utmSource ?? '',
           utmCampaign: parsed.data.utmCampaign ?? '',
-          // --- tracking + consent (Task 13) ---------------------------------------------
-          fbp: parsed.data.fbp?.trim().slice(0, MAX_TRACKING_VALUE) ?? '',
-          fbc: parsed.data.fbc?.trim().slice(0, MAX_TRACKING_VALUE) ?? '',
+          // --- tracking + consent (Task 13, Task 20 §5) -------------------------------
+          // `fbp`/`fbc` are stored only when tracking was accepted: keeping a
+          // click-id for an opted-out visitor would retain a tracking identifier
+          // with no lawful basis to ever use it.
+          fbp: trackingAccepted ? (parsed.data.fbp?.trim().slice(0, MAX_TRACKING_VALUE) ?? '') : '',
+          fbc: trackingAccepted ? (parsed.data.fbc?.trim().slice(0, MAX_TRACKING_VALUE) ?? '') : '',
           eventId: readEventId(parsed.data.eventId),
           clientIp,
           userAgent: readString(req.headers.get('user-agent')).slice(0, MAX_USER_AGENT),
           consentGiven: true,
           consentAt: new Date(),
           consentText,
+          // Essential-only visitors skip the conversion pipeline visibly (`Skipped`,
+          // not `Pending`) so the admin never mistakes them for a failed dispatch.
+          metaCapiStatus: trackingAccepted ? 'Pending' : 'Skipped',
+          metaCapiError: trackingAccepted ? '' : 'Tracking consent not given (Essential-only)',
         })
         .returning();
 
@@ -291,7 +343,14 @@ export async function POST(req: Request) {
     // Meta CAPI + License Portal + notification, all handed to the platform. `keepAlive`
     // reuses `ctx.waitUntil` so a recycled isolate cannot cancel any of them — and the lead
     // row is already committed, so a dispatch failure never loses the lead.
-    keepAlive(Promise.all([dispatchLeadIntegrations(lead.id), notifyNewLead(lead)]));
+    // Task 20 §5: opted-out visitors never dispatch Meta — not inline, not via the
+    // retry queue (`metaCapi: false` skips it; the row was stored as `Skipped` above).
+    keepAlive(
+      Promise.all([
+        dispatchLeadIntegrations(lead.id, { metaCapi: trackingAccepted }),
+        notifyNewLead(lead),
+      ]),
+    );
 
     return ok(
       {
@@ -308,6 +367,16 @@ export async function POST(req: Request) {
     );
   } catch (e) {
     logServerError('POST /api/leads', e, reqId);
+    // Task 20 §3: outage fails loudly with 503 + "try again" (never fake success,
+    // never a raw driver string). The transaction guarantees zero rows on this path.
+    if (isDbOutage(e)) {
+      return fail(
+        'Our system is temporarily unavailable. Please try again in a few minutes or contact us on WhatsApp.',
+        503,
+        undefined,
+        reqId,
+      );
+    }
     return failWithRequestId(errorMessage(e), reqId);
   }
 }

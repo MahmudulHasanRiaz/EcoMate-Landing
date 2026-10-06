@@ -16,6 +16,7 @@ import { updateTag } from 'next/cache';
 import { getDb } from '@/db/client';
 import { menuItemsTable, menusTable } from '@/db/schema';
 import { errorMessage, fail, logServerError, ok } from '@/lib/json';
+import { requestId } from '@/lib/request';
 import { requireAdminRole } from '@/lib/authz';
 import { canWriteContent } from '@/lib/roles';
 import { isLocale } from '@/lib/locales';
@@ -39,6 +40,7 @@ function isMenuKey(value: unknown): value is MenuKey {
 }
 
 export async function GET(req: Request) {
+  const reqId = requestId(req);
   try {
     const url = new URL(req.url);
     const keyParam = url.searchParams.get('key');
@@ -46,7 +48,7 @@ export async function GET(req: Request) {
 
     const keys: MenuKey[] = isMenuKey(keyParam) ? [keyParam] : ['main', 'footer'];
     const locale: Locale | null = localeParam ? (isLocale(localeParam) ? localeParam : null) : null;
-    if (localeParam && !locale) return fail('Invalid locale', 400);
+    if (localeParam && !locale) return fail('Invalid locale', 400, undefined, reqId);
 
     const db = getDb();
     const menus = await db
@@ -80,8 +82,8 @@ export async function GET(req: Request) {
       }));
     return ok(payload);
   } catch (e) {
-    logServerError('GET /api/menus', e);
-    return fail(errorMessage(e));
+    logServerError('GET /api/menus', e, reqId);
+    return fail(errorMessage(e), 500, undefined, reqId);
   }
 }
 

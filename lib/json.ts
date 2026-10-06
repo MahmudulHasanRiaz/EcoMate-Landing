@@ -11,11 +11,20 @@ export function ok(data: unknown, status = 200): Response {
   return Response.json(data, { status });
 }
 
-export function fail(message: string, status = 500, details?: unknown): Response {
-  return Response.json(
-    details === undefined ? { error: message } : { error: message, details },
-    { status },
-  );
+/**
+ * Uniform API error envelope (Task 20 §2): every error body is
+ * `{ error, requestId }`, with `details` only when the caller passes it.
+ *
+ * `requestId` is always present (null when the handler did not thread one)
+ * so clients can rely on the shape without probing. Stack traces never reach
+ * the client — `errorMessage()` carries only the message; the full error goes
+ * to `logServerError` with the same id.
+ */
+export function fail(message: string, status = 500, details?: unknown, requestId?: string | null): Response {
+  const body: Record<string, unknown> =
+    details === undefined ? { error: message } : { error: message, details };
+  body.requestId = requestId ?? null;
+  return Response.json(body, { status });
 }
 
 /** `catch` binds `unknown` under strict mode — never widen it to `any`. */
@@ -85,7 +94,7 @@ function errorCode(e: unknown): string {
  * can be traced to a single Worker invocation.
  */
 export function failWithRequestId(message: string, requestId?: string, status = 500): Response {
-  return Response.json({ error: message, requestId: requestId ?? null }, { status });
+  return fail(message, status, undefined, requestId ?? null);
 }
 
 /**

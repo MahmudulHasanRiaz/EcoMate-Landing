@@ -20,11 +20,12 @@ export function clientIp(request: Request): string {
 }
 
 /**
- * Correlation id for one request (Task 16 §7).
+ * Correlation id for one request (Task 16 §7, Task 20 §2).
  *
  * Prefers Cloudflare's own `cf-ray` so a Worker log line joins to the Cloudflare dashboard
  * entry and to the edge's access log — a locally generated uuid would not. Falls back to an
- * inbound `x-request-id` (propagated by a trusted caller, e.g. the WAF/API-gateway tier), and
+ * inbound `x-request-id` (minted per request by `proxy.ts` and echoed on the response,
+ * or propagated by a trusted caller, e.g. the WAF/API-gateway tier), and
  * only mints its own when neither is present.
  *
  * Purely an observability value: never used for authorisation, and never derived from

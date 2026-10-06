@@ -9,9 +9,9 @@
  * already-converted lead duplicates a conversion in Events Manager and a licence in the
  * portal, which is worse than a missed retry — so they are skipped, not re-sent.
  */
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { getDb } from '@/db/client';
-import { integrationLogsTable, leadsTable } from '@/db/schema';
+import { dispatchQueueTable, integrationLogsTable, leadsTable } from '@/db/schema';
 import { envString } from '@/lib/env';
 import { dispatchLeadTracked, type TrackLeadInput } from '@/lib/events';
 import { logServerError } from '@/lib/json';
@@ -60,6 +60,23 @@ export async function dispatchLeadIntegrations(
       if (e instanceof LeadNotFoundError) throw e;
       logServerError('leadDispatch licensePortal', e);
     }
+    // A configured-but-failed portal dispatch lands in the retry queue (Task 20 §4).
+    // Unconfigured (`Pending`) is a queued-locally state, not a failure — no row.
+    try {
+      const [current] = await getDb()
+        .select({
+          licensePortalStatus: leadsTable.licensePortalStatus,
+          licensePortalError: leadsTable.licensePortalError,
+        })
+        .from(leadsTable)
+        .where(eq(leadsTable.id, leadId))
+        .limit(1);
+      if (current?.licensePortalStatus === 'Failed') {
+        await enqueueDispatch('license-portal', leadId, { source: 'dispatchLeadIntegrations' }, current.licensePortalError ?? '');
+      }
+    } catch (e) {
+      logServerError('leadDispatch licensePortal enqueue', e);
+    }
   }
 
   // Report what is actually persisted rather than what we hoped happened: the License
@@ -79,7 +96,21 @@ export async function dispatchLeadIntegrations(
   return summary;
 }
 
+/**
+ * Consent gate (Task 20 §5): the server never sends a conversion event for a
+ * visitor who did not consent. Every lead row created through the public form
+ * carries `consentGiven: true` (the schema rejects anything else), so this is
+ * defense in depth — a backfilled or imported row without consent stays `Skipped`.
+ */
+function hasTrackingConsent(lead: LeadRow): boolean {
+  return lead.consentGiven === true;
+}
+
 async function dispatchMetaCapi(lead: LeadRow): Promise<MetaCapiStatus> {
+  if (!hasTrackingConsent(lead)) {
+    await markMetaSkipped(lead.id, 'Tracking consent not given');
+    return 'Skipped';
+  }
   const input: TrackLeadInput = {
     leadId: lead.id,
     name: lead.name,
@@ -144,5 +175,110 @@ async function dispatchMetaCapi(lead: LeadRow): Promise<MetaCapiStatus> {
     });
   });
 
+  // Task 20 §4: a failed first attempt lands in the retry queue; the drain cron
+  // owns every attempt after this one. Enqueue failures are logged, never thrown —
+  // the lead row is already committed and must not become a 500.
+  if (status === 'Failed') {
+    try {
+      await enqueueDispatch('meta-capi', lead.id, { eventId: input.eventId }, error);
+    } catch (e) {
+      logServerError('leadDispatch metaCapi enqueue', e);
+    }
+  }
+
   return status;
+}
+
+async function markMetaSkipped(leadId: number, reason: string): Promise<void> {
+  await getDb().transaction(async (tx) => {
+    await tx
+      .update(leadsTable)
+      .set({ metaCapiStatus: 'Skipped', metaCapiError: reason, updatedAt: new Date() })
+      .where(eq(leadsTable.id, leadId));
+    await tx.insert(integrationLogsTable).values({
+      serviceName: 'MetaCAPI',
+      action: 'DISPATCH_LEAD',
+      payload: { leadId, skippedForConsent: true },
+      response: { ok: true, skipped: true, error: reason },
+      status: 'Success',
+      errorMessage: reason,
+      attempts: 1,
+    });
+  });
+}
+
+/**
+ * Retry backoff (Task 20 §4): 1m, 5m, 30m, 2h, 12h, then `Failed`.
+ *
+ * `attempts` counts failures so far (the inline failure enqueues with
+ * `attempts: 1`). The delay for that count is `BACKOFF_SECONDS[attempts - 1]`;
+ * when `attempts` exceeds the table the row is terminal.
+ */
+export const DISPATCH_BACKOFF_SECONDS = [60, 300, 1800, 7200, 43200] as const;
+export const DISPATCH_MAX_ATTEMPTS = DISPATCH_BACKOFF_SECONDS.length + 1;
+
+export function nextAttemptDelaySeconds(failedAttempts: number): number | null {
+  if (failedAttempts < 1 || failedAttempts > DISPATCH_BACKOFF_SECONDS.length) return null;
+  return DISPATCH_BACKOFF_SECONDS[failedAttempts - 1];
+}
+
+/**
+ * Insert (or refresh) a retry row. Idempotent per (`kind`, `lead_id`) while a row
+ * is still open (`Pending`/`Retrying`): a second failure before the drain runs
+ * refreshes the error rather than stacking a duplicate retry.
+ */
+export async function enqueueDispatch(
+  kind: string,
+  leadId: number,
+  payload: unknown,
+  lastError: string,
+): Promise<void> {
+  const db = getDb();
+  const [open] = await db
+    .select({ id: dispatchQueueTable.id })
+    .from(dispatchQueueTable)
+    .where(
+      and(
+        eq(dispatchQueueTable.kind, kind),
+        eq(dispatchQueueTable.leadId, leadId),
+        eq(dispatchQueueTable.status, 'Pending'),
+      ),
+    )
+    .limit(1);
+  const error = (lastError || '').slice(0, 500);
+  if (open) {
+    await db
+      .update(dispatchQueueTable)
+      .set({ lastError: error, payload: payload as Record<string, unknown>, updatedAt: new Date() })
+      .where(eq(dispatchQueueTable.id, open.id));
+    return;
+  }
+  const [retrying] = await db
+    .select({ id: dispatchQueueTable.id })
+    .from(dispatchQueueTable)
+    .where(
+      and(
+        eq(dispatchQueueTable.kind, kind),
+        eq(dispatchQueueTable.leadId, leadId),
+        eq(dispatchQueueTable.status, 'Retrying'),
+      ),
+    )
+    .limit(1);
+  if (retrying) {
+    await db
+      .update(dispatchQueueTable)
+      .set({ lastError: error, payload: payload as Record<string, unknown>, updatedAt: new Date() })
+      .where(eq(dispatchQueueTable.id, retrying.id));
+    return;
+  }
+  const delay = nextAttemptDelaySeconds(1) ?? 60;
+  await db.insert(dispatchQueueTable).values({
+    kind,
+    leadId,
+    payload: (payload ?? {}) as Record<string, unknown>,
+    attempts: 1,
+    nextAttemptAt: new Date(Date.now() + delay * 1000),
+    lastError: error,
+    status: 'Pending',
+  });
 }

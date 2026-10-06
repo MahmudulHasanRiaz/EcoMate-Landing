@@ -476,6 +476,38 @@ export const redirectsTable = pgTable('redirects', {
   check('redirects_status_code_valid', sql`${t.statusCode} IN (301, 302, 307, 308)`),
 ]);
 
+// 20b. Dispatch Retry Queue (Task 20 §4).
+//
+// Durable retry for outbound integrations (Meta CAPI today, License Portal today,
+// order-transfer tomorrow). The first attempt runs inline via `ctx.waitUntil`
+// from the lead POST; only a failure lands here, and the drain cron retries with
+// exponential backoff (1m, 5m, 30m, 2h, 12h, then `Failed`).
+//
+// Adding order-transfer later MUST reuse this table unchanged: it is keyed by
+// (`kind`, `lead_id`) with an opaque jsonb `payload`, so a new `kind` value is a
+// new producer/consumer, not a migration.
+export const dispatchQueueTable = pgTable('dispatch_queue', {
+  id: serial('id').primaryKey(),
+  /** Integration kind: 'meta-capi' | 'license-portal' | future 'order-transfer'. */
+  kind: text('kind').notNull(),
+  leadId: integer('lead_id')
+    .notNull()
+    .references(() => leadsTable.id, { onDelete: 'cascade' }),
+  payload: jsonb('payload').notNull().default({}),
+  attempts: integer('attempts').notNull().default(0),
+  nextAttemptAt: timestamp('next_attempt_at').notNull().defaultNow(),
+  lastError: text('last_error').default(''),
+  /** Pending → retried by the drain cron → Done on success, Failed when backoff is exhausted. */
+  status: text('status').notNull().default('Pending'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  check('dispatch_queue_status_valid',
+    sql`${t.status} IN ('Pending', 'Retrying', 'Done', 'Failed')`),
+  index('dispatch_queue_due_idx').on(t.status, t.nextAttemptAt),
+  index('dispatch_queue_lead_idx').on(t.leadId),
+]);
+
 // 20. Content Revisions (Task 19). Forward-only history for every content domain.
 //
 // A content row without its revisions is untraceable history: the row says what the site

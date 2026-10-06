@@ -2,11 +2,13 @@ import { asc } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { pricingPlansTable, siteSettingsTable } from '@/db/schema';
 import { errorMessage, fail, isUniqueViolation, logServerError, ok } from '@/lib/json';
+import { requestId } from '@/lib/request';
 import { assertSlugAvailable } from '@/lib/guard';
 import { invalidateDomains } from '@/lib/revalidate';
 import { pricingPlanCreate } from '@/lib/validation';
 
-export async function GET() {
+export async function GET(req: Request) {
+  const reqId = requestId(req);
   try {
     const db = getDb();
     const settings = (await db.select().from(siteSettingsTable).limit(1))[0];
@@ -16,8 +18,8 @@ export async function GET() {
       .orderBy(asc(pricingPlansTable.sortOrder));
     return ok({ isPricingVisible: settings?.isPricingVisible ?? true, plans });
   } catch (e) {
-    logServerError('GET /api/pricing', e);
-    return fail(errorMessage(e));
+    logServerError('GET /api/pricing', e, reqId);
+    return fail(errorMessage(e), 500, undefined, reqId);
   }
 }
 

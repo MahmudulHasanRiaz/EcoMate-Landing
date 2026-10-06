@@ -50,6 +50,13 @@
       "when": 1791265178807,
       "tag": "0006_brave_sharon_ventura",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791273929936,
+      "tag": "0007_fast_cannonball",
+      "breakpoints": true
     }
   ]
 }

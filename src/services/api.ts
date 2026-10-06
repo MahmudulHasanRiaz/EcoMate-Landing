@@ -82,6 +82,41 @@ async function fetchListData<T>(path: string, params?: PageParams): Promise<T[]>
 
 import { throwApiError } from '../components/admin/fieldErrors';
 
+/**
+ * A 409 optimistic-locking conflict (Task 19 §5). Carries the server's current row so the
+ * editor can show what changed instead of a bare error toast.
+ */
+export class ApiConflictError extends Error {
+  readonly status = 409;
+  readonly serverRow: LandingContentRow | null;
+
+  constructor(message: string, serverRow: LandingContentRow | null) {
+    super(message);
+    this.name = 'ApiConflictError';
+    this.serverRow = serverRow;
+  }
+}
+
+/** Throw `ApiConflictError` for a 409, `ApiValidationError` otherwise. */
+async function throwConflictAwareError(response: Response, fallback: string): Promise<never> {
+  const payload: unknown = await response.json().catch(() => null);
+  if (response.status === 409) {
+    const details =
+      typeof payload === 'object' && payload !== null
+        ? (payload as { details?: { current?: unknown } }).details
+        : undefined;
+    const current = details?.current;
+    const serverRow =
+      typeof current === 'object' && current !== null ? (current as LandingContentRow) : null;
+    const message =
+      typeof payload === 'object' && payload !== null && 'error' in payload
+        ? String((payload as { error: unknown }).error)
+        : fallback;
+    throw new ApiConflictError(message || fallback, serverRow);
+  }
+  return throwApiError(response, fallback);
+}
+
 export async function getSettings(): Promise<SiteSettings> {
   const res = await fetch(`${API_BASE}/settings`);
   if (!res.ok) throw new Error('Failed to fetch settings');
@@ -392,20 +427,76 @@ export async function getSectionPair(sectionKey: string): Promise<{
  * Save one locale of one section.
  *
  * `PUT /api/content/[sectionKey]` upserts on `(sectionKey, locale)`, so this is the only
- * write needed for a first translation as well as for an edit.
+ * write needed for a first translation as well as for an edit. `expectedVersion` is the
+ * optimistic-locking token (Task 19 §5): the version the editor loaded. A save against a
+ * row someone else moved throws `ApiConflictError` with their current row attached.
+ *
+ * A changed copy on a published row does NOT go live: the server stages it as a draft
+ * revision and answers `{ staged: true, ... }` — the live copy moves only through
+ * `publishSection` below.
  */
 export async function saveSectionContent(
   sectionKey: string,
   locale: 'en' | 'bn',
   content: Record<string, unknown>,
   status: 'draft' | 'published' = 'published',
-): Promise<LandingContentRow> {
+  expectedVersion?: number,
+): Promise<LandingContentRow | { staged: true; revisionVersion: number; row: LandingContentRow }> {
   const res = await fetch(`${API_BASE}/content/${encodeURIComponent(sectionKey)}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ locale, content, status }),
+    body: JSON.stringify({ locale, content, status, expectedVersion }),
   });
-  if (!res.ok) await throwApiError(res, 'Failed to save section content');
+  if (!res.ok) await throwConflictAwareError(res, 'Failed to save section content');
+  return res.json();
+}
+
+/** Promote staged drafts to the live copy (Task 19 §3). Live immediately. */
+export async function publishSection(
+  sectionKey: string,
+  locale: 'en' | 'bn',
+): Promise<LandingContentRow> {
+  const res = await fetch(`${API_BASE}/content/${encodeURIComponent(sectionKey)}/publish`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ locale }),
+  });
+  if (!res.ok) await throwConflictAwareError(res, 'Failed to publish section');
+  return res.json();
+}
+
+/** Re-apply a historical revision as a new version (Task 19 §4, forward-only). */
+export async function restoreSection(
+  sectionKey: string,
+  locale: 'en' | 'bn',
+  version: number,
+): Promise<LandingContentRow> {
+  const res = await fetch(`${API_BASE}/content/${encodeURIComponent(sectionKey)}/restore`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ locale, version }),
+  });
+  if (!res.ok) await throwConflictAwareError(res, 'Failed to restore revision');
+  return res.json();
+}
+
+export interface ContentRevision {
+  version: number;
+  status: string;
+  actorId: number | null;
+  note: string;
+  createdAt: string;
+}
+
+/** One key's forward-only history, newest first. */
+export async function getSectionRevisions(
+  sectionKey: string,
+  locale: 'en' | 'bn',
+): Promise<ContentRevision[]> {
+  const res = await fetch(
+    `${API_BASE}/content/${encodeURIComponent(sectionKey)}/revisions?locale=${locale}`,
+  );
+  if (!res.ok) throw new Error('Failed to fetch revision history');
   return res.json();
 }
 

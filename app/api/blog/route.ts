@@ -1,6 +1,7 @@
 import { desc, isNull, sql } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { blogPostsTable } from '@/db/schema';
+import { requireAdminRole } from '@/lib/authz';
 import {
   errorMessage,
   fail,
@@ -13,6 +14,7 @@ import { assertSlugAvailable } from '@/lib/guard';
 import { paginate } from '@/lib/paginate';
 import { requestId } from '@/lib/request';
 import { invalidateDomains } from '@/lib/revalidate';
+import { recordRevision } from '@/lib/revisions';
 import { sanitizeHtml } from '@/lib/sanitize';
 import { blogPostCreate } from '@/lib/validation';
 
@@ -49,6 +51,9 @@ export async function GET(req: Request) {
 
 // NEVER `.values(body)` — mass assignment on insert is the same hole as on update.
 export async function POST(req: Request) {
+  const guard = await requireAdminRole(['superadmin', 'admin']);
+  if (!guard.ok) return guard.response;
+
   try {
     // Validate first (shape + length): a 120KB payload is rejected by length before it
     // ever reaches the sanitizer.
@@ -60,27 +65,56 @@ export async function POST(req: Request) {
     if (!slugGuard.ok) return fail(slugGuard.reason, 409);
     const { ogImageUrl: _ogImage, publishedAt, ...rest } = parsed.data;
     void _ogImage;
-    const [created] = await getDb()
-      .insert(blogPostsTable)
-      .values({
-        slug: rest.slug,
-        title: rest.title,
-        excerpt: rest.excerpt ?? '',
-        // Sanitized after validation: the length bound already held on the raw input,
-        // and sanitizing can only shrink it.
-        content: sanitizeHtml(rest.content),
-        author: rest.author ?? 'EcoMate Engineering Team',
-        category: rest.category ?? 'Operations & Fulfillment',
-        tags: rest.tags ?? [],
-        featuredImageUrl: rest.featuredImageUrl ?? '',
-        readTime: rest.readTime ?? '5 min read',
-        status: rest.status ?? 'draft',
-        seoTitle: rest.seoTitle ?? '',
-        seoDescription: rest.seoDescription ?? '',
-        canonicalUrl: rest.canonicalUrl ?? '',
-        publishedAt: publishedAt ? new Date(publishedAt) : rest.status === 'published' ? new Date() : undefined,
-      })
-      .returning();
+    // The insert and its revision commit together (Task 19 §2): a post without a v1
+    // revision would leave the restore endpoint with nothing to apply.
+    const [created] = await getDb().transaction(async (tx) => {
+      const [row] = await tx
+        .insert(blogPostsTable)
+        .values({
+          slug: rest.slug,
+          title: rest.title,
+          excerpt: rest.excerpt ?? '',
+          // Sanitized after validation: the length bound already held on the raw input,
+          // and sanitizing can only shrink it.
+          content: sanitizeHtml(rest.content),
+          author: rest.author ?? 'EcoMate Engineering Team',
+          category: rest.category ?? 'Operations & Fulfillment',
+          tags: rest.tags ?? [],
+          featuredImageUrl: rest.featuredImageUrl ?? '',
+          readTime: rest.readTime ?? '5 min read',
+          status: rest.status ?? 'draft',
+          seoTitle: rest.seoTitle ?? '',
+          seoDescription: rest.seoDescription ?? '',
+          canonicalUrl: rest.canonicalUrl ?? '',
+          publishedAt: publishedAt ? new Date(publishedAt) : rest.status === 'published' ? new Date() : undefined,
+        })
+        .returning();
+      if (!row) return [];
+      await recordRevision(tx, {
+        entity: 'blog_post',
+        entityKey: String(row.id),
+        payload: {
+          title: row.title,
+          excerpt: row.excerpt,
+          content: row.content,
+          author: row.author,
+          category: row.category,
+          tags: row.tags,
+          featuredImageUrl: row.featuredImageUrl,
+          readTime: row.readTime,
+          status: row.status,
+          seoTitle: row.seoTitle,
+          seoDescription: row.seoDescription,
+          canonicalUrl: row.canonicalUrl,
+          publishedAt: row.publishedAt?.toISOString() ?? null,
+        },
+        status: row.status === 'published' ? 'published' : 'draft',
+        actorId: guard.actorId,
+        note: 'create',
+      });
+      return [row];
+    });
+    if (!created) return fail('Blog post could not be created', 500);
     // The blog index, the article page and the sitemap all read under this tag, so a new
     // draft is not searchable and a newly published one appears without a rebuild.
     invalidateDomains('blog');

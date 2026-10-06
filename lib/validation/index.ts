@@ -3,7 +3,7 @@ export { pricingPlanCreate, pricingPlanUpdate } from './pricing';
 export { leadCreate, leadUpdate, normalisePhone } from './lead';
 export { blogPostCreate, blogPostUpdate } from './blog';
 export { mediaCreate, mediaUpdate, mediaUploadMeta, MEDIA_CATEGORIES } from './media';
-export { contentUpsert } from './content';
+export { contentUpsert, contentRestore } from './content';
 export { sectionUpdate } from './sections';
 export { socialLinkCreate, socialLinkUpdate, SOCIAL_PLATFORMS } from './socialLinks';
 export { menuCreate, menuReplace, MENU_KEYS } from './menus';

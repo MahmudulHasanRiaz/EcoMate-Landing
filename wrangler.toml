@@ -65,4 +65,9 @@ RETENTION_DAYS = "180"
 # the route accepts the secret as an `x-cron-secret` header or a `?secret=` parameter, and it
 # FAILS CLOSED when CRON_SECRET is unset. See the route header before trusting that this fires.
 [triggers]
-crons = ["17 3 * * *"]
+# - 03:17 UTC daily: lead-PII retention sweep (`/api/cron/retention`), deliberately off the
+#   :00 stampede.
+# - Every 15 minutes: scheduled publishing (`/api/cron/publish`, Task 19 §6) — a marketing
+#   team scheduling a post for 10:00 expects it live at 10:00, not at tomorrow's 03:17, and
+#   the job is one indexed scan that no-ops when nothing is due.
+crons = ["17 3 * * *", "*/15 * * * *"]

@@ -108,6 +108,21 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
   const [editorDraft, setEditorDraft] = useState<{ en: string; bn: string }>({ en: '', bn: '' });
   const [editorErrors, setEditorErrors] = useState<{ en: string; bn: string }>({ en: '', bn: '' });
   const [isSavingEditor, setIsSavingEditor] = useState(false);
+  /**
+   * Optimistic-locking conflict (Task 19 §5): someone else saved this locale while the
+   * editor was open. The operator's own draft stays in the textarea — nothing is lost —
+   * and the banner below shows what changed and offers their version to load.
+   */
+  const [editorConflict, setEditorConflict] = useState<{
+    locale: 'en' | 'bn';
+    serverRow: LandingContentRow;
+  } | null>(null);
+  /** Revision history for the open section (Task 19 §4 rollback source). */
+  const [revisionHistory, setRevisionHistory] = useState<{
+    locale: 'en' | 'bn';
+    rows: api.ContentRevision[];
+  } | null>(null);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   // Filters & Selected States
   const [leadStatusFilter, setLeadStatusFilter] = useState<string>('All');
@@ -230,6 +245,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
   const handleOpenSection = async (sectionKey: string) => {
     setEditingSectionKey(sectionKey);
     setEditorErrors({ en: '', bn: '' });
+    setEditorConflict(null);
+    setRevisionHistory(null);
     try {
       const pair = await api.getSectionPair(sectionKey);
       setEditorRows(pair);
@@ -244,7 +261,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
     }
   };
 
-  /** Save one locale. Parsed, validated and rejected loudly rather than silently dropped. */
+  /**
+   * Save one locale. Parsed, validated and rejected loudly rather than silently dropped.
+   *
+   * The save carries the row version the editor loaded (Task 19 §5): when someone else
+   * saved first the server answers 409 and the conflict banner takes over instead of a
+   * bare error toast. A changed copy on a published row is staged as a draft revision —
+   * the live copy moves only through `handlePublishLocale` — so the status sent here is
+   * the row's own (a first save creates the row published, as before).
+   */
   const handleSaveLocale = async (locale: 'en' | 'bn') => {
     if (!editingSectionKey) return;
     const raw = editorDraft[locale].trim();
@@ -267,17 +292,121 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
     setEditorErrors((prev) => ({ ...prev, [locale]: '' }));
     setIsSavingEditor(true);
     try {
-      const saved = await api.saveSectionContent(editingSectionKey, locale, parsed);
-      setEditorRows((prev) => ({ ...prev, [locale]: saved }));
-      setEditorDraft((prev) => ({ ...prev, [locale]: JSON.stringify(saved.content, null, 2) }));
+      const status = editorRows[locale]?.status ?? 'published';
+      const saved = await api.saveSectionContent(
+        editingSectionKey,
+        locale,
+        parsed,
+        status,
+        editorRows[locale]?.version,
+      );
+      if (typeof saved === 'object' && saved !== null && 'staged' in saved && saved.staged) {
+        // Changed copy on a published row: draft staged, live copy untouched. The row the
+        // editor holds is still current, so no reload is needed — only a publish.
+        setEditorConflict(null);
+        showNotification(
+          `${editingSectionKey} · ${locale.toUpperCase()} draft staged (revision ${saved.revisionVersion}) — Publish to go live`,
+        );
+        return;
+      }
+      const row = saved as LandingContentRow;
+      setEditorRows((prev) => ({ ...prev, [locale]: row }));
+      setEditorDraft((prev) => ({ ...prev, [locale]: JSON.stringify(row.content, null, 2) }));
+      setEditorConflict(null);
       showNotification(`${editingSectionKey} · ${locale.toUpperCase()} saved`);
       // The gap count just changed; re-read it rather than guessing.
       api.getI18nReport().then(setI18nReport).catch(() => undefined);
     } catch (err: any) {
-      setEditorErrors((prev) => ({ ...prev, [locale]: err.message }));
-      showNotification(`Save failed: ${err.message}`);
+      if (err instanceof api.ApiConflictError && err.serverRow) {
+        setEditorConflict({ locale, serverRow: err.serverRow });
+        showNotification(`Save conflict on ${editingSectionKey} · ${locale.toUpperCase()} — see the banner`);
+      } else {
+        setEditorErrors((prev) => ({ ...prev, [locale]: err.message }));
+        showNotification(`Save failed: ${err.message}`);
+      }
     } finally {
       setIsSavingEditor(false);
+    }
+  };
+
+  /** Promote staged drafts to the live copy (Task 19 §3). Live immediately. */
+  const handlePublishLocale = async (locale: 'en' | 'bn') => {
+    if (!editingSectionKey) return;
+    setIsSavingEditor(true);
+    try {
+      const published = await api.publishSection(editingSectionKey, locale);
+      setEditorRows((prev) => ({ ...prev, [locale]: published }));
+      setEditorDraft((prev) => ({ ...prev, [locale]: JSON.stringify(published.content, null, 2) }));
+      setEditorConflict(null);
+      showNotification(`${editingSectionKey} · ${locale.toUpperCase()} published live`);
+      api.getI18nReport().then(setI18nReport).catch(() => undefined);
+    } catch (err: any) {
+      if (err instanceof api.ApiConflictError && err.serverRow) {
+        setEditorConflict({ locale, serverRow: err.serverRow });
+        showNotification(`Publish conflict on ${editingSectionKey} · ${locale.toUpperCase()} — see the banner`);
+      } else {
+        showNotification(`Publish failed: ${err.message}`);
+      }
+    } finally {
+      setIsSavingEditor(false);
+    }
+  };
+
+  /** Load one locale's forward-only history for the rollback list (Task 19 §4). */
+  const handleLoadHistory = async (locale: 'en' | 'bn') => {
+    if (!editingSectionKey) return;
+    setIsLoadingHistory(true);
+    try {
+      const rows = await api.getSectionRevisions(editingSectionKey, locale);
+      setRevisionHistory({ locale, rows });
+    } catch (err: any) {
+      showNotification(`Failed to load history: ${err.message}`);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+
+  /** Re-apply a historical revision as a new live version (forward-only rollback). */
+  const handleRestoreRevision = async (locale: 'en' | 'bn', version: number) => {
+    if (!editingSectionKey) return;
+    setIsSavingEditor(true);
+    try {
+      const restored = await api.restoreSection(editingSectionKey, locale, version);
+      setEditorRows((prev) => ({ ...prev, [locale]: restored }));
+      setEditorDraft((prev) => ({ ...prev, [locale]: JSON.stringify(restored.content, null, 2) }));
+      setEditorConflict(null);
+      const rows = await api.getSectionRevisions(editingSectionKey, locale);
+      setRevisionHistory({ locale, rows });
+      showNotification(
+        `${editingSectionKey} · ${locale.toUpperCase()} restored to revision ${version} — live now`,
+      );
+    } catch (err: any) {
+      showNotification(`Restore failed: ${err.message}`);
+    } finally {
+      setIsSavingEditor(false);
+    }
+  };
+
+  /**
+   * Top-level payload keys where the operator's draft and the server's current copy
+   * disagree. Shown in the conflict banner so a non-technical operator sees *what*
+   * changed ("headline, cta") rather than a wall of JSON.
+   */
+  const conflictDiffKeys = (serverContent: unknown, localRaw: string): string[] => {
+    try {
+      const local: unknown = JSON.parse(localRaw);
+      if (typeof local !== 'object' || local === null || Array.isArray(local)) return [];
+      const server =
+        typeof serverContent === 'object' && serverContent !== null
+          ? (serverContent as Record<string, unknown>)
+          : {};
+      const keys = new Set([...Object.keys(local as Record<string, unknown>), ...Object.keys(server)]);
+      return [...keys].filter(
+        (key) =>
+          JSON.stringify((local as Record<string, unknown>)[key]) !== JSON.stringify(server[key]),
+      );
+    } catch {
+      return [];
     }
   };
 
@@ -1254,6 +1383,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                     {(['en', 'bn'] as const).map((locale) => {
                       const row = editorRows[locale];
                       const error = editorErrors[locale];
+                      const conflict = editorConflict?.locale === locale ? editorConflict : null;
+                      const diffKeys = conflict
+                        ? conflictDiffKeys(conflict.serverRow.content, editorDraft[locale])
+                        : [];
                       return (
                         <div
                           key={locale}
@@ -1263,18 +1396,76 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                             <h4 className="text-xs font-bold uppercase tracking-wide text-slate-700 dark:text-slate-200">
                               {locale === 'en' ? 'English (en)' : 'বাংলা (bn)'}
                               <span className="ml-2 font-mono font-normal text-[11px] text-slate-400">
-                                {row ? (row.status === 'published' ? 'published' : row.status) : 'no row'}
+                                {row
+                                  ? `${row.status} · v${row.version}`
+                                  : 'no row'}
                               </span>
                             </h4>
-                            <button
-                              onClick={() => void handleSaveLocale(locale)}
-                              disabled={isSavingEditor}
-                              className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-[11px] font-bold text-white transition-colors hover:bg-indigo-700 disabled:opacity-50 cursor-pointer"
-                            >
-                              <Save className="h-3.5 w-3.5" />
-                              Save {locale.toUpperCase()}
-                            </button>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                onClick={() => void handlePublishLocale(locale)}
+                                disabled={isSavingEditor || !row}
+                                title="Promote staged drafts to the live page immediately"
+                                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-[11px] font-bold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50 cursor-pointer"
+                              >
+                                Publish {locale.toUpperCase()}
+                              </button>
+                              <button
+                                onClick={() => void handleSaveLocale(locale)}
+                                disabled={isSavingEditor}
+                                className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-[11px] font-bold text-white transition-colors hover:bg-indigo-700 disabled:opacity-50 cursor-pointer"
+                              >
+                                <Save className="h-3.5 w-3.5" />
+                                Save {locale.toUpperCase()}
+                              </button>
+                            </div>
                           </div>
+
+                          {/* Optimistic-locking conflict (Task 19 §5). The operator's draft
+                              is untouched in the textarea below — loading their version is
+                              explicit, never automatic, so a click cannot discard work. */}
+                          {conflict && (
+                            <div
+                              role="alert"
+                              className="mb-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5 text-[11px] text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200"
+                            >
+                              <p className="font-bold">
+                                Someone else saved this section at{' '}
+                                {new Date(conflict.serverRow.updatedAt).toLocaleString()} (version{' '}
+                                {conflict.serverRow.version}). Your edits are still in the editor
+                                below — nothing was lost.
+                              </p>
+                              {diffKeys.length > 0 && (
+                                <p className="mt-1">
+                                  Fields they changed:{' '}
+                                  <span className="font-mono font-semibold">{diffKeys.join(', ')}</span>
+                                </p>
+                              )}
+                              <div className="mt-2 flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditorRows((prev) => ({ ...prev, [locale]: conflict.serverRow }));
+                                    setEditorDraft((prev) => ({
+                                      ...prev,
+                                      [locale]: JSON.stringify(conflict.serverRow.content, null, 2),
+                                    }));
+                                    setEditorConflict(null);
+                                  }}
+                                  className="rounded-lg bg-amber-700 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-amber-800 cursor-pointer"
+                                >
+                                  Load their version
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setEditorConflict(null)}
+                                  className="rounded-lg border border-amber-400 px-2.5 py-1 text-[11px] font-semibold hover:bg-amber-100 dark:hover:bg-amber-500/20 cursor-pointer"
+                                >
+                                  Keep editing mine
+                                </button>
+                              </div>
+                            </div>
+                          )}
 
                           <textarea
                             value={editorDraft[locale]}
@@ -1305,9 +1496,72 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                   </div>
 
                   <p className="text-[11px] text-slate-600 dark:text-slate-400">
-                    Payload shape must match the static copy in <span className="font-mono">src/data/landingContent.ts</span> —
-                    keys the payload omits keep their English value on merge.
+                    Saving a published section stages a <strong>draft</strong> — the live page
+                    keeps the old copy until you press <strong>Publish</strong>. Payload shape
+                    must match the static copy in{' '}
+                    <span className="font-mono">src/data/landingContent.ts</span> — keys the
+                    payload omits keep their English value on merge.
                   </p>
+
+                  {/* Revision history + forward-only rollback (Task 19 §4) */}
+                  <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1B] p-4 shadow-xs">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h4 className="text-xs font-bold uppercase tracking-wide text-slate-700 dark:text-slate-200">
+                        Revision history
+                      </h4>
+                      {(['en', 'bn'] as const).map((locale) => (
+                        <button
+                          key={locale}
+                          type="button"
+                          onClick={() => void handleLoadHistory(locale)}
+                          disabled={isLoadingHistory}
+                          className="rounded-lg border border-slate-200 px-2.5 py-1 font-mono text-[11px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 cursor-pointer dark:border-white/10 dark:text-slate-200 dark:hover:bg-white/5"
+                        >
+                          {locale.toUpperCase()}
+                        </button>
+                      ))}
+                      {isLoadingHistory && (
+                        <span className="text-[11px] text-slate-500">Loading…</span>
+                      )}
+                    </div>
+                    {revisionHistory && (
+                      <div className="mt-3">
+                        <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                          {revisionHistory.locale.toUpperCase()} — newest first. Restoring
+                          applies the old copy as a <strong>new</strong> version; history is
+                          never deleted.
+                        </p>
+                        {revisionHistory.rows.length === 0 ? (
+                          <p className="mt-1 text-[11px] text-slate-500">No revisions yet.</p>
+                        ) : (
+                          <ul className="mt-2 divide-y divide-slate-100 dark:divide-white/5">
+                            {revisionHistory.rows.map((revision) => (
+                              <li
+                                key={revision.version}
+                                className="flex items-center justify-between gap-3 py-1.5 text-[11px]"
+                              >
+                                <span className="font-mono text-slate-700 dark:text-slate-300">
+                                  v{revision.version} · {revision.status}
+                                  {revision.note ? ` · ${revision.note}` : ''} ·{' '}
+                                  {new Date(revision.createdAt).toLocaleString()}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    void handleRestoreRevision(revisionHistory.locale, revision.version)
+                                  }
+                                  disabled={isSavingEditor}
+                                  className="rounded-lg border border-slate-200 px-2 py-0.5 font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 cursor-pointer dark:border-white/10 dark:text-slate-200 dark:hover:bg-white/5"
+                                >
+                                  Restore this
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <p className="text-xs text-slate-600 dark:text-slate-400">

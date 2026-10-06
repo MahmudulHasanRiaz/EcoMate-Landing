@@ -475,3 +475,34 @@ export const redirectsTable = pgTable('redirects', {
 }, (t) => [
   check('redirects_status_code_valid', sql`${t.statusCode} IN (301, 302, 307, 308)`),
 ]);
+
+// 20. Content Revisions (Task 19). Forward-only history for every content domain.
+//
+// A content row without its revisions is untraceable history: the row says what the site
+// shows *now*, and this table says what it showed at every point before, who changed it
+// and why. Drafts of a published section live here — not on the live row — so staging an
+// edit can never take the public copy down with it; `POST .../publish` promotes the latest
+// draft onto the row, and `POST .../restore` re-applies an old payload as a *new* row here
+// (history is never deleted, only appended to).
+//
+// `entity` names the domain table (`landing_content` | `blog_post` | ...), `entity_key` the
+// row inside it (`hero:en` for landing content, the numeric id for blog posts, `'1'` for
+// the singleton settings row). `version` is per-key (`max(version)+1` inside the same
+// transaction as the content write), so two domains never share a sequence and a gap in
+// one key's history is always a real deletion, never cross-talk.
+export const contentRevisionsTable = pgTable('content_revisions', {
+  id: serial('id').primaryKey(),
+  entity: text('entity').notNull(), // landing_content | blog_post | pricing_plan | case_study | testimonial | site_settings
+  entityKey: text('entity_key').notNull(), // sectionKey:locale | id | '1'
+  version: integer('version').notNull(),
+  payload: jsonb('payload').notNull(),
+  status: text('status').notNull(), // draft | published
+  actorId: integer('actor_id').references(() => adminUsersTable.id, { onDelete: 'set null' }),
+  note: text('note').default(''),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  // The restore/publish reads are always "this key's history, newest first".
+  index('content_revisions_entity_key_version_idx').on(t.entity, t.entityKey, t.version),
+  check('content_revisions_status_valid', sql`${t.status} IN ('draft', 'published')`),
+  check('content_revisions_version_positive', sql`${t.version} >= 1`),
+]);

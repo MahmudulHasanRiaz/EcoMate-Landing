@@ -1,5 +1,11 @@
 import type { NextConfig } from 'next';
 
+// Exposed only for the production `instant()` rig (Task 24): `next build` with
+// `EXPOSE_TESTING_API=1` compiles the navigation-lock testing API into the
+// artifact so `instant()` from `@next/playwright` can distinguish prefetched
+// shell from streamed content. Real production builds leave it off.
+const exposeTestingApi = process.env.EXPOSE_TESTING_API === '1';
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   // Next 16: replaces the old `experimental.ppr`. Enables Partial Prerendering so the
@@ -11,6 +17,15 @@ const nextConfig: NextConfig = {
   // Hyperdrive binding. `db/client.ts` (Task 3) handles that with a `DIRECT_URL`
   // fallback, and CI must expose `DIRECT_URL` to the build step (Task 8).
   cacheComponents: true,
+  // Task 24: Partial Prefetching (Next >= 16.3). Default links warm the shared
+  // App Shell (provider + `[locale]` layout); `prefetch={true}` additionally
+  // resolves cached URL-specific content. No per-route `prefetch = 'partial'`
+  // exports remain — the audit found zero `prefetch={true}` links, so there
+  // was nothing to adopt incrementally and the flag lands directly.
+  partialPrefetching: true,
+  experimental: {
+    exposeTestingApiInProductionBuild: exposeTestingApi,
+  },
   images: {
     remotePatterns: [{ protocol: 'https', hostname: 'media.ecomate.app' }],
   },

@@ -109,6 +109,21 @@ export const leadsTable = pgTable('leads', {
   consentGiven: boolean('consent_given').notNull().default(false),
   consentAt: timestamp('consent_at'),
   consentText: text('consent_text').default(''), // exact privacy-policy version accepted
+  /**
+   * Sales ownership (Task 16 §1). A FK, not free text like the legacy `assignedTo` column:
+   * "the row must still exist when the assignee is deleted" is exactly what SET NULL gives,
+   * whereas a text name would go stale and point at nobody. The legacy column is left in
+   * place so nothing that still reads it breaks.
+   */
+  assignedToId: integer('assigned_to_id').references(() => adminUsersTable.id, { onDelete: 'set null' }),
+  /** When the sales team promised to call back. Drives the overdue-follow-up worklist. */
+  followUpAt: timestamp('follow_up_at'),
+  /**
+   * Set by the retention cron (Task 16 §6) when the PII on this row was cleared. Present so
+   * the job is idempotent (a second pass can see its own work) and so an auditor can tell
+   * "never had PII" from "PII was removed".
+   */
+  anonymizedAt: timestamp('anonymized_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => [
@@ -118,6 +133,12 @@ export const leadsTable = pgTable('leads', {
     sql`${t.consentGiven} = false OR (${t.consentAt} IS NOT NULL AND ${t.consentText} <> '')`),
   check('leads_meta_capi_status_valid',
     sql`${t.metaCapiStatus} IN ('Pending', 'Sent', 'Failed', 'Skipped')`),
+  // `leads` is listed newest-first and filtered by status; without these the admin list
+  // degrades to a sequential scan plus a sort as the table grows past a few thousand rows.
+  index('leads_created_at_idx').on(t.createdAt),
+  index('leads_status_created_idx').on(t.status, t.createdAt),
+  // The overdue-follow-up query is `follow_up_at < now() AND status NOT IN (...)`.
+  index('leads_follow_up_at_idx').on(t.followUpAt),
 ]);
 
 // 5. Testimonials Table (Multi-format: quotes, videos, audio/podcast)
@@ -140,7 +161,11 @@ export const testimonialsTable = pgTable('testimonials', {
   isPublished: boolean('is_published').notNull().default(true),
   deletedAt: timestamp('deleted_at'), // soft delete (is_published only controls visibility)
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (t) => [
+  // The public list reads `WHERE deleted_at IS NULL ORDER BY sort_order`, which had no
+  // index until Task 16 made the read paginated (sort before slice).
+  index('testimonials_sort_order_idx').on(t.sortOrder),
+]);
 
 // 6. Case Studies Table (Detailed problem -> solution -> outcome)
 export const caseStudiesTable = pgTable('case_studies', {
@@ -188,6 +213,16 @@ export const blogPostsTable = pgTable('blog_posts', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => [
   uniqueIndex('blog_posts_slug_live_idx').on(t.slug).where(sql`${t.deletedAt} IS NULL`),
+  // The list route sorts on `coalesce(published_at, created_at)`, so the index has to be an
+  // expression index on that same expression — a plain index on `published_at` cannot serve the
+  // sort, and Postgres falls back to sorting the whole filtered set before slicing.
+  //
+  // The column names are written as SQL identifiers rather than interpolated from
+  // `blogPostsTable`: referencing the table inside its own initializer makes it self-referential
+  // (TS7022) and the result is an implicit `any`. Static identifiers carry no injection risk.
+  index('blog_posts_publish_order_idx').on(
+    sql`coalesce("published_at", "created_at")`,
+  ),
   check(
     'blog_posts_status_valid',
     sql`${t.status} IN ('draft', 'scheduled', 'published', 'archived')`,
@@ -204,7 +239,11 @@ export const mediaAssetsTable = pgTable('media_assets', {
   category: text('category').notNull().default('general'), // logo, hero, product_ui, customer_logo, og_image
   deletedAt: timestamp('deleted_at'), // soft delete: the R2 object is only purged when unreferenced
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (t) => [
+  // Media library is listed newest-first and filtered on `deleted_at`; without this the
+  // paginated read sorts before it slices.
+  index('media_assets_created_at_idx').on(t.createdAt),
+]);
 
 // 9. Integration Logs Table (Authoritative audit log of License Portal dispatches)
 export const integrationLogsTable = pgTable('integration_logs', {
@@ -217,7 +256,11 @@ export const integrationLogsTable = pgTable('integration_logs', {
   errorMessage: text('error_message').default(''),
   attempts: integer('attempts').notNull().default(1),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (t) => [
+  // The integration-log viewer is a newest-first paginated read over a table that grows
+  // without bound (every dispatch appends one row), so its sort column needs an index.
+  index('integration_logs_created_at_idx').on(t.createdAt),
+]);
 
 // 10. Landing Content Table (whole-site, DB-driven, per-locale section payloads)
 // `version` exists for optimistic locking, `status` for draft/publish and `deletedAt` for
@@ -386,7 +429,37 @@ export const menuItemsTable = pgTable('menu_items', {
   index('menu_items_menu_sort_idx').on(t.menuId, t.sortOrder),
 ]);
 
-// 17. Managed Redirects (Task 15). `from_path` is unique because two rules for one path is
+// 17b. Lead timeline (Task 16 §1). Every status change and every assignment change writes one
+// row here, inside the same transaction as the `leads` update itself.
+//
+// `actor_id` is resolved server-side from the live session, never read from the request body:
+// a client-supplied actor would make the entire history forgeable, which defeats the point of
+// keeping a timeline at all.
+//
+// Both foreign keys cascade on lead delete / set null on operator delete — losing the timeline
+// because an operator was removed would destroy the audit trail, and losing the actor name on
+// an activity should not delete the event that happened.
+export const leadActivitiesTable = pgTable('lead_activities', {
+  id: serial('id').primaryKey(),
+  leadId: integer('lead_id')
+    .notNull()
+    .references(() => leadsTable.id, { onDelete: 'cascade' }),
+  actorId: integer('actor_id').references(() => adminUsersTable.id, { onDelete: 'set null' }),
+  /**
+   * Status transitions record both ends. Assignment and note events leave both empty, which
+   * is why they default to `''` rather than being NULL — a timeline row is a "something
+   * happened" marker and must never be filtered out by a null check in the drawer.
+   */
+  fromStatus: text('from_status').default(''),
+  toStatus: text('to_status').default(''),
+  note: text('note').default(''),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  // The drawer reads one lead's history newest-first; this is the covering access path.
+  index('lead_activities_lead_created_idx').on(t.leadId, t.createdAt),
+]);
+
+// 19. Managed Redirects (Task 15). `from_path` is unique because two rules for one path is
 // ambiguous, and an ambiguous redirect is how a URL silently 500s in production.
 // `to_path` is stored relative (`/new-path`) rather than absolute so a redirect created in
 // staging still points at the same path in production.

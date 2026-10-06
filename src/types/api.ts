@@ -95,8 +95,55 @@ export interface Lead {
   consentGiven: boolean;
   consentAt?: string;
   consentText?: string;
+  // Sales ownership + retention (Task 16).
+  /** `admin_users.id`, or null when unassigned or the operator was deleted. */
+  assignedToId?: number | null;
+  followUpAt?: string | null;
+  /** Set once the retention cron cleared this lead's PII. */
+  anonymizedAt?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+/** One entry in a lead's timeline (Task 16 §1). */
+export interface LeadActivity {
+  id: number;
+  /** `admin_users.id`, or null when the event was system-initiated or the actor was deleted. */
+  actorId: number | null;
+  fromStatus: string;
+  toStatus: string;
+  note: string;
+  createdAt: string;
+}
+
+/** Row shape of the overdue-follow-up worklist (`GET /api/leads?overdue=1`). */
+export interface OverdueLead {
+  id: number;
+  name: string;
+  phone: string;
+  status: string;
+  assignedToId: number | null;
+  assignedTo: string;
+  followUpAt: string | null;
+}
+
+/** `GET /api/ready` response (Task 16 §7). */
+export interface ReadinessCheck {
+  status: 'ok' | 'failed' | 'not_configured';
+  latencyMs: number;
+  error?: string;
+}
+
+export interface ReadinessReport {
+  status: 'ready' | 'degraded' | 'not_ready';
+  checks: {
+    database: ReadinessCheck;
+    storage: ReadinessCheck;
+    cache: ReadinessCheck;
+  };
+  notificationProvider: 'configured' | 'log_only';
+  requestId: string;
+  timestamp: string;
 }
 
 export interface Testimonial {

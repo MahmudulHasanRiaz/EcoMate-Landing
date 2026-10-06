@@ -1,27 +1,44 @@
-import { desc, isNull } from 'drizzle-orm';
+import { desc, isNull, sql } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { mediaAssetsTable } from '@/db/schema';
 import {
   asObject,
   errorMessage,
   fail,
+  failWithRequestId,
   isUniqueViolation,
   logServerError,
   ok,
   readString,
 } from '@/lib/json';
+import { paginate } from '@/lib/paginate';
+import { requestId } from '@/lib/request';
 
-export async function GET() {
+/** Paginated (Task 16 §4): the media library is a growing list, not a fixed set. */
+export async function GET(req: Request) {
   try {
-    const rows = await getDb()
-      .select()
-      .from(mediaAssetsTable)
-      .where(isNull(mediaAssetsTable.deletedAt))
-      .orderBy(desc(mediaAssetsTable.createdAt));
-    return ok(rows);
+    const page = await paginate(
+      req.url,
+      (limit, offset) =>
+        getDb()
+          .select()
+          .from(mediaAssetsTable)
+          .where(isNull(mediaAssetsTable.deletedAt))
+          .orderBy(desc(mediaAssetsTable.createdAt), desc(mediaAssetsTable.id))
+          .limit(limit)
+          .offset(offset),
+      async () => {
+        const [row] = await getDb()
+          .select({ count: sql<number>`count(*)` })
+          .from(mediaAssetsTable)
+          .where(isNull(mediaAssetsTable.deletedAt));
+        return { count: Number(row?.count ?? 0) };
+      },
+    );
+    return ok(page);
   } catch (e) {
-    logServerError('GET /api/media', e);
-    return fail(errorMessage(e));
+    logServerError('GET /api/media', e, requestId(req));
+    return failWithRequestId(errorMessage(e), requestId(req));
   }
 }
 
@@ -47,7 +64,7 @@ export async function POST(req: Request) {
     const [created] = await getDb().insert(mediaAssetsTable).values(row).returning();
     return ok(created, 201);
   } catch (e) {
-    logServerError('POST /api/media', e);
+    logServerError('POST /api/media', e, requestId(req));
     if (isUniqueViolation(e)) return fail('A media asset with that key already exists', 409);
     return fail(errorMessage(e));
   }

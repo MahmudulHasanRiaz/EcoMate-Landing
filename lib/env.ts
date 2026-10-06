@@ -30,7 +30,10 @@ export type CloudflareEnvKey =
   | 'TURNSTILE_SECRET_KEY'
   | 'TOTP_ENCRYPTION_KEY'
   | 'RESEND_API_KEY'
-  | 'CRON_SECRET';
+  | 'NOTIFY_FROM_EMAIL'
+  | 'NOTIFY_TO_EMAIL'
+  | 'CRON_SECRET'
+  | 'RETENTION_DAYS';
 
 /**
  * Resolve a string binding/secret or return `''`.

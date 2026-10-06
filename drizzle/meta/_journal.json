@@ -43,6 +43,13 @@
       "when": 1791261997867,
       "tag": "0005_worthless_mimic",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791265178807,
+      "tag": "0006_brave_sharon_ventura",
+      "breakpoints": true
     }
   ]
 }

@@ -24,9 +24,65 @@ export function errorMessage(e: unknown): string {
  * Log the full error server-side (Workers logs / `next dev` console) while the response
  * body stays the terse message. Without this, a failing route is only visible to whoever
  * happened to curl it.
+ *
+ * Emits one JSON object rather than `console.error(message, error)`: a thrown Error stringifies
+ * with embedded newlines, and Workers treats each line as its own log entry. Structured output
+ * keeps one failure on one line, carries the request id so it can be joined to the edge's
+ * `cf-ray`, and gives a log query something stable to filter on.
+ *
+ * `scope` is the operation name (`"POST /api/leads"`) — it becomes the `op` field. Stack traces
+ * are dropped: `wrangler tail` already prints them for uncaught throws, and repeating a full
+ * stack on every caught-and-logged error doubles the ingest volume.
  */
-export function logServerError(scope: string, e: unknown): void {
-  console.error(`[api] ${scope} failed:`, e);
+export function logServerError(scope: string, e: unknown, requestId?: string): void {
+  const entry: Record<string, unknown> = {
+    level: 'error',
+    event: 'api.error',
+    op: scope,
+    // Explicitly threaded rather than ambient. A module-level "current request" variable is
+    // wrong on Workers: an isolate interleaves requests at every `await`, so a second handler
+    // can run inside the first one's lifetime and log the wrong id. Threading the value costs
+    // one argument per call site and removes the possibility entirely.
+    requestId: requestId ?? null,
+    message: errorMessage(e),
+  };
+  if (e instanceof Error && e.name) entry.errorName = e.name;
+  // Drivers attach the machine-readable cause (SQLSTATE, HTTP status) one or two links down;
+  // without it, "Postgres error" and "constraint 23505" are indistinguishable in a log search.
+  const code = errorCode(e);
+  if (code !== '') entry.code = code;
+  try {
+    console.error(JSON.stringify(entry));
+  } catch {
+    // JSON.stringify can throw on a BigInt inside the cause chain. A plain message is still
+    // better than losing the error entirely.
+    console.error(`[api] ${scope} failed: ${errorMessage(e)}`);
+  }
+}
+
+/**
+ * The machine-readable error code from a driver, walking the `cause` chain the way
+ * `isUniqueViolation` does. Empty string when there is none.
+ */
+function errorCode(e: unknown): string {
+  let current: unknown = e;
+  for (let depth = 0; depth < 4 && typeof current === 'object' && current !== null; depth++) {
+    const code = (current as { code?: unknown }).code;
+    if (typeof code === 'string' && code !== '') return code;
+    current = (current as { cause?: unknown }).cause;
+  }
+  return '';
+}
+
+/**
+ * 500 with the request id in the body.
+ *
+ * The id is safe to return: it is a ray id or a uuid, and an operator reading it can quote it
+ * back into a log search. Returning it is the difference between "it broke" and a report that
+ * can be traced to a single Worker invocation.
+ */
+export function failWithRequestId(message: string, requestId?: string, status = 500): Response {
+  return Response.json({ error: message, requestId: requestId ?? null }, { status });
 }
 
 /**

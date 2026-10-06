@@ -1,15 +1,36 @@
+import { asc, sql } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { caseStudiesTable } from '@/db/schema';
-import { errorMessage, fail, logServerError, ok } from '@/lib/json';
+import { errorMessage, fail, failWithRequestId, logServerError, ok } from '@/lib/json';
+import { countTable, paginate } from '@/lib/paginate';
+import { requestId } from '@/lib/request';
 
-export async function GET() {
+/**
+ * Paginated (Task 16 §4).
+ *
+ * `case_studies` has no ordering column and no soft-delete column, so the list is the whole
+ * live set. It is ordered by `id` explicitly rather than left unordered: an `OFFSET` scan over
+ * a query with no `ORDER BY` has no stable order, which means row 20 of page 1 and row 20 of
+ * page 2 can be the same row — a duplicate with something silently dropped. `id` is the
+ * primary key, so its existing index serves the scan; **no new index is needed here**, unlike
+ * the other list routes which sort on an unindexed column.
+ */
+export async function GET(req: Request) {
   try {
-    // `case_studies` has no ordering column and no soft-delete column; the list is the
-    // whole live set.
-    const rows = await getDb().select().from(caseStudiesTable);
-    return ok(rows);
+    const page = await paginate(
+      req.url,
+      (limit, offset) =>
+        getDb()
+          .select()
+          .from(caseStudiesTable)
+          .orderBy(asc(caseStudiesTable.id))
+          .limit(limit)
+          .offset(offset),
+      () => countTable(caseStudiesTable),
+    );
+    return ok(page);
   } catch (e) {
-    logServerError('GET /api/case-studies', e);
-    return fail(errorMessage(e));
+    logServerError('GET /api/case-studies', e, requestId(req));
+    return failWithRequestId(errorMessage(e), requestId(req));
   }
 }

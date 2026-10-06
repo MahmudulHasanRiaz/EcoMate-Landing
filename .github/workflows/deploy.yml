@@ -118,8 +118,28 @@ jobs:
           name: opennext-bundle
           path: .open-next
 
-      # `migrate` (journaled SQL), never `push` (live schema diff) in a deploy workflow.
+      # `migrate` (journaled SQL from `drizzle/`), never `push` (live schema diff).
+      #
+      # `db:push` reconciles the database to `db/schema.ts` by whatever means it judges
+      # necessary, which on Postgres includes DROPPING columns it believes are unused. Against a
+      # production leads table that is data loss performed by a deploy step, and it is not
+      # reversible from git. Migrations only ever apply the statements that were generated,
+      # reviewed and committed.
+      - name: Assert no db:push in this workflow
+        run: |
+          if grep -rnE '(^|[^a-z:])db:push([^a-z]|$)|drizzle-kit[[:space:]]+push' .github/workflows/; then
+            echo "::error::db:push found in a deploy workflow. It reconciles the live schema by dropping columns and is not safe in production. Use db:migrate."
+            exit 1
+          fi
+          echo "no db:push in any deploy workflow"
+
       - name: Apply DB migrations
+        # KNOWN ISSUE: `drizzle-kit migrate` exits 1 silently in this repository and has not yet
+        # been diagnosed. Until it is fixed, this step will fail the deploy rather than silently
+        # shipping code against an out-of-date schema — which is the correct failure direction,
+        # but it does mean deploys are blocked. Follow-up: capture `drizzle-kit migrate`
+        # stderr, confirm whether it is the journal/`__drizzle_migrations` bookkeeping or the
+        # connection, and fix the script rather than removing this step.
         run: npm run db:migrate
         env:
           DIRECT_URL: ${{ secrets.DIRECT_URL }}

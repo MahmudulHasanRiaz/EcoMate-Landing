@@ -1,11 +1,40 @@
 import { getCloudflareContext } from '@opennextjs/cloudflare';
-import { desc } from 'drizzle-orm';
+import { desc, eq, sql } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { leadsTable } from '@/db/schema';
-import { asObject, errorMessage, fail, logServerError, ok, readString } from '@/lib/json';
+import {
+  asObject,
+  errorMessage,
+  fail,
+  failWithRequestId,
+  logServerError,
+  ok,
+  readString,
+} from '@/lib/json';
 import { dispatchLeadIntegrations } from '@/lib/leadDispatch';
+import {
+  countOverdueFollowUps,
+  findRecentLeadByPhone,
+  listOverdueFollowUps,
+  normalisePhone,
+  recordLeadActivity,
+} from '@/lib/leads';
+import { notifyNewLead } from '@/lib/notify';
+import { paginate, parsePage } from '@/lib/paginate';
+import { clientIp as clientIpOf, requestId } from '@/lib/request';
 import { hitLimit } from '@/lib/rateLimit';
 import { verifyTurnstile } from '@/lib/turnstile';
+
+// Registers the Resend adapter on import. No call site changes when it becomes active.
+import '@/lib/notifyResend';
+
+/**
+ * Dedupe warning window. A lead with the same phone inside this many days is reported, never
+ * blocked: the same person resubmitting a form is common and legitimate (they dropped out, they
+ * want a different plan), and refusing the submission loses the lead to fix a data-quality
+ * problem. The salesperson decides.
+ */
+const DEDUPE_WINDOW_DAYS = 90;
 
 // Per-isolate best effort, deliberately kept as the *backstop* behind the KV limiter
 // (Task 14 §1) and the WAF rule (Task 8): a Worker has no shared memory across the fleet,
@@ -41,25 +70,76 @@ function readEventId(value: unknown): string {
   return /^[A-Za-z0-9._:-]{8,80}$/.test(candidate) ? candidate : newEventId();
 }
 
-function readClientIp(req: Request): string {
-  const direct = req.headers.get('cf-connecting-ip');
-  if (direct) return direct;
-  // `x-forwarded-for` is a comma-separated chain; the first entry is the client.
-  const forwarded = req.headers.get('x-forwarded-for');
-  return forwarded ? forwarded.split(',')[0]?.trim() ?? '' : '';
+/**
+ * Paginated lead list (Task 16 §4).
+ *
+ * `?overdue=1` returns the follow-up worklist instead of the main list. The two have different
+ * WHERE clauses *and* different orderings (newest-first vs soonest-missed-first), so they are
+ * separate queries rather than one query with a mode flag — a shared query would need two
+ * divergent filter sets, and only one of the two counts would then be correct.
+ */
+export async function GET(req: Request) {
+  const reqId = requestId(req);
+  try {
+    if (wantsOverdue(req.url)) {
+      const page = await paginate(
+        req.url,
+        (limit, offset) => listOverdueFollowUps(limit, offset),
+        countOverdueFollowUps,
+      );
+      return ok(page);
+    }
+
+    const status = statusFilter(req.url);
+    const page = await paginate(
+      req.url,
+      (limit, offset) =>
+        getDb()
+          .select()
+          .from(leadsTable)
+          // `id` is the tiebreaker: two leads created in the same millisecond must not swap
+          // places between page 1 and page 2 on the next request.
+          .orderBy(desc(leadsTable.createdAt), desc(leadsTable.id))
+          .where(status ? eq(leadsTable.status, status) : undefined)
+          .limit(limit)
+          .offset(offset),
+      async () => {
+        const [row] = await getDb()
+          .select({ count: sql<number>`count(*)` })
+          .from(leadsTable)
+          .where(status ? eq(leadsTable.status, status) : undefined);
+        return { count: Number(row?.count ?? 0) };
+      },
+    );
+    return ok(page);
+  } catch (e) {
+    logServerError('GET /api/leads', e, reqId);
+    return failWithRequestId(errorMessage(e), reqId);
+  }
 }
 
-export async function GET() {
+/** `overdue=1|true` selects the follow-up worklist. */
+function wantsOverdue(url: string): boolean {
   try {
-    const rows = await getDb().select().from(leadsTable).orderBy(desc(leadsTable.createdAt));
-    return ok(rows);
-  } catch (e) {
-    logServerError('GET /api/leads', e);
-    return fail(errorMessage(e));
+    const value = new URL(url).searchParams.get('overdue');
+    return value === '1' || value === 'true';
+  } catch {
+    return false;
+  }
+}
+
+/** Status filter for the main list. An unrecognised value is ignored, not rejected. */
+function statusFilter(url: string): string | null {
+  try {
+    const value = new URL(url).searchParams.get('status');
+    return value !== null && value !== '' && value !== 'All' ? value : null;
+  } catch {
+    return null;
   }
 }
 
 export async function POST(req: Request) {
+  const reqId = requestId(req);
   try {
     const ip = req.headers.get('cf-connecting-ip') ?? 'unknown-ip';
     const now = Date.now();
@@ -89,6 +169,7 @@ export async function POST(req: Request) {
     const body = asObject(await req.json());
     const name = readString(body.name).trim();
     const phone = readString(body.phone).trim();
+    const clientIp = clientIpOf(req);
     if (!name) return fail('Name is required', 400);
     if (phone.length < 8) return fail('A valid phone number is required', 400);
 
@@ -109,33 +190,91 @@ export async function POST(req: Request) {
       return fail('Human verification failed. Please refresh the page and try again.', 400);
     }
 
-    const [lead] = await getDb()
-      .insert(leadsTable)
-      .values({
-        name,
-        phone,
-        email: readString(body.email).trim(),
-        dailyVolume: readString(body.dailyVolume, '150 – 500 orders / day'),
-        note: readString(body.note).trim(),
-        source: readString(body.source, 'landing_page_lead_form'),
-        utmSource: readString(body.utmSource),
-        utmCampaign: readString(body.utmCampaign),
-        // --- tracking + consent (Task 13) ---------------------------------------------
-        fbp: readString(body.fbp).trim().slice(0, MAX_TRACKING_VALUE),
-        fbc: readString(body.fbc).trim().slice(0, MAX_TRACKING_VALUE),
-        eventId: readEventId(body.eventId),
-        clientIp: readClientIp(req),
-        userAgent: readString(req.headers.get('user-agent')).slice(0, MAX_USER_AGENT),
-        consentGiven: true,
-        consentAt: new Date(),
-        consentText,
-      })
-      .returning();
+const source = readString(body.source, 'landing_page_lead_form');
 
-    // Meta CAPI + License Portal, both handed to the platform. `keepAlive` reuses
-    // `ctx.waitUntil` so a recycled isolate cannot cancel either dispatch — and the lead
+    /**
+     * The lead row and its opening timeline entry commit together.
+     *
+     * A lead with no `lead_activities` row is a lead whose history starts mid-story, which is
+     * precisely the corruption the timeline exists to prevent — so the two writes are one
+     * transaction rather than two calls that happen to run in order.
+     *
+     * `actorId: null` is correct here rather than an omission: this row was created by an
+     * anonymous visitor. The status changes that follow are what carry a real operator id.
+     */
+    const [lead] = await getDb().transaction(async (tx) => {
+      const inserted = await tx
+        .insert(leadsTable)
+        .values({
+          name,
+          phone,
+          email: readString(body.email).trim(),
+          dailyVolume: readString(body.dailyVolume, '150 – 500 orders / day'),
+          note: readString(body.note).trim(),
+          source,
+          utmSource: readString(body.utmSource),
+          utmCampaign: readString(body.utmCampaign),
+          // --- tracking + consent (Task 13) ---------------------------------------------
+          fbp: readString(body.fbp).trim().slice(0, MAX_TRACKING_VALUE),
+          fbc: readString(body.fbc).trim().slice(0, MAX_TRACKING_VALUE),
+          eventId: readEventId(body.eventId),
+          clientIp,
+          userAgent: readString(req.headers.get('user-agent')).slice(0, MAX_USER_AGENT),
+          consentGiven: true,
+          consentAt: new Date(),
+          consentText,
+        })
+        .returning();
+
+      const created = inserted[0];
+      if (!created) throw new Error('Lead insert returned no row');
+
+      await recordLeadActivity(tx, {
+        leadId: created.id,
+        actorId: null,
+        toStatus: created.status,
+        note: `Lead captured from ${source}`,
+      });
+
+      return inserted;
+    });
+    if (!lead) throw new Error('Lead insert returned no row');
+
+    /**
+     * Dedupe warning — a warning, never a block.
+     *
+     * Run after the insert on purpose: the alternative (checking first and returning an error)
+     * turns a data-quality signal into a lost lead, and the same person resubmitting the form
+     * is a completely normal thing for them to do. The response carries the matched id so the
+     * form can tell the visitor their enquiry is already on file, while the operator still
+     * gets the row.
+     */
+    let duplicateWarning: { leadId: number; createdAt: string; status: string } | null = null;
+    try {
+      // The new row is excluded inside the query: it is always the newest match, so checking
+      // afterwards would throw away the genuine prior lead it found.
+      const match = await findRecentLeadByPhone(
+        normalisePhone(phone),
+        DEDUPE_WINDOW_DAYS,
+        lead.id,
+      );
+      if (match) {
+        duplicateWarning = {
+          leadId: match.id,
+          createdAt: match.createdAt.toISOString(),
+          status: match.status,
+        };
+      }
+    } catch (e) {
+      // A failed dedupe check must never cost a lead: the row is already committed, so
+      // failing here would report an error for a lead that is safely stored.
+      logServerError('POST /api/leads (dedupe warning)', e, reqId);
+    }
+
+    // Meta CAPI + License Portal + notification, all handed to the platform. `keepAlive`
+    // reuses `ctx.waitUntil` so a recycled isolate cannot cancel any of them — and the lead
     // row is already committed, so a dispatch failure never loses the lead.
-    keepAlive(dispatchLeadIntegrations(lead.id));
+    keepAlive(Promise.all([dispatchLeadIntegrations(lead.id), notifyNewLead(lead)]));
 
     return ok(
       {
@@ -144,12 +283,15 @@ export async function POST(req: Request) {
         eventId: lead.eventId,
         message:
           'Demo request registered successfully. Our operations team will reach out promptly.',
+        // Absent (rather than null) when there is no match, so a client can feature-detect on
+        // the key existing instead of on a falsy-but-present field.
+        ...(duplicateWarning ? { duplicateWarning } : {}),
       },
       201,
     );
   } catch (e) {
-    logServerError('POST /api/leads', e);
-    return fail(errorMessage(e));
+    logServerError('POST /api/leads', e, reqId);
+    return failWithRequestId(errorMessage(e), reqId);
   }
 }
 

@@ -31,6 +31,12 @@ declare global {
       options?: { httpMetadata?: { contentType?: string; cacheControl?: string } },
     ): Promise<unknown>;
     get(key: string): Promise<{ arrayBuffer(): Promise<ArrayBuffer> } | null>;
+    /**
+     * Metadata-only fetch. Resolves with `null` for a missing key rather than rejecting, which
+     * is why `/api/ready` uses it against a deliberately-absent probe key: a null result is
+     * still a successful round trip against a live bucket.
+     */
+    head(key: string): Promise<{ size: number; etag: string } | null>;
     delete(key: string | string[]): Promise<void>;
   }
 
@@ -78,6 +84,17 @@ declare global {
     GEMINI_API_KEY?: string;
     SENTRY_DSN?: string;
     RESEND_API_KEY?: string;
+    /** From address for lead notification email (Resend adapter, `lib/notifyResend.ts`). */
+    NOTIFY_FROM_EMAIL?: string;
+    /** Inbox that receives "new lead" notifications. */
+    NOTIFY_TO_EMAIL?: string;
+    /** Guards `/api/cron/*`. Cloudflare's cron binding does not add it — see the route. */
     CRON_SECRET?: string;
+    /**
+     * Lead PII retention window in days (Task 16 §6). A `[vars]` value, not a secret: it is a
+     * policy number, and reading it from the environment (rather than hardcoding 180) is what
+     * lets legal change the window without a code change.
+     */
+    RETENTION_DAYS?: string;
   }
 }

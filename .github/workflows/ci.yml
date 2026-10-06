@@ -64,6 +64,21 @@ jobs:
       # It internally runs `npm run build` (`next build`), which is why the package.json
       # build script must NEVER point back at `opennextjs-cloudflare build` — that
       # recurses without bound.
+      # Same guard as deploy.yml, at CI rather than deploy time: catching `db:push` in a pull
+      # request is cheaper than discovering it in a production deploy job. `db:push` reconciles
+      # the live database to `db/schema.ts` and may DROP columns it thinks are unused.
+      - name: Assert no db:push in any workflow
+        run: |
+          if grep -rnE '(^|[^a-z:])db:push([^a-z]|$)|drizzle-kit[[:space:]]+push' .github/workflows/; then
+            echo "::error::db:push found in a workflow. It reconciles the live schema by dropping columns and is not safe against production data. Use db:migrate."
+            exit 1
+          fi
+          echo "no db:push in any workflow"
+
+      # The opennext CLI is what produces the deployable Worker bundle (`.open-next`).
+      # It internally runs `npm run build` (`next build`), which is why the package.json
+      # build script must NEVER point back at `opennextjs-cloudflare build` — that
+      # recurses without bound.
       - name: Execute production build
         run: npx opennextjs-cloudflare build
         env:

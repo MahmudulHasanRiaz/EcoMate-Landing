@@ -47,3 +47,22 @@ NEXT_PUBLIC_TURNSTILE_SITE_KEY = ""
 # `/api/auth/*` request fails in production. Not a secret: it is a deployment property,
 # and it only enables host-derived origins on hostnames this zone already serves.
 AUTH_TRUST_HOST = "true"
+
+# Lead PII retention (Task 16 §6). A `[vars]` value rather than a secret: the retention window
+# is a policy number legal can change, and changing it should not require a secret rotation.
+# `app/api/cron/retention/route.ts` clamps it and falls back to 180 if this is missing or
+# nonsensical.
+RETENTION_DAYS = "180"
+
+# ---------------------------------------------------------------------------
+# Scheduled triggers
+# ---------------------------------------------------------------------------
+# 03:17 UTC daily, deliberately off the :00 stampede every other tenant hits — a retention job
+# that starts scanning at exactly 03:00 competes with everyone else's backups for the same
+# Postgres connections.
+#
+# Cloudflare Cron Triggers call the Worker URL with a plain GET and cannot attach a header, so
+# the route accepts the secret as an `x-cron-secret` header or a `?secret=` parameter, and it
+# FAILS CLOSED when CRON_SECRET is unset. See the route header before trusting that this fires.
+[triggers]
+crons = ["17 3 * * *"]

@@ -11,6 +11,8 @@ import type {
   MediaAsset,
   IntegrationLog,
   I18nReport,
+  LeadActivity,
+  OverdueLead,
 } from '../../types/api';
 import * as api from '../../services/api';
 import {
@@ -42,6 +44,10 @@ import {
   Mail,
   Calendar,
   Languages,
+  Download,
+  History,
+  UserPlus,
+  Clock,
 } from 'lucide-react';
 
 interface AdminPanelProps {
@@ -97,6 +103,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
   const [leadSearchQuery, setLeadSearchQuery] = useState('');
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
 
+  // --- Lead timeline + follow-up worklist (Task 16) -------------------------------------
+  /** Timeline for `selectedLead`, newest first. Separate state so opening a different lead
+   *  never shows the previous lead's history while the fetch is in flight. */
+  const [leadActivities, setLeadActivities] = useState<LeadActivity[]>([]);
+  const [isLoadingTimeline, setIsLoadingTimeline] = useState(false);
+  /** Follow-up date being edited in the drawer, as `yyyy-mm-dd` for a date input. */
+  const [followUpDraft, setFollowUpDraft] = useState('');
+  /** Operators who can own a lead. Empty when the caller is an editor (endpoint is
+   *  superadmin-only), which is why the picker degrades to a read-only display. */
+  const [operators, setOperators] = useState<{ id: number; email: string }[]>([]);
+  /** Leads whose promised follow-up has passed. Drives the dashboard worklist. */
+  const [overdueLeads, setOverdueLeads] = useState<OverdueLead[]>([]);
+
   // Blog Editor State
   const [isEditingBlog, setIsEditingBlog] = useState(false);
   const [editingPost, setEditingPost] = useState<Partial<BlogPost>>({
@@ -130,12 +149,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
         api.getSettings(),
         api.getSections(),
         api.getPricing(),
-        api.getLeads(),
-        api.getTestimonials(),
-        api.getCaseStudies(),
-        api.getBlogPosts(),
-        api.getMediaAssets(),
-        api.getIntegrationLogs(),
+        // Every list endpoint is paginated (Task 16). The admin asks for the maximum page in
+        // one shot rather than rendering a pager: an operator triaging leads needs the whole
+        // working set on screen, and `MAX_LIMIT` (100) is the ceiling the server enforces anyway.
+        api.getLeads({ limit: api.ADMIN_LIST_LIMIT }),
+        api.getTestimonials({ limit: api.ADMIN_LIST_LIMIT }),
+        api.getCaseStudies({ limit: api.ADMIN_LIST_LIMIT }),
+        api.getBlogPosts({ limit: api.ADMIN_LIST_LIMIT }),
+        api.getMediaAssets({ limit: api.ADMIN_LIST_LIMIT }),
+        api.getIntegrationLogs({ limit: api.ADMIN_LIST_LIMIT }),
         api.getSystemHealth(),
       ]);
 
@@ -161,6 +183,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
     } finally {
       setIsLoading(false);
     }
+
+    // The operator roster and the overdue worklist are fetched separately for the same reason
+    // as the translation report: both are role-gated or non-essential, so a 403 must not blank
+    // every panel by rejecting the shared `Promise.all` above.
+    api
+      .getAssignableOperators()
+      .then(setOperators)
+      .catch(() => setOperators([]));
+    api
+      .getOverdueLeadsPage({ limit: api.ADMIN_LIST_LIMIT })
+      .then((page) => setOverdueLeads(page.data))
+      .catch(() => setOverdueLeads([]));
   };
 
   useEffect(() => {
@@ -233,14 +267,97 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
     }
   };
 
-  // Handlers
+  /**
+   * Load one lead's timeline for the drawer.
+   *
+   * Cleared first, and the id is re-checked after the await: an operator who clicks two leads
+   * quickly would otherwise have the first lead's history land in the second lead's drawer.
+   */
+  const handleOpenLead = async (lead: Lead) => {
+    setSelectedLead(lead);
+    setLeadActivities([]);
+    setFollowUpDraft(toDateInputValue(lead.followUpAt));
+    setIsLoadingTimeline(true);
+    try {
+      const page = await api.getLeadActivities(lead.id, { limit: api.ADMIN_LIST_LIMIT });
+      if (selectedLead?.id === lead.id) setLeadActivities(page.data);
+    } catch (err: any) {
+      showNotification(`Failed to load timeline: ${err.message}`);
+    } finally {
+      setIsLoadingTimeline(false);
+    }
+  };
+
+  /**
+   * Status change. Routed through `updateLead` (one transaction, one timeline entry) rather
+   * than the legacy status-only call, so the history can never be missing for a change the
+   * drawer is showing.
+   */
   const handleUpdateLeadStatus = async (id: number, status: Lead['status']) => {
     try {
-      const updated = await api.updateLeadStatus(id, status);
+      const updated = await api.updateLead(id, { status });
       setLeads((prev) => prev.map((l) => (l.id === id ? updated : l)));
+      setSelectedLead((prev) => (prev?.id === id ? updated : prev));
       showNotification(`Lead #${id} status updated to ${status}`);
+      await refreshTimeline(id);
+      await refreshOverdue();
     } catch (err: any) {
       showNotification(`Error updating lead: ${err.message}`);
+    }
+  };
+
+  /** Re-read the timeline for the open lead after a mutation that wrote to it. */
+  const refreshTimeline = async (leadId: number) => {
+    try {
+      const page = await api.getLeadActivities(leadId, { limit: api.ADMIN_LIST_LIMIT });
+      setLeadActivities(page.data);
+    } catch {
+      // A stale timeline is a cosmetic problem; the mutation itself already succeeded and its
+      // own error path has reported to the operator.
+    }
+  };
+
+  const refreshOverdue = async () => {
+    try {
+      const page = await api.getOverdueLeadsPage({ limit: api.ADMIN_LIST_LIMIT });
+      setOverdueLeads(page.data);
+    } catch {
+      setOverdueLeads([]);
+    }
+  };
+
+  /** Assignment change. Logged as an activity server-side, same transaction as the write. */
+  const handleAssignLead = async (leadId: number, assignedToId: number | null) => {
+    try {
+      const updated = await api.updateLead(leadId, { assignedToId });
+      setLeads((prev) => prev.map((l) => (l.id === leadId ? updated : l)));
+      setSelectedLead((prev) => (prev?.id === leadId ? updated : prev));
+      showNotification(
+        assignedToId === null
+          ? `Lead #${leadId} unassigned`
+          : `Lead #${leadId} assigned to ${operators.find((o) => o.id === assignedToId)?.email ?? `operator #${assignedToId}`}`,
+      );
+      await refreshTimeline(leadId);
+    } catch (err: any) {
+      showNotification(`Error assigning lead: ${err.message}`);
+    }
+  };
+
+  /** Follow-up scheduling. `''` clears it — the server distinguishes that from a bad date. */
+  const handleSaveFollowUp = async (lead: Lead) => {
+    const trimmed = followUpDraft.trim();
+    const followUpAt = trimmed === '' ? null : new Date(`${trimmed}T09:00:00`).toISOString();
+    try {
+      const updated = await api.updateLead(lead.id, { followUpAt });
+      setLeads((prev) => prev.map((l) => (l.id === lead.id ? updated : l)));
+      setSelectedLead((prev) => (prev?.id === lead.id ? updated : prev));
+      showNotification(
+        followUpAt === null ? `Follow-up cleared for lead #${lead.id}` : `Follow-up set for lead #${lead.id}`,
+      );
+      await refreshTimeline(lead.id);
+      await refreshOverdue();
+    } catch (err: any) {
+      showNotification(`Error saving follow-up: ${err.message}`);
     }
   };
 
@@ -248,9 +365,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
     try {
       const result = await api.retryLeadLicenseSync(id);
       showNotification(result.message || `Dispatched lead #${id} to License Portal integration queue`);
-      const updatedLeads = await api.getLeads();
+      const updatedLeads = await api.getLeads({ limit: api.ADMIN_LIST_LIMIT });
       setLeads(updatedLeads);
-      const updatedLogs = await api.getIntegrationLogs();
+      const updatedLogs = await api.getIntegrationLogs({ limit: api.ADMIN_LIST_LIMIT });
       setIntegrationLogs(updatedLogs);
     } catch (err: any) {
       showNotification(`Sync failed: ${err.message}`);
@@ -270,9 +387,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
           ? `Lead #${id} converted: Meta CAPI accepted the Lead event`
           : `Meta CAPI status for lead #${id}: ${result.metaCapiStatus}`
       );
-      const updatedLeads = await api.getLeads();
+      const updatedLeads = await api.getLeads({ limit: api.ADMIN_LIST_LIMIT });
       setLeads(updatedLeads);
-      const updatedLogs = await api.getIntegrationLogs();
+      const updatedLogs = await api.getIntegrationLogs({ limit: api.ADMIN_LIST_LIMIT });
       setIntegrationLogs(updatedLogs);
     } catch (err: any) {
       showNotification(`Meta CAPI sync failed: ${err.message}`);
@@ -312,7 +429,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
         showNotification('New article published successfully');
       }
       setIsEditingBlog(false);
-      const bData = await api.getBlogPosts();
+      const bData = await api.getBlogPosts({ limit: api.ADMIN_LIST_LIMIT });
       setBlogPosts(bData);
     } catch (err: any) {
       showNotification(`Error saving post: ${err.message}`);
@@ -328,6 +445,181 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
       l.email.toLowerCase().includes(leadSearchQuery.toLowerCase());
     return matchesStatus && matchesSearch;
   });
+
+  /**
+   * The lead drawer: timeline, assignment, follow-up (Task 16 §1).
+   *
+   * A fixed overlay rather than an inline row expansion, because the timeline is a scrollable
+   * column of its own and expanding a table row to hold it breaks the row height for every
+   * other row in the table.
+   */
+  const renderLeadDrawer = () => {
+    if (!selectedLead) return null;
+    const lead = selectedLead;
+    const isOverdue =
+      lead.followUpAt !== null &&
+      lead.followUpAt !== undefined &&
+      new Date(lead.followUpAt).getTime() < Date.now() &&
+      lead.status !== 'Won' &&
+      lead.status !== 'Lost';
+
+    return (
+      <div
+        className="fixed inset-0 z-[60] flex justify-end bg-slate-900/40 backdrop-blur-sm"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Lead ${lead.name} — timeline and follow-up`}
+        onClick={(e) => {
+          // Click-outside to close, but not a click that started inside the panel: a text
+          // selection inside the timeline must not dismiss it.
+          if (e.target === e.currentTarget) setSelectedLead(null);
+        }}
+      >
+        <div className="flex h-full w-full max-w-xl flex-col overflow-y-auto border-l border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-[#0B0D18]">
+          <header className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-slate-200 bg-white px-5 py-4 dark:border-white/10 dark:bg-[#0B0D18]">
+            <div className="min-w-0">
+              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">
+                <History className="h-3.5 w-3.5" />
+                Lead #{lead.id}
+              </p>
+              <h3 className="mt-1 truncate text-lg font-bold text-slate-900 dark:text-white">{lead.name}</h3>
+              <p className="truncate font-mono text-xs text-slate-500 dark:text-slate-400">
+                {lead.phone}
+                {lead.email ? ` · ${lead.email}` : ''}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSelectedLead(null)}
+              aria-label="Close lead panel"
+              className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-white/10 dark:hover:text-slate-200"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </header>
+
+          {/* Anonymised by the retention cron: the timeline is history, but the contact
+              details below it are gone and re-entering them would undo a compliance action. */}
+          {lead.anonymizedAt && (
+            <p className="mx-5 mt-4 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+              Personal data on this lead was anonymised on{' '}
+              {new Date(lead.anonymizedAt).toLocaleDateString()} under the retention policy.
+              Status history is preserved.
+            </p>
+          )}
+
+          <div className="space-y-6 px-5 py-5">
+            {/* Assignment */}
+            <section>
+              <h4 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                <UserPlus className="h-3.5 w-3.5" />
+                Assignment
+              </h4>
+              <div className="mt-2 flex items-center gap-2">
+                <select
+                  value={lead.assignedToId ?? ''}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    void handleAssignLead(lead.id, raw === '' ? null : Number(raw));
+                  }}
+                  aria-label="Assign this lead to an operator"
+                  className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 dark:border-white/10 dark:bg-black/40 dark:text-white"
+                >
+                  <option value="">Unassigned</option>
+                  {operators.map((operator) => (
+                    <option key={operator.id} value={operator.id}>
+                      {operator.email}
+                    </option>
+                  ))}
+                </select>
+                {/* The legacy free-text column, shown because it is what the rest of the
+                    pipeline has historically displayed and it is not written by this task. */}
+                {lead.assignedTo && (
+                  <span className="shrink-0 rounded-full bg-slate-100 px-2 py-1 text-[11px] text-slate-600 dark:bg-white/10 dark:text-slate-300">
+                    {lead.assignedTo}
+                  </span>
+                )}
+              </div>
+            </section>
+
+            {/* Follow-up */}
+            <section>
+              <h4 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                <Clock className="h-3.5 w-3.5" />
+                Follow-up
+              </h4>
+              <div className="mt-2 flex items-center gap-2">
+                <input
+                  type="date"
+                  value={followUpDraft}
+                  onChange={(e) => setFollowUpDraft(e.target.value)}
+                  aria-label="Scheduled follow-up date"
+                  className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 dark:border-white/10 dark:bg-black/40 dark:text-white"
+                />
+                <button
+                  type="button"
+                  onClick={() => void handleSaveFollowUp(lead)}
+                  className="rounded-xl bg-indigo-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-indigo-700"
+                >
+                  Save
+                </button>
+              </div>
+              {isOverdue && (
+                <p className="mt-1.5 text-[11px] font-semibold text-rose-600 dark:text-rose-400">
+                  Overdue — the promised follow-up date has passed.
+                </p>
+              )}
+            </section>
+
+            {/* Timeline, newest first */}
+            <section>
+              <h4 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                <History className="h-3.5 w-3.5" />
+                Timeline
+              </h4>
+
+              {isLoadingTimeline ? (
+                <p className="mt-2 text-xs text-slate-500">Loading history…</p>
+              ) : leadActivities.length === 0 ? (
+                <p className="mt-2 text-xs text-slate-500">
+                  No recorded activity yet. Every status change and assignment from here on is
+                  logged with the operator who made it.
+                </p>
+              ) : (
+                <ol className="mt-3 space-y-0 border-l border-slate-200 pl-4 dark:border-white/10">
+                  {leadActivities.map((activity) => (
+                    <li key={activity.id} className="relative pb-4 last:pb-0">
+                      <span
+                        aria-hidden="true"
+                        className="absolute -left-[21px] top-1.5 h-2 w-2 rounded-full bg-indigo-500 ring-4 ring-white dark:ring-[#0B0D18]"
+                      />
+                      <p className="text-xs font-semibold text-slate-900 dark:text-white">
+                        {activity.fromStatus && activity.toStatus && activity.fromStatus !== activity.toStatus
+                          ? `${activity.fromStatus} → ${activity.toStatus}`
+                          : activity.toStatus || 'Activity'}
+                      </p>
+                      {activity.note && (
+                        <p className="mt-0.5 text-[11px] text-slate-600 dark:text-slate-300">
+                          {activity.note}
+                        </p>
+                      )}
+                      <p className="mt-0.5 text-[10px] text-slate-400">
+                        {new Date(activity.createdAt).toLocaleString()}
+                        {/* A null actor is either system-initiated (lead captured) or an operator
+                            who has since been deleted — both are worth distinguishing from
+                            "an operator did this" rather than leaving the field blank. */}
+                        {activity.actorId === null ? ' · system' : ` · operator #${activity.actorId}`}
+                      </p>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </section>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-slate-50 dark:bg-[#07080E] text-slate-900 dark:text-slate-100 overflow-hidden font-sans">
@@ -468,6 +760,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                   <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-1 font-medium">
                     {leads.filter((l) => l.status === 'New').length} pending follow-up
                   </p>
+                  {/* Overdue worklist (Task 16 §2). A clickable count rather than a separate
+                      section: the operator's question on the dashboard is "what needs me today",
+                      and this is the answer to it. */}
+                  <button
+                    onClick={() => setActiveTab('leads')}
+                    className={`text-xs mt-1 font-semibold hover:underline cursor-pointer ${
+                      overdueLeads.length > 0
+                        ? 'text-rose-600 dark:text-rose-400'
+                        : 'text-emerald-600 dark:text-emerald-400'
+                    }`}
+                  >
+                    {overdueLeads.length} overdue follow-up{overdueLeads.length === 1 ? '' : 's'}
+                  </button>
                 </div>
 
                 <div className="p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1B] shadow-xs">
@@ -535,6 +840,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                 <div className="divide-y divide-slate-100 dark:divide-white/5">
                   {leads.slice(0, 4).map((lead) => (
                     <div key={lead.id} className="py-3 flex items-center justify-between gap-4 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenLead(lead)}
+                        className="min-w-0 text-left"
+                        title="Open the full timeline"
+                      >
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-slate-900 dark:text-white">{lead.name}</span>
@@ -547,11 +858,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                           {lead.note || 'No specific note provided.'}
                         </p>
                       </div>
+                      </button>
 
                       <div className="flex items-center gap-3 shrink-0">
                         <select
                           value={lead.status}
-                          onChange={(e) => handleUpdateLeadStatus(lead.id, e.target.value as any)}
+                          onChange={(e) => handleUpdateLeadStatus(lead.id, e.target.value as Lead['status'])}
                           className="px-2 py-1 rounded-lg bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer"
                         >
                           <option value="New">New</option>
@@ -605,8 +917,58 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                     <option value="Won">Won</option>
                     <option value="Lost">Lost</option>
                   </select>
+
+                  {/* CSV export (Task 16 §2). A plain link rather than a fetch-then-blob: the
+                      browser handles the download, the Content-Disposition filename comes from
+                      the server, and the session cookie rides along without any token handling. */}
+                  <a
+                    href={api.leadExportUrl()}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100 dark:border-white/10 dark:text-slate-200 dark:hover:bg-white/5"
+                    title="Download every lead as CSV (audited; capped at 10,000 rows)"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Export CSV
+                  </a>
                 </div>
               </div>
+
+              {/* Overdue follow-up worklist (Task 16 §2). Rendered above the table because a
+                  missed promise to a customer is the most time-sensitive thing on this screen. */}
+              {overdueLeads.length > 0 && (
+                <div className="rounded-2xl border border-rose-200 bg-rose-50/50 p-4 dark:border-rose-500/20 dark:bg-rose-500/5">
+                  <h3 className="flex items-center gap-2 text-sm font-bold text-rose-900 dark:text-rose-200">
+                    <Clock className="h-4 w-4" />
+                    Overdue follow-ups ({overdueLeads.length})
+                  </h3>
+                  <p className="mt-0.5 text-[11px] text-rose-700/80 dark:text-rose-300/80">
+                    Promised callback dates that have passed on leads that are still open.
+                  </p>
+                  <ul className="mt-3 divide-y divide-rose-200/60 text-xs dark:divide-rose-500/20">
+                    {overdueLeads.map((overdue) => (
+                      <li key={overdue.id} className="flex items-center justify-between gap-3 py-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const match = leads.find((l) => l.id === overdue.id);
+                            if (match) void handleOpenLead(match);
+                            else
+                              showNotification(
+                                `Lead #${overdue.id} is outside the loaded page — narrow the filters or use the CSV export.`,
+                              );
+                          }}
+                          className="min-w-0 text-left font-semibold text-slate-900 hover:underline dark:text-white"
+                        >
+                          <span className="block truncate">{overdue.name}</span>
+                          <span className="font-mono text-[11px] text-slate-500">{overdue.phone}</span>
+                        </button>
+                        <span className="shrink-0 font-mono text-[11px] text-rose-700 dark:text-rose-300">
+                          due {overdue.followUpAt ? new Date(overdue.followUpAt).toLocaleDateString() : '—'}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               {/* Leads Table */}
               <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1B] overflow-hidden shadow-xs">
@@ -699,6 +1061,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                                 title="Dispatch to external License Portal queue"
                               >
                                 Sync Portal
+                              </button>
+                              {/* Opens the drawer: timeline, assignment, follow-up. */}
+                              <button
+                                onClick={() => handleOpenLead(lead)}
+                                className="px-2.5 py-1 rounded bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/20 text-[11px] font-semibold transition-colors cursor-pointer"
+                                title="Open the full timeline, assignment and follow-up"
+                              >
+                                <History className="h-3 w-3" />
+                                <span className="sr-only">Timeline for lead {lead.id}</span>
                               </button>
                             </div>
                           </td>
@@ -1342,6 +1713,24 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
           )}
         </main>
       </div>
+
+      {renderLeadDrawer()}
     </div>
   );
 };
+
+/**
+ * `Date` → the `yyyy-mm-dd` a `<input type="date">` expects, in the browser's own timezone.
+ *
+ * `toISOString()` is deliberately avoided: it converts to UTC first, so a follow-up set for
+ * 2026-01-01 in Dhaka (UTC+6) would render in the picker as 2025-12-31.
+ */
+function toDateInputValue(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}

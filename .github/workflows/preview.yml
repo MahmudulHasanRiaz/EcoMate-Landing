@@ -64,6 +64,23 @@ jobs:
       # Until that is fixed this step fails the preview rather than shipping
       # code against an out-of-date preview schema — the correct failure
       # direction, but it means previews are blocked too.
+      # Same DIRECT_URL shape rule as deploy.yml: the secret must hold the direct
+      # port-5432 URL (or a session-mode pooler on 5432), never the transaction
+      # pooler on 6543. Hostname/password never printed.
+      - name: Assert preview DIRECT_URL is a direct (non-pooler) URL
+        run: |
+          node -e "
+            const u = process.env.DIRECT_URL || '';
+            let p;
+            try { p = new URL(u); } catch { console.error('::error::PREVIEW_DIRECT_URL is not a valid URL.'); process.exit(1); }
+            if (p.protocol !== 'postgresql:' && p.protocol !== 'postgres:') { console.error('::error::PREVIEW_DIRECT_URL must use the postgresql:// scheme.'); process.exit(1); }
+            if (!p.username) { console.error('::error::PREVIEW_DIRECT_URL has no username.'); process.exit(1); }
+            if (p.port === '6543') { console.error('::error::PREVIEW_DIRECT_URL uses port 6543 (transaction pooler). Use a direct port-5432 URL instead.'); process.exit(1); }
+            console.log('Preview DIRECT_URL shape OK.');
+          "
+        env:
+          DIRECT_URL: ${{ secrets.PREVIEW_DIRECT_URL }}
+
       - name: Migrate preview DB
         run: npm run db:migrate
         env:

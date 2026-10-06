@@ -162,6 +162,25 @@ jobs:
           fi
           echo "no db:push in any deploy workflow"
 
+      # DIRECT_URL must be the DIRECT port-5432 connection, never Supabase's
+      # "Drizzle" tab pooler URL (port 6543, user `postgres.<ref>`): transaction
+      # mode cannot run DDL, so migrations fail against it. Validates shape only —
+      # hostname and password are never printed. Supabase dashboard → Connect →
+      # "Direct connection" tab (host `db.<ref>.supabase.co`, port 5432).
+      - name: Assert DIRECT_URL is a direct (non-pooler) URL
+        run: |
+          node -e "
+            const u = process.env.DIRECT_URL || '';
+            let p;
+            try { p = new URL(u); } catch { console.error('::error::DIRECT_URL is not a valid URL. Set the GitHub Secret DIRECT_URL to the Supabase direct connection string (Connect → Direct connection, port 5432).'); process.exit(1); }
+            if (p.protocol !== 'postgresql:' && p.protocol !== 'postgres:') { console.error('::error::DIRECT_URL must use the postgresql:// scheme.'); process.exit(1); }
+            if (!p.username) { console.error('::error::DIRECT_URL has no username.'); process.exit(1); }
+            if (p.port === '6543') { console.error('::error::DIRECT_URL uses port 6543 (Supabase transaction pooler). DDL migrations cannot run in transaction mode. Use the DIRECT port-5432 URL: Supabase dashboard → Connect → Direct connection (NOT the Drizzle/pooler tab).'); process.exit(1); }
+            console.log('DIRECT_URL shape OK (direct Postgres URL with credentials present; host not shown).');
+          "
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+
       - name: Apply DB migrations
         # KNOWN ISSUE: `drizzle-kit migrate` exits 1 silently in this repository and has not yet
         # been diagnosed. Until it is fixed, this step will fail the deploy rather than silently

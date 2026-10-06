@@ -53,6 +53,37 @@ function tagsFor(domain: Domain, locale: string): string[] {
   return domain === CONTENT_DOMAIN ? [`content:${locale}`] : [domain];
 }
 
+/** Menu keys matching the `menus` table contract (`lib/validation.ts` → `MENU_KEYS`). */
+export type InvalidatableMenuKey = 'main' | 'footer';
+
+/**
+ * Invalidate one menu in one locale from inside the request that performed the write.
+ *
+ * Menus are tagged per key *and* per locale (`menus:main:en`) in `lib/content.ts`, so the
+ * generic `invalidateDomains` path (domain-only tags) cannot address them. Same-request
+ * `updateTag`, same fail direction as above: a missing tag store logs and swallows.
+ */
+export function invalidateMenus(key: InvalidatableMenuKey, locale = 'en'): void {
+  const tag = `menus:${key}:${locale}`;
+  try {
+    updateTag(tag);
+  } catch (e) {
+    logServerError(`revalidate (updateTag: ${tag})`, e);
+  }
+}
+
+/**
+ * Invalidate one menu from a background path (cron, retry queue). Stale-while-revalidate.
+ */
+export function invalidateMenusInBackground(key: InvalidatableMenuKey, locale = 'en'): void {
+  const tag = `menus:${key}:${locale}`;
+  try {
+    revalidateTag(tag, { expire: 0 });
+  } catch (e) {
+    logServerError(`revalidate (revalidateTag: ${tag})`, e);
+  }
+}
+
 /**
  * Invalidate one or more domains from inside the request that performed the write.
  *

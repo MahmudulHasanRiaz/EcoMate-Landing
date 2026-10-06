@@ -12,7 +12,6 @@
  * `lib/roles.ts` → `canWriteContent`).
  */
 import { and, asc, eq, inArray } from 'drizzle-orm';
-import { updateTag } from 'next/cache';
 import { getDb } from '@/db/client';
 import { menuItemsTable, menusTable } from '@/db/schema';
 import { errorMessage, fail, logServerError, ok } from '@/lib/json';
@@ -21,6 +20,7 @@ import { requireAdminRole } from '@/lib/authz';
 import { canWriteContent } from '@/lib/roles';
 import { isLocale } from '@/lib/locales';
 import { menuCreate, menuReplace, type MENU_KEYS } from '@/lib/validation';
+import { invalidateMenus } from '@/lib/revalidate';
 import type { Locale } from '@/src/types/landing';
 
 type MenuKey = (typeof MENU_KEYS)[number];
@@ -191,14 +191,10 @@ export async function PUT(req: Request) {
 }
 
 /**
- * Same-request `updateTag` so the admin sees the navigation change on the page behind them.
- * Wrapped because a handler invoked outside Next's request pipeline has no tag store; the
- * write has already committed and the page revalidates on its own profile anyway.
+ * Same-request `updateTag` via `lib/revalidate.ts` so the admin sees the navigation change
+ * on the page behind them. Centralised there so the tag string (`menus:${key}:${locale}`)
+ * has exactly one writer matching the one reader in `lib/content.ts`.
  */
 function invalidateMenu(key: MenuKey, locale: Locale): void {
-  try {
-    updateTag(`menus:${key}:${locale}`);
-  } catch (e) {
-    logServerError('PUT /api/menus invalidation', e);
-  }
+  invalidateMenus(key, locale);
 }

@@ -33,6 +33,17 @@ import type { Locale } from '@/src/types/landing';
 const CONTENT_CACHE_PROFILE = { stale: 300, revalidate: 3600, expire: 86400 } as const;
 
 /**
+ * Longer profile for single-body reads (blog post / case study).
+ *
+ * The index lists change on every publish; a body changes only when that one document is
+ * edited. Holding bodies 1 h stale / 1 d revalidate / 7 d expire keeps article pages fast
+ * without delaying the index, which stays on the shorter profile above. Invalidation is
+ * still per-domain (`blog`, `casestudies:${slug}`), so an edit appears immediately via
+ * `updateTag` regardless of the longer lifetime.
+ */
+const CONTENT_LONG_PROFILE = { stale: 3600, revalidate: 86400, expire: 604800 } as const;
+
+/**
  * Short profile for the failure path, so a transient outage is not cached for an hour.
  *
  * `stale` must be non-zero. A zero stale window makes the entry immediately stale, and a
@@ -255,7 +266,8 @@ export async function getBlogPost(slug: string): Promise<BlogPostSummary & { con
       .from(blogPostsTable)
       .where(and(eq(blogPostsTable.slug, slug), BLOG_PUBLIC))
       .limit(1);
-    cacheLife(CONTENT_CACHE_PROFILE);
+    // Body uses the long profile: a single document changes rarely, the index stays short.
+    cacheLife(CONTENT_LONG_PROFILE);
     if (!row) return null;
     return { ...toBlogSummary(row), content: row.content };
   } catch (e) {
@@ -481,7 +493,8 @@ export async function getCaseStudy(slug: string): Promise<{
       .from(caseStudiesTable)
       .where(and(eq(caseStudiesTable.slug, slug), eq(caseStudiesTable.isPublished, true)))
       .limit(1);
-    cacheLife(CONTENT_CACHE_PROFILE);
+    // Body uses the long profile, same reasoning as `getBlogPost`: one document, rare edits.
+    cacheLife(CONTENT_LONG_PROFILE);
     if (!row) return null;
     return {
       slug: row.slug,

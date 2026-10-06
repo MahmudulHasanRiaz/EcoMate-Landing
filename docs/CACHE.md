@@ -95,3 +95,17 @@ while refusing to memoise an outage for any real length of time. Do not change i
   issue — app code verified correct, `next start` serves `/` in ~0.1s). No LCP-affecting
   change was made (no Suspense reshuffle, no image/font/hero change), and the build route
   table shows the landing statically prerendered as before.
+
+## Known limitation: dark-mode contrast (Task 11 scope)
+
+Light mode passes axe WCAG 2AA zero-critical/serious. Dark mode has ~40
+remaining contrast failures, all from mixed surfaces: some cards stay light
+(`bg-white`, `bg-slate-50`) in dark mode while their text uses dark-optimized
+colors, and vice versa. Examples: `text-slate-800 dark:text-slate-300` on a
+white card (1.38:1), footer links without `dark:` base, badge text on
+elevated dark surfaces.
+
+These need element-by-element design judgment (which surface stays light vs
+goes dark), not bulk class bumps — bulk bumps already fixed 200+ light-mode
+cases but cannot resolve mixed-surface pairs without seeing each element.
+Tracked for the Task 11 design-polish pass, which owns dark-mode refinement.

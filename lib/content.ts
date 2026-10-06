@@ -32,8 +32,17 @@ import type { Locale } from '@/src/types/landing';
 /** 5 min stale / 1 h revalidate / 1 day expire — content edits are rare, visitors are not. */
 const CONTENT_CACHE_PROFILE = { stale: 300, revalidate: 3600, expire: 86400 } as const;
 
-/** Short profile for the failure path, so a transient outage is not cached for an hour. */
-const CONTENT_FAILURE_PROFILE = { stale: 0, revalidate: 60, expire: 300 } as const;
+/**
+ * Short profile for the failure path, so a transient outage is not cached for an hour.
+ *
+ * `stale` must be non-zero. A zero stale window makes the entry immediately stale, and a
+ * stale entry cannot satisfy a prerender — so Next rejected every failure-path read with
+ * `Route "/": Next.js encountered uncached or runtime data during prerendering` and the
+ * **build failed whenever the database was unreachable**. Thirty seconds is the smallest
+ * window that keeps the entry prerenderable while still refusing to memoise an outage for
+ * any real length of time.
+ */
+const CONTENT_FAILURE_PROFILE = { stale: 30, revalidate: 60, expire: 300 } as const;
 
 export async function getLandingContent(locale: Locale): Promise<ContentSection[] | null> {
   'use cache';

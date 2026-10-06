@@ -20,6 +20,13 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import dns from 'node:dns';
+
+// Supabase publishes AAAA records for db.*.supabase.co. Networks without an IPv6
+// route (GitHub runners included) then fail with ENETUNREACH on the IPv6 attempt
+// instead of falling back to IPv4 — Node resolves in DNS order by default.
+// Prefer IPv4 so a missing v6 route can never blackhole the migration.
+dns.setDefaultResultOrder('ipv4first');
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const JOURNAL_PATH = join(ROOT, 'drizzle', 'meta', '_journal.json');

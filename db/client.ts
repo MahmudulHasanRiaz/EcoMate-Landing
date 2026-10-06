@@ -1,7 +1,22 @@
 import { drizzle, type PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
+import dns from 'node:dns';
 import postgres from 'postgres';
 import * as schema from './schema';
+
+// Supabase publishes AAAA records; networks without an IPv6 route (CI runners)
+// fail ENETUNREACH on the v6 attempt instead of falling back to IPv4, because
+// Node resolves in DNS order by default. Prefer IPv4 so a missing v6 route can
+// never blackhole a connection. Harmless where v6 works (only ordering).
+// NOTE: module scope also runs on Workers, but there every connection goes
+// through Hyperdrive (which resolves itself) — this only affects direct
+// `postgres()` connections (build prerender, seed, local dev). Guarded because
+// `node:dns` is partial under Workers nodejs_compat and must never break import.
+try {
+  dns.setDefaultResultOrder('ipv4first');
+} catch {
+  // Workers runtime without full node:dns — Hyperdrive path unaffected.
+}
 
 type Database = PostgresJsDatabase<typeof schema>;
 

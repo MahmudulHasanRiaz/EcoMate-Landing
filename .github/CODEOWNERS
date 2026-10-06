@@ -1,0 +1,11 @@
+# Task 21 §4 — these paths always need a second pair of eyes.
+# Replace @ecomate-owners with the real team/user once it exists
+# (docs/RUNBOOK.md §15.3); until then review requests fall back to the
+# branch-protection "1 approving review" rule.
+db/schema.ts @ecomate-owners
+auth.ts @ecomate-owners
+proxy.ts @ecomate-owners
+wrangler.toml @ecomate-owners
+.github/** @ecomate-owners
+lib/securityHeaders.ts @ecomate-owners
+lib/rateLimit.ts @ecomate-owners

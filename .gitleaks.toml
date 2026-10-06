@@ -1,0 +1,27 @@
+# Task 21 §2 — secret-history guard. Every secret in this repo goes through
+# `wrangler secret put`; this config lets gitleaks prove none leaked into
+# files or history. CI runs `gitleaks detect` over the full history, so an
+# allowlist entry here is a permanent, reviewable exception — add one only
+# with a comment saying WHY the value is safe, never to silence a real leak.
+#
+# Verified locally 2026-10-06 with gitleaks 8.28.0:
+#   gitleaks detect --source . --config .gitleaks.toml   -> no leaks
+# Without the two fixture allowlists below it reports exactly 2 findings,
+# both in commit 7931501 and both public test fixtures (see comments).
+
+title = "EcoMate Landing secret scan"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Public test fixtures only. Neither value grants access to anything."
+regexes = [
+  # xkcd-style throwaway password used as a login-form fixture in e2e/admin.spec.ts.
+  # It authenticates against the throwaway test database only (DIRECT_URL_TEST).
+  '''correct-horse-battery-staple-e2e-99''',
+  # RFC 6238 Appendix B reference secret (base32 of "12345678901234567890"),
+  # published in the RFC itself and used as the HOTP/TOTP test vector in
+  # tests/unit/totp.test.ts. Knowing it proves nothing about any real enrolment.
+  '''GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ''',
+]

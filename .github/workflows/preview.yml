@@ -1,0 +1,149 @@
+# Preview per PR (Task 21 §4). Every pull request gets a live preview worker
+# (`--env preview`, isolated Hyperdrive/R2/KV — never prod data) plus the
+# Playwright smoke subset and LHCI run against it, commented back on the PR.
+#
+# ⚠️ UNVERIFIED END TO END — no real PR has been opened against this workflow
+# yet. YAML syntax is validated (ruby psych parse); the deploy/smoke/comment
+# path needs a live PR to prove itself. See docs/RUNBOOK.md §15.
+#
+# Required repository secrets (Settings → Secrets and variables → Actions):
+#   PREVIEW_DIRECT_URL    direct (port 5432) Postgres URL of the PREVIEW database
+#   PREVIEW_URL           public preview hostname, e.g. https://preview.ecomate.app
+#   CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID   same as production deploy
+# DIRECT_URL (production) is deliberately NOT used here: a typo must not be
+# able to migrate the prod database from a PR run.
+name: Preview per PR
+
+on:
+  pull_request:
+    branches:
+      - main
+      - master
+
+# Only the latest commit on a PR holds a preview; older runs cancel instead of
+# stacking deploys (and migrations) behind each other.
+concurrency:
+  group: preview-${{ github.ref }}
+  cancel-in-progress: true
+
+# contents:read runs the pipeline; pull-requests:write posts the URL + LHCI
+# comment. Nothing else needs the token.
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  preview:
+    name: Preview deploy + smoke
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Assert Node floor (24)
+        run: node -e "if (parseInt(process.versions.node.split('.')[0], 10) < 24) { console.error('Node 24+ required'); process.exit(1); }"
+
+      - name: Setup Node.js (v24)
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: 'npm'
+
+      - name: Install dependencies with frozen package-lock
+        run: npm ci
+
+      - name: TypeScript typecheck & lint
+        run: npm run lint
+
+      # Journaled migrations only — never db:push (see deploy.yml for why).
+      # KNOWN ISSUE (shared with production deploys): `drizzle-kit migrate`
+      # currently exits 1 silently in this repository (docs/RUNBOOK.md §9.1).
+      # Until that is fixed this step fails the preview rather than shipping
+      # code against an out-of-date preview schema — the correct failure
+      # direction, but it means previews are blocked too.
+      - name: Migrate preview DB
+        run: npm run db:migrate
+        env:
+          DIRECT_URL: ${{ secrets.PREVIEW_DIRECT_URL }}
+
+      # Idempotent + transactional (db/seed.ts): safe to re-run per commit.
+      - name: Seed preview DB
+        run: npm run db:seed
+        env:
+          DIRECT_URL: ${{ secrets.PREVIEW_DIRECT_URL }}
+
+      - name: Build preview bundle
+        run: npx opennextjs-cloudflare build
+        env:
+          DIRECT_URL: ${{ secrets.PREVIEW_DIRECT_URL }}
+
+      - name: Verify build artifact integrity
+        run: |
+          if [ ! -d .open-next ]; then
+            echo "::error::CRITICAL: .open-next build output missing! Aborting preview."
+            exit 1
+          fi
+
+      # `--env preview` selects [env.preview.*] in wrangler.toml. Deploying a
+      # PR without it would fall back to the top-level dev bindings.
+      - name: Deploy preview via opennext
+        run: npx opennextjs-cloudflare deploy --env preview
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Install Playwright chromium
+        run: npx playwright install --with-deps chromium
+
+      # Smoke subset, not the whole suite: lead capture (the revenue path) +
+      # SEO shell on the preview hostname. Full E2E stays a local gate.
+      - name: Playwright smoke against preview
+        run: npx playwright test e2e/lead.spec.ts e2e/seo.spec.ts
+        env:
+          PLAYWRIGHT_BASE_URL: ${{ secrets.PREVIEW_URL }}
+
+      # Reuses lighthouserc.json (assert preset + filesystem upload) with the
+      # collect URLs overridden to the preview hostname.
+      - name: LHCI against preview
+        run: npx lhci autorun --collect.url="${{ secrets.PREVIEW_URL }}/" --collect.url="${{ secrets.PREVIEW_URL }}/bn"
+
+      - name: Archive LHCI results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: lhci-preview
+          path: .lhci
+          retention-days: 7
+          if-no-files-found: warn
+
+      # URL + LHCI deltas on the PR. LHCI's filesystem upload writes
+      # assertion-results.json; when it is absent (collect failed) the comment
+      # says so instead of pretending green.
+      - name: Comment preview URL + LHCI deltas
+        if: always()
+        uses: actions/github-script@10b53a9ec6c222bb4ce97aa6bd2b5f739696b536 # v4
+        with:
+          script: |
+            const fs = require('fs');
+            const url = '${{ secrets.PREVIEW_URL }}';
+            let lhci = '_LHCI did not produce assertion results (collect failed — see the run log)._';
+            try {
+              const raw = fs.readFileSync('.lhci/assertion-results.json', 'utf8');
+              const results = JSON.parse(raw);
+              const failed = results.filter((r) => r.level === 'error');
+              const warned = results.filter((r) => r.level === 'warn');
+              const rows = results.slice(0, 20).map((r) =>
+                `| ${r.auditProperty || r.auditId} | ${r.level} | ${r.actual ?? ''} | ${r.expected ?? ''} |`,
+              );
+              lhci = `**LHCI:** ${failed.length} failed, ${warned.length} warned\n\n` +
+                '| audit | level | actual | expected |\n| --- | --- | --- | --- |\n' + rows.join('\n');
+            } catch (e) {
+              // collect failed before assertions ran — keep the fallback text.
+            }
+            const body = `## Preview\n\n${url}\n\n${lhci}\n\n_Smoke: \`e2e/lead.spec.ts\`, \`e2e/seo.spec.ts\` on this URL._`;
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });

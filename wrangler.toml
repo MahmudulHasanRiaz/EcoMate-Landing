@@ -71,3 +71,93 @@ RETENTION_DAYS = "180"
 #   team scheduling a post for 10:00 expects it live at 10:00, not at tomorrow's 03:17, and
 #   the job is one indexed scan that no-ops when nothing is due.
 crons = ["17 3 * * *", "*/15 * * * *"]
+
+# ---------------------------------------------------------------------------
+# Environments (Task 21 §1). The top-level bindings above are LOCAL DEV ONLY.
+#
+# Why this exists: with a single flat config, one `deploy` without `--env`
+# silently repoints production at whatever the top level says. Named
+# environments make that impossible: a prod deploy must say `--env
+# production` (`npm run deploy:prod`), a PR preview must say `--env preview`
+# (`npm run deploy:preview`), and each carries its OWN Hyperdrive id, R2
+# bucket and KV namespace so preview traffic can never touch prod data.
+#
+# Secrets are per-env and never in this file:
+#   npx wrangler secret put AUTH_SECRET --env production
+#   npx wrangler secret put AUTH_SECRET --env preview
+# (repeat for TOTP_ENCRYPTION_KEY, SETUP_TOKEN, CRON_SECRET, META_CAPI_TOKEN,
+# TURNSTILE_SECRET_KEY, LICENSE_PORTAL_API_KEY, RESEND_API_KEY — see
+# docs/RUNBOOK.md §3 for the rotation matrix.)
+# ---------------------------------------------------------------------------
+
+# --- production ------------------------------------------------------------
+[[env.production.hyperdrive]]
+binding = "HYPERDRIVE"
+# Create with:
+#   npx wrangler hyperdrive create ecomate-db-prod --connection-string="postgresql://postgres:PASSWORD@db.REF.supabase.co:6543/postgres?pgbouncer=true"
+# then replace the placeholder with the id it prints.
+id = "PASTE_PROD_HYPERDRIVE_ID"
+
+[[env.production.r2_buckets]]
+binding = "R2_BUCKET"
+# Create with: npx wrangler r2 bucket create ecomate-media-prod
+# then attach the public custom domain the app expects:
+#   npx wrangler r2 bucket domain ecomate-media-prod --custom-domain media.ecomate.app
+bucket_name = "ecomate-media-prod"
+
+[[env.production.kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+# Create with: npx wrangler kv namespace create RATE_LIMIT_KV-prod
+id = "PASTE_PROD_KV_ID"
+
+[env.production.vars]
+NEXT_PUBLIC_SITE_URL = "https://ecomate.app"
+NEXT_PUBLIC_DEFAULT_LOCALE = "en"
+NEXT_PUBLIC_META_PIXEL_ID = ""
+NEXT_PUBLIC_TURNSTILE_SITE_KEY = ""
+AUTH_TRUST_HOST = "true"
+RETENTION_DAYS = "180"
+
+# Workers Logs, zero-config floor (Task 21 §5): structured JSON logs
+# (`api.error`, `lead.notify`, `cron.retention.*`) are queryable in the
+# dashboard without any further wiring.
+[env.production.observability]
+enabled = true
+
+# Production owns the crons. The retention sweep and the publish scheduler
+# must fire exactly once per tick — against the prod database, not preview's.
+[env.production.triggers]
+crons = ["17 3 * * *", "*/15 * * * *"]
+
+# --- preview (per-PR) ------------------------------------------------------
+[[env.preview.hyperdrive]]
+binding = "HYPERDRIVE"
+# Create with:
+#   npx wrangler hyperdrive create ecomate-db-preview --connection-string="postgresql://postgres:PASSWORD@db.PREVIEW_REF.supabase.co:6543/postgres?pgbouncer=true"
+# then replace the placeholder with the id it prints.
+id = "PASTE_PREVIEW_HYPERDRIVE_ID"
+
+[[env.preview.r2_buckets]]
+binding = "R2_BUCKET"
+# Create with: npx wrangler r2 bucket create ecomate-media-preview
+bucket_name = "ecomate-media-preview"
+
+[[env.preview.kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+# Create with: npx wrangler kv namespace create RATE_LIMIT_KV-preview
+id = "PASTE_PREVIEW_KV_ID"
+
+[env.preview.vars]
+# Replace with the real preview hostname once the preview worker has one
+# (workers.dev URL or preview.ecomate.app route) — see docs/RUNBOOK.md §15.
+NEXT_PUBLIC_SITE_URL = "https://preview.ecomate.app"
+NEXT_PUBLIC_DEFAULT_LOCALE = "en"
+NEXT_PUBLIC_META_PIXEL_ID = ""
+NEXT_PUBLIC_TURNSTILE_SITE_KEY = ""
+AUTH_TRUST_HOST = "true"
+RETENTION_DAYS = "180"
+
+# Deliberately NO [env.preview.triggers]: the retention sweep must not run
+# against the preview database (it would anonymise fixture leads and burn
+# pooled connections), and the publish scheduler must not publish preview
+# drafts. Preview gets traffic only, never crons.

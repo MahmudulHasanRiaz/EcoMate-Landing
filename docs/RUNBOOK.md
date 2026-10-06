@@ -454,3 +454,324 @@ Event names to alert on: `api.error`, `readiness.failed`, `cron.retention.denied
 | Date | Change | Author |
 | --- | --- | --- |
 | 2026-10-06 | Created with Task 16: retention cron, readiness probe, secret rotation matrix, migration direction policy, WAF inventory, restore procedures. | Task 16 |
+| 2026-10-06 | Task 21: environments (prod/preview), supply-chain CI gates, preview-per-PR, branch protection procedure, monitoring, PITR drill procedure, SECURITY.md pointer. Fixed the self-triggering db:push guard. | Task 21 |
+
+---
+
+## 13. Environments: production vs preview (Task 21)
+
+⚠️ **PARTIALLY UNVERIFIED** — the `[env.*]` blocks are committed and `tsc` +
+both builds are green, but no `--env` deploy has ever run (binding ids are
+still `PASTE_*` placeholders). The first real `--env preview` deploy is the
+test; expect it to fail until §13.2 is done.
+
+### 13.1 Binding map
+
+| Binding | Dev (top-level) | `[env.preview]` | `[env.production]` |
+| --- | --- | --- | --- |
+| Hyperdrive (`HYPERDRIVE`) | `PASTE_HYPERDRIVE_ID_FROM_STEP_1` | `PASTE_PREVIEW_HYPERDRIVE_ID` | `PASTE_PROD_HYPERDRIVE_ID` |
+| R2 (`R2_BUCKET`) | `ecomate-media` | `ecomate-media-preview` | `ecomate-media-prod` |
+| KV (`RATE_LIMIT_KV`) | `PASTE_KV_ID` | `PASTE_PREVIEW_KV_ID` | `PASTE_PROD_KV_ID` |
+| Site URL | `https://ecomate.app` | `https://preview.ecomate.app` (replace with the real hostname) | `https://ecomate.app` |
+| Crons | yes (top-level) | **none — deliberate** (§13.3) | yes (`[env.production.triggers]`) |
+| Workers Logs | — | — | `observability.enabled = true` |
+
+### 13.2 Creating the preview/prod resources (operator checklist)
+
+Run once per resource; each command prints the id to paste over the matching
+`PASTE_*` placeholder in `wrangler.toml`:
+
+```bash
+npx wrangler hyperdrive create ecomate-db-prod --connection-string="postgresql://postgres:PASSWORD@db.REF.supabase.co:6543/postgres?pgbouncer=true"
+npx wrangler hyperdrive create ecomate-db-preview --connection-string="postgresql://postgres:PASSWORD@db.PREVIEW_REF.supabase.co:6543/postgres?pgbouncer=true"
+npx wrangler r2 bucket create ecomate-media-prod
+npx wrangler r2 bucket create ecomate-media-preview
+npx wrangler r2 bucket domain ecomate-media-prod --custom-domain media.ecomate.app
+npx wrangler kv namespace create RATE_LIMIT_KV-prod
+npx wrangler kv namespace create RATE_LIMIT_KV-preview
+```
+
+Preview needs its OWN Supabase project/branch (`PREVIEW_REF`): sharing the
+prod database with a different Hyperdrive id is not isolation, it is a label.
+
+### 13.3 Deploying per environment
+
+```bash
+npm run deploy:preview   # build + deploy --env preview
+npm run deploy:prod      # build + deploy --env production
+```
+
+The bare `npm run deploy` and any `wrangler deploy` without `--env` use the
+top-level **dev** bindings and must never be used for a real release. `deploy.yml`
+passes `--env` from its `environment` input for the same reason. Preview runs
+**no crons**: the retention sweep would anonymise fixture leads and the
+publish scheduler could publish preview drafts — traffic only, never timers.
+
+### 13.4 Per-environment secrets
+
+Every secret exists twice (prod + preview), set independently — a preview
+`AUTH_SECRET` equal to prod's would let a preview session-cookie bug become a
+prod session forgery:
+
+```bash
+npx wrangler secret put AUTH_SECRET --env production
+npx wrangler secret put AUTH_SECRET --env preview
+# repeat for: TOTP_ENCRYPTION_KEY, SETUP_TOKEN, CRON_SECRET, META_CAPI_TOKEN,
+# TURNSTILE_SECRET_KEY, LICENSE_PORTAL_API_KEY, RESEND_API_KEY
+```
+
+Rotation blast radius per secret is unchanged from §3 (rotating `AUTH_SECRET`
+logs everyone out on THAT env only). Order when several are compromised:
+`TOTP_ENCRYPTION_KEY` first, then `AUTH_SECRET`, then the rest — per env.
+
+---
+
+## 14. CI supply-chain gates (Task 21)
+
+All in `.github/workflows/ci.yml` (`Lint & Build Validation` + `Migration
+drift guard` jobs) and `deploy.yml`. Least-privilege first: every workflow
+declares `permissions: contents: read` — the default token scope is write-all.
+
+### 14.1 What each gate does
+
+| Gate | What | Why it is blocking |
+| --- | --- | --- |
+| Gitleaks (`gitleaks-action`) | full-history secret scan vs `.gitleaks.toml` | every secret goes through `wrangler secret put`; history is forever |
+| `npm audit --audit-level=high` | registry advisories, whole tree | §14.3 — currently RED, honestly so |
+| OSV scan (`osv-scanner-action`, `--lockfile`) | multi-DB advisories (GHSA+) on the lockfile | second opinion beyond the registry view |
+| `NEXT_PUBLIC_` assertion | fails on `TOKEN\|SECRET\|PASSWORD\|PRIVATE_KEY\|API_KEY` behind the prefix (`*_SITE_KEY` allowlisted — public by design) | browser-bundled values are published, not configured |
+| `db:push` assertion | fails on `npm run db:push` / `drizzle-kit push` in any workflow | reconciles prod by dropping columns; migrations only |
+| Migration drift guard | `db:generate` must be a no-op diff vs committed `drizzle/` | uncommitted migrations are prod incidents |
+| Dependabot (`npm` + `github-actions`, weekly) | proposes updates as PRs through the full gate | nothing auto-merges |
+
+### 14.2 Pinned actions
+
+Third-party actions are pinned by SHA with a `# vX` comment that Dependabot's
+`github-actions` updater still reads. SHAs are the major-tag tips verified
+2026-10-06 (`git ls-remote`): checkout `11d5960a`, setup-node `49933ea5`,
+upload-artifact `ea165f8d`, download-artifact `d3f86a10`, github-script
+`10b53a9e`, gitleaks `e0c47f4f` (v3.0.0), osv-scanner `a345acff` (v2.6.0).
+Nothing is left unpinned. If Dependabot lags a security fix, bump the SHA by
+hand — the comment says which tag it tracks.
+
+### 14.3 `npm audit` is RED — the honest status
+
+✅ **VERIFIED locally 2026-10-06:** `npm audit --audit-level=high` exits 1 with
+**26 vulnerabilities (4 low, 9 moderate, 13 high)**. The highs cluster in
+dev-only toolchains, not Worker runtime code: `@lhci/cli` (inquirer/tmp/uuid
+chains), `puppeteer-core`/`@puppeteer/browsers` (extract-zip/proxy-agent),
+`rclone.js` via `@opennextjs/cloudflare` (adm-zip/basic-ftp/get-uri). Fix
+direction is targeted upgrades of those tools (e.g. the uuid note wants a
+breaking `@lhci/cli` move), which is its own task — NOT a threshold raise and
+NOT an `audit fix --force` in this one. Until then CI is red on this step by
+design: a gate that cannot fail is decoration.
+
+### 14.4 Fixed in passing: the self-triggering db:push guard
+
+✅ **VERIFIED 2026-10-06:** the old pattern (`(^|[^a-z:])db:push…`) matched its
+own comments and step names — checked against HEAD, it failed on the
+pre-change tree, meaning **neither guard ever passed**. Replaced with
+invocation patterns (`npm run db:push`, `drizzle-kit push`, `pu[s]h`
+self-match-safe), verified green on the tree and catching a planted
+invocation. If this regresses, CI fails on every PR — loud, not silent.
+
+### 14.5 False-positive notes
+
+- Gitleaks: the only allowlists are two public test fixtures (RFC 6238 vector,
+  xkcd-style e2e password), each commented. Local `.dev.vars` holds a REAL dev
+  `AUTH_SECRET` — it is gitignored/untracked and never enters history; if it
+  is ever committed, the scan SHOULD scream. Gitignored build dirs
+  (`.wrangler/tmp`, `.next`, `.open-next`) contain dev-session keys and are not
+  scanned by the history gate.
+- Drift guard: a drizzle-kit version bump can re-render snapshots with no
+  schema change. Re-run `db:generate` locally, inspect, commit — do not delete
+  the step.
+
+---
+
+## 15. Preview per PR + branch protection (Task 21)
+
+### 15.1 `.github/workflows/preview.yml`
+
+On every PR to `main`/`master`: lint → migrate + seed the **preview** DB →
+build → `deploy --env preview` → Playwright smoke (`e2e/lead.spec.ts`,
+`e2e/seo.spec.ts` — the revenue path + SEO shell) → LHCI (both locales,
+`lighthouserc.json` assert preset) → comment URL + LHCI deltas on the PR.
+Concurrency cancels superseded runs. Needs repo secrets: `PREVIEW_DIRECT_URL`
+(direct 5432 preview URL — prod `DIRECT_URL` is never in scope here),
+`PREVIEW_URL` (public preview hostname), `CLOUDFLARE_API_TOKEN`,
+`CLOUDFLARE_ACCOUNT_ID`.
+
+⚠️ **UNVERIFIED — no real PR has been opened.** YAML parses (ruby psych);
+deploy/smoke/comment needs a live PR. Open a draft PR after merging this task
+and watch it once end to end before trusting the check.
+
+### 15.2 Branch protection — dashboard setting, applied via API
+
+Protection is not a file; these are the exact settings to apply (Settings →
+Branches → Add rule for `main`, or the API below):
+
+- Require status checks, strict: `Lint & Build Validation`, `Migration drift
+  guard`, `Preview deploy + smoke` (the three `name:` values — rename a job and
+  the requirement silently stops matching).
+- Require 1 approving review; require CODEOWNERS review (`.github/CODEOWNERS`
+  covers `db/schema.ts`, `auth.ts`, `proxy.ts`, `wrangler.toml`, `.github/**`,
+  plus `lib/securityHeaders.ts`, `lib/rateLimit.ts`).
+- Block direct pushes, block force-pushes, require linear history off (squash
+  merges stay allowed).
+
+```bash
+OWNER=ecomate ORG…; REPO=EcoMate-Landing  # fill in
+gh api repos/$OWNER/$REPO/branches/main/protection -X PUT \
+  -F required_status_checks='{"strict":true,"contexts":["Lint & Build Validation","Migration drift guard","Preview deploy + smoke"]}' \
+  -F enforce_admins=true \
+  -F required_pull_request_reviews='{"required_approving_review_count":1,"require_code_owner_reviews":true,"dismiss_stale_reviews":true}' \
+  -F restrictions=null \
+  -F allow_force_pushes=false \
+  -F allow_deletions=false \
+  -F required_conversation_resolution=true
+```
+
+⚠️ **UNVERIFIED — not applied.** Applying needs admin on the repo; verify with
+`gh api repos/$OWNER/$REPO/branches/main/protection`.
+
+### 15.3 CODEOWNERS placeholder
+
+`.github/CODEOWNERS` points at `@ecomate-owners`, which does not exist yet —
+replace with the real team before it can request reviews. Until then the "1
+approving review" rule is the backstop.
+
+---
+
+## 16. Monitoring + alerting (Task 21)
+
+⚠️ **UNVERIFIED — configurations + docs, not verifiable locally.** Nothing
+below exists until an operator clicks it into being; each item says exactly
+what to create.
+
+### 16.1 External uptime monitors (create two)
+
+Provider-agnostic (UptimeRobot / Better Uptime / Cloudflare Health Checks —
+any that supports keyword matching); interval **60s**, timeout 10s, retries 2:
+
+| # | Name | Target | Healthy | Alert when |
+| --- | --- | --- | --- | --- |
+| 1 | `ecomate-prod-liveness` | `GET https://ecomate.app/api/health` | 200 + body contains `"status":"ok"` | 2 consecutive failures |
+| 2 | `ecomate-prod-readiness` | `GET https://ecomate.app/api/ready` | 200 | **any non-200** (503 = DB unreachable, §10) |
+
+Alert targets (fill in): on-call phone/SMS + `#ecomate-incidents` channel +
+incident-commander mailbox. Monitor 2 pages; monitor 1 notifies (liveness
+without readiness is "process alive, serving nothing" — useful context, not a
+page). After creating them, probe-fail once (stop the route via a preview
+deploy or expect the DB-down drill) and confirm the alert fires — an untested
+monitor is a rumour.
+
+### 16.2 Lead-submit success-rate alert (< 95% over 15 min = revenue incident)
+
+Signal: structured Worker logs. Every `POST /api/leads` emits either
+`lead.notify` (`status: Sent/Pending`) or `api.error` (`op: POST /api/leads`).
+Success rate = `Sent / (Sent + Failed + api.error)` over a 15-minute window;
+below 0.95 pages the business owner + backend roles (§8) — a silent lead form
+is lost revenue, not a tech ticket.
+
+Wiring: the intended path is a scheduled evaluator (15-min cron, external or
+Workers) reading Workers Logs / Logpush and fanning out through the existing
+`lib/notify.ts` provider abstraction (it already owns "announce important
+things to operators"). That wiring is a **follow-up, not this task** — no
+evaluator exists, no provider method was added, and claiming otherwise would be
+fiction. Interim: add the Workers Logs query below as a saved dashboard query
+and check it in the daily ops glance until the alert is wired:
+
+```
+event:lead.notify OR (event:api.error op:"POST /api/leads")   # last 15 min
+# Sent ÷ total ≥ 0.95, else treat as a revenue incident per §8 escalation.
+```
+
+### 16.3 Workers Logs retention
+
+`[env.production.observability] enabled = true` (§13) is the zero-config floor:
+`wrangler tail` + dashboard Logs work with no further wiring. Retention length
+is plan-dependent — confirm in Dash → Workers → ecomate-landing → Logs and
+record the window here: _(unverified — fill in)_. If Logpush/Splunk-style
+archiving is needed for the §16.2 audit trail, that is a separate decision
+(cost + PII in long-term storage vs retention policy §4).
+
+---
+
+## 2.4 Rollback per environment (Task 21 addition to §2)
+
+`wrangler rollback` is per-env — rolling back without `--env` answers a
+different question than the one you asked in an incident:
+
+```bash
+npx wrangler deployments list --env production    # version ids live per env
+npx wrangler rollback <version-id> --env production
+```
+
+Decision rule unchanged from §2.2 (code rolls back, migrations roll forward,
+never destructive down-migrations on prod). Preview rollbacks are almost never
+needed — redeploy the PR instead; preview has no uptime promise.
+
+---
+
+## 3.1 Rotating a secret per environment (Task 21 addition to §3)
+
+Append `--env production` (or `--env preview`) to every `wrangler secret put`
+in §3 — there is no global secret anymore. Rotate prod and preview
+independently; preview first (it validates the procedure), prod second.
+Restated because it bites: rotating `AUTH_SECRET` logs every operator out on
+that env, and rotating it while `TOTP_ENCRYPTION_KEY` is unset breaks TOTP too
+— set the latter explicitly first (§3 table).
+
+---
+
+## 5.1 Code-enforced controls behind the WAF inventory (Task 21 addition to §5)
+
+The §5 rules are dashboard configuration (still ⚠️ UNVERIFIED). Independent of
+them, enforced in code today:
+
+- `proxy.ts` matcher + `auth.ts` `authorized`: every `/api/*` mutating method
+  needs a session except public `POST /api/leads` and the two `SETUP_TOKEN`
+  bootstrap endpoints (empty-`admin_users` only).
+- `lib/authz.ts` `requireAdminRole`: per-route role enforcement (IDOR backstop
+  alongside `docs/SECURITY.md` T4).
+- `lib/securityHeaders.ts` via the proxy: HSTS, nosniff, frame-deny, referrer,
+  permissions policy, CSP on every response including redirects.
+- Turnstile on the lead form; KV limiters (`lib/rateLimit.ts`, fail-open by
+  design) + per-isolate backstop on `/api/leads`; per-account lockout in
+  `auth.ts` fed by `admin_audit_logs`.
+- `GET /api/cron/*` fails closed (503) when `CRON_SECRET` is unset — the WAF
+  rule 6 only caps guessing.
+
+---
+
+## 7.3 PITR restore drill — exact procedure (Task 21)
+
+⚠️ **UNVERIFIED — never executed. Do NOT run against the live database. This
+section is a plan, and it stays marked so until someone runs it and records the
+wall-clock time.**
+
+Preconditions: PITR confirmed enabled (§7.2 — still open); a RESTORE TARGET
+Supabase project exists that is NOT production; on-call + business owner named
+(§8 still has placeholders — a drill without the sales owner present cannot
+decide about `Won`/`Qualified` rows).
+
+```
+1. Record NOW:  SELECT count(*) FROM leads;  SELECT * FROM drizzle.__drizzle_migrations ORDER BY id;
+   (counts + hashes are the "as expected" against which the restore is judged.)
+2. In the Supabase dashboard for the PRODUCTION project → Database → Backups →
+   Point-in-time recovery → restore to the RESTORE TARGET project at timestamp
+   T (pick T = just before the most recent migration in drizzle/).
+3. Against the RESTORE TARGET only (DIRECT_URL pointed at it, never prod):
+     - drizzle.__drizzle_migrations must show exactly the migrations ≤ T.
+     - leads count must equal the count recorded for time T (binlogs/replica lag aside).
+     - spot-check one anonymised row: name='Withheld' rows stay Withheld (retention is not undone by restore).
+4. Point a preview worker at the restore target, smoke GET / and POST /api/leads with a fixture, confirm 200s.
+5. Record wall-clock minutes from "decide to restore" to "preview serving the restore". THAT number is the RPO/RTO claim.
+6. Destroy or isolate the restore target (it holds real PII the moment it exists — access-logged, access-limited).
+```
+
+Do NOT promote the restore target to production by re-pointing Hyperdrive in a
+hurry: rows written to prod between T and now would be silently abandoned.
+Forward-reconcile (export-then-merge the delta) or accept the loss explicitly
+with the business owner — never neither.

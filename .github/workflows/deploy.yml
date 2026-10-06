@@ -1,5 +1,9 @@
 name: Production Deployment - Cloudflare Workers (Manual Trigger Only)
 
+# Least privilege: nothing here creates releases or comments, so read is enough.
+permissions:
+  contents: read
+
 on:
   workflow_dispatch:
     inputs:
@@ -27,14 +31,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        # Pinned by SHA (see ci.yml for why); `# v4` keeps Dependabot updates working.
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       # Node 24 is the project floor; assert it before the install steps.
       - name: Assert Node floor (24)
         run: node -e "if (parseInt(process.versions.node.split('.')[0], 10) < 24) { console.error('Node 24+ required'); process.exit(1); }"
 
       - name: Setup Node.js (v24)
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
           cache: 'npm'
@@ -44,6 +49,19 @@ jobs:
 
       - name: TypeScript typecheck & lint
         run: npm run lint
+
+      # Same guarantee as CI, at deploy time: browser-bundled values must be
+      # public. See ci.yml for the SITE_KEY rationale.
+      - name: Assert no secrets behind NEXT_PUBLIC_
+        run: |
+          secretish=$(grep -rEn 'NEXT_PUBLIC_[A-Z0-9_]*(TOKEN|SECRET|PASSWORD|PRIVATE_KEY|API_KEY)' wrangler.toml .env.example lib app 2>/dev/null || true)
+          keyish=$(grep -rEn 'NEXT_PUBLIC_[A-Z0-9_]*KEY' wrangler.toml .env.example lib app 2>/dev/null | grep -v 'SITE_KEY' || true)
+          if [ -n "$secretish$keyish" ]; then
+            echo "$secretish$keyish"
+            echo "::error::A NEXT_PUBLIC_ variable looks like a secret. Move the real value to a Worker secret."
+            exit 1
+          fi
+          echo "no secrets behind NEXT_PUBLIC_"
 
       # See .github/workflows/ci.yml for the full explanation: `opennextjs-cloudflare
       # build` runs `npm run build` internally, so the package.json build script must
@@ -80,7 +98,7 @@ jobs:
           echo "Build integrity confirmed. .open-next bundle ready for Cloudflare."
 
       - name: Archive build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: opennext-bundle
           path: .open-next
@@ -96,13 +114,13 @@ jobs:
       name: ${{ github.event.inputs.environment || 'production' }}
     steps:
       - name: Checkout repository for configuration
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Assert Node floor (24)
         run: node -e "if (parseInt(process.versions.node.split('.')[0], 10) < 24) { console.error('Node 24+ required'); process.exit(1); }"
 
       - name: Setup Node.js (v24)
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
           cache: 'npm'
@@ -113,7 +131,7 @@ jobs:
         run: npm ci
 
       - name: Download build artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: opennext-bundle
           path: .open-next
@@ -127,7 +145,8 @@ jobs:
       # reviewed and committed.
       - name: Assert no db:push in this workflow
         run: |
-          if grep -rnE '(^|[^a-z:])db:push([^a-z]|$)|drizzle-kit[[:space:]]+push' .github/workflows/; then
+          # Invocation patterns only — see ci.yml for why the broad pattern was retired.
+          if grep -rnE 'npm run db:pu[s]h|drizzle-kit[[:space:]]+pu[s]h' .github/workflows/; then
             echo "::error::db:push found in a deploy workflow. It reconciles the live schema by dropping columns and is not safe in production. Use db:migrate."
             exit 1
           fi
@@ -146,9 +165,11 @@ jobs:
 
       # The opennext CLI must drive the deploy. A plain `wrangler deploy` (what
       # `cloudflare/wrangler-action` runs) does not carry the opennext build output/args
-      # and silently ships a broken or empty Worker.
+      # and silently ships a broken or empty Worker. `--env` selects the matching
+      # `[env.*]` block in wrangler.toml (Task 21 §1): deploying without it would
+      # fall back to the top-level dev bindings.
       - name: Deploy to Cloudflare via opennext
-        run: npx opennextjs-cloudflare deploy
+        run: npx opennextjs-cloudflare deploy --env ${{ github.event.inputs.environment || 'production' }}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

@@ -11,8 +11,11 @@ export function ok(data: unknown, status = 200): Response {
   return Response.json(data, { status });
 }
 
-export function fail(message: string, status = 500): Response {
-  return Response.json({ error: message }, { status });
+export function fail(message: string, status = 500, details?: unknown): Response {
+  return Response.json(
+    details === undefined ? { error: message } : { error: message, details },
+    { status },
+  );
 }
 
 /** `catch` binds `unknown` under strict mode — never widen it to `any`. */

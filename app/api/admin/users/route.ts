@@ -8,10 +8,11 @@ import { asc } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { adminAuditLogsTable, adminUsersTable } from '@/db/schema';
 import { requireAdminRole } from '@/lib/authz';
-import { asObject, errorMessage, fail, isUniqueViolation, logServerError, ok } from '@/lib/json';
-import { isValidEmail, normalizeEmail, parseAdminRole, readPassword } from '@/lib/operators';
+import { errorMessage, fail, isUniqueViolation, logServerError, ok } from '@/lib/json';
+import { normalizeEmail } from '@/lib/operators';
 import { hashPassword, passwordPolicyError } from '@/lib/password';
 import { clientIp } from '@/lib/request';
+import { operatorCreate } from '@/lib/validation';
 
 const OPERATOR_COLUMNS = {
   id: adminUsersTable.id,
@@ -46,17 +47,18 @@ export async function POST(request: Request): Promise<Response> {
   if (!guard.ok) return guard.response;
 
   try {
-    const body = asObject(await request.json().catch(() => null));
-    const email = normalizeEmail(body.email);
-    const password = readPassword(body.password);
-    const role = parseAdminRole(body.role ?? 'editor');
+    const parsed = operatorCreate.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) {
+      return fail('Validation failed', 400, { issues: parsed.error.issues });
+    }
+    // Normalized after validation: the length/shape bounds already held on the raw input.
+    const email = normalizeEmail(parsed.data.email);
+    const role = parsed.data.role ?? 'editor';
 
-    if (!isValidEmail(email)) return fail('A valid email address is required', 400);
-    if (role === null) return fail('role must be one of superadmin, admin, editor', 400);
-    const policyError = passwordPolicyError(password);
+    const policyError = passwordPolicyError(parsed.data.password);
     if (policyError) return fail(policyError, 400);
 
-    const passwordHash = await hashPassword(password);
+    const passwordHash = await hashPassword(parsed.data.password);
     const ip = clientIp(request);
     const actorId = guard.actorId;
 

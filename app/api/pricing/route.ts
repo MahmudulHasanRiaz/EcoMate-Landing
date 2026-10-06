@@ -1,16 +1,10 @@
 import { asc } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { pricingPlansTable, siteSettingsTable } from '@/db/schema';
-import {
-  asObject,
-  errorMessage,
-  fail,
-  isUniqueViolation,
-  logServerError,
-  ok,
-} from '@/lib/json';
-import { readPricingPlanCreate } from '@/lib/pricing';
+import { errorMessage, fail, isUniqueViolation, logServerError, ok } from '@/lib/json';
+import { assertSlugAvailable } from '@/lib/guard';
 import { invalidateDomains } from '@/lib/revalidate';
+import { pricingPlanCreate } from '@/lib/validation';
 
 export async function GET() {
   try {
@@ -30,13 +24,34 @@ export async function GET() {
 // NEVER `.values(body)` — mass assignment on insert is the same hole as on update.
 export async function POST(req: Request) {
   try {
-    const row = readPricingPlanCreate(asObject(await req.json()));
-    if (!row.slug || !row.nameEn) return fail('slug and nameEn are required', 400);
-    // The DB CHECK constraints are the guarantee; this is the courtesy that turns a
-    // constraint violation into a 400 with a readable message.
-    if (row.monthlyPrice < 0 || row.annualPrice < 0) {
-      return fail('Prices must be non-negative', 400);
+    const parsed = pricingPlanCreate.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) {
+      return fail('Validation failed', 400, { issues: parsed.error.issues });
     }
+    // Friendly 409 before the unique index fires, naming the conflicting entity.
+    const slugGuard = await assertSlugAvailable('pricing_plans', parsed.data.slug);
+    if (!slugGuard.ok) return fail(slugGuard.reason, 409);
+    const row = {
+      slug: parsed.data.slug,
+      nameEn: parsed.data.nameEn,
+      nameBn: parsed.data.nameBn ?? '',
+      tierSubtitleEn: parsed.data.tierSubtitleEn ?? '',
+      tierSubtitleBn: parsed.data.tierSubtitleBn ?? '',
+      monthlyPrice: parsed.data.monthlyPrice ?? 0,
+      annualPrice: parsed.data.annualPrice ?? 0,
+      currency: parsed.data.currency ?? '৳',
+      orderVolume: parsed.data.orderVolume ?? '',
+      usersIncluded: parsed.data.usersIncluded ?? '',
+      showroomsIncluded: parsed.data.showroomsIncluded ?? '',
+      featuresEn: parsed.data.featuresEn ?? [],
+      featuresBn: parsed.data.featuresBn ?? [],
+      excludedFeaturesEn: parsed.data.excludedFeaturesEn ?? [],
+      ctaLabelEn: parsed.data.ctaLabelEn ?? 'Start with this tier',
+      ctaLabelBn: parsed.data.ctaLabelBn ?? 'এই প্ল্যানে শুরু করুন',
+      isPopular: parsed.data.isPopular ?? false,
+      sortOrder: parsed.data.sortOrder ?? 0,
+      isActive: parsed.data.isActive ?? true,
+    };
     const [created] = await getDb().insert(pricingPlansTable).values(row).returning();
     invalidateDomains('pricing');
     return ok(created, 201);

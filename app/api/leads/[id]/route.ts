@@ -14,7 +14,7 @@
  * the status change rolls back with it.
  *
  * `actorId` comes from `requireAdminRole`, which resolved it from the live session. Nothing in
- * the request body can influence who is recorded: the body is allowlisted field-by-field, and
+ * the request body can influence who is recorded: the body is validated field-by-field, and
  * the actor is a server-side variable that no client input reaches.
  */
 import { eq } from 'drizzle-orm';
@@ -23,7 +23,6 @@ import { adminUsersTable, leadsTable } from '@/db/schema';
 import { requireAdminRole } from '@/lib/authz';
 import { recordLeadActivity } from '@/lib/leads';
 import {
-  asObject,
   errorMessage,
   fail,
   failWithRequestId,
@@ -31,25 +30,13 @@ import {
   ok,
   optionalString,
   parseId,
-  readIsoDate,
 } from '@/lib/json';
 import { requestId } from '@/lib/request';
-
-// Mirrors the `leads.status` lifecycle in db/schema.ts. Validating against the real set
-// keeps the admin Kanban from writing a status the UI can never render.
-const LEAD_STATUSES = ['New', 'Contacted', 'Qualified', 'Demo Scheduled', 'Won', 'Lost'] as const;
-type LeadStatus = (typeof LEAD_STATUSES)[number];
-
-function isLeadStatus(value: unknown): value is LeadStatus {
-  return typeof value === 'string' && (LEAD_STATUSES as readonly string[]).includes(value);
-}
+import { leadUpdate } from '@/lib/validation';
 
 /** `assignedToId` must name a live operator. `null` explicitly unassigns. */
-function readAssignee(value: unknown): number | null | undefined {
-  if (value === null) return null;
-  if (value === undefined) return undefined;
-  const id = Number(value);
-  return Number.isInteger(id) && id > 0 ? id : undefined;
+function readAssignee(value: number | null | undefined): number | null | undefined {
+  return value;
 }
 
 /**
@@ -77,9 +64,8 @@ function followUpDiffers(current: Date | null, next: Date | null): boolean {
 }
 
 /** Operator-supplied note on the transition. Bounded, and never used as SQL. */
-function readActivityNote(value: unknown): string {
-  const note = typeof value === 'string' ? value.trim() : '';
-  return note.slice(0, 2000);
+function readActivityNote(value: string | undefined): string {
+  return (value ?? '').trim().slice(0, 2000);
 }
 
 /** Thrown when the row vanishes between the read and the update (a concurrent delete). */
@@ -103,7 +89,11 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const id = parseId(rawId);
     if (id === null) return fail('Invalid lead id', 400);
 
-    const body = asObject(await req.json());
+    const parsed = leadUpdate.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) {
+      return fail('Validation failed', 400, { issues: parsed.error.issues });
+    }
+    const body = parsed.data;
 
     // The current row is read first: the timeline records the transition *from* the previous
     // status, which cannot be known without it, and an update against a missing lead must 404
@@ -118,33 +108,22 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       return fail('Nothing to update: supply status, assignedToId, followUpAt or internalNotes', 400);
     }
 
-    let nextStatus = current.status;
-    if (hasStatus) {
-      if (!isLeadStatus(body.status)) {
-        return fail(`status must be one of: ${LEAD_STATUSES.join(', ')}`, 400);
-      }
-      nextStatus = body.status;
-    }
+    const nextStatus = hasStatus && body.status !== undefined ? body.status : current.status;
 
     const assignee = hasAssignee ? readAssignee(body.assignedToId) : undefined;
-    if (hasAssignee && assignee === undefined) {
-      return fail('assignedToId must be a positive integer or null', 400);
-    }
     if (typeof assignee === 'number' && !(await assigneeExists(assignee))) {
       return fail('assignedToId does not name an existing operator', 404);
     }
 
-    // `followUpAt: null` clears the promise; an unparseable string is a 400 rather than a
-    // silent clear, because "I mistyped the date" and "remove the follow-up" are different
-    // intentions that must not collapse into the same write.
+    // `followUpAt: null` clears the promise; an unparseable string never reaches here —
+    // the schema rejects it with a 400 — because "I mistyped the date" and "remove the
+    // follow-up" are different intentions that must not collapse into the same write.
     let nextFollowUp: Date | null | undefined;
     if (hasFollowUp) {
-      if (body.followUpAt === null) {
+      if (body.followUpAt === null || body.followUpAt === undefined) {
         nextFollowUp = null;
       } else {
-        const parsed = readIsoDate(body.followUpAt);
-        if (parsed === undefined) return fail('followUpAt must be an ISO date string or null', 400);
-        nextFollowUp = parsed;
+        nextFollowUp = new Date(body.followUpAt);
       }
     }
 

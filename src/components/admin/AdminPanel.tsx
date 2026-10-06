@@ -15,6 +15,7 @@ import type {
   OverdueLead,
 } from '../../types/api';
 import * as api from '../../services/api';
+import { fieldErrorsOf, type FieldErrors } from './fieldErrors';
 import {
   LayoutDashboard,
   Users,
@@ -68,6 +69,16 @@ type AdminTab =
   | 'settings'
   | 'integrations';
 
+/** Inline validation message rendered against its input (Task 17 §5). */
+const FieldError: React.FC<{ id: string; message?: string }> = ({ id, message }) => {
+  if (!message) return null;
+  return (
+    <p id={id} role="alert" className="mt-1 text-[11px] font-medium text-rose-600 dark:text-rose-400">
+      {message}
+    </p>
+  );
+};
+
 export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }) => {
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [isLoading, setIsLoading] = useState(false);
@@ -118,6 +129,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
 
   // Blog Editor State
   const [isEditingBlog, setIsEditingBlog] = useState(false);
+  /** Per-field validation errors from the last failed settings/blog save (Task 17 §5). */
+  const [settingsErrors, setSettingsErrors] = useState<FieldErrors>({});
+  const [blogErrors, setBlogErrors] = useState<FieldErrors>({});
   const [editingPost, setEditingPost] = useState<Partial<BlogPost>>({
     title: '',
     slug: '',
@@ -409,17 +423,20 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!settings) return;
+    setSettingsErrors({});
     try {
       const updated = await api.updateSettings(settings);
       setSettings(updated);
       showNotification('Site settings updated successfully');
-    } catch (err: any) {
-      showNotification(`Error saving settings: ${err.message}`);
+    } catch (err: unknown) {
+      setSettingsErrors(fieldErrorsOf(err));
+      showNotification(`Error saving settings: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   };
 
   const handleSaveBlogPost = async (e: React.FormEvent) => {
     e.preventDefault();
+    setBlogErrors({});
     try {
       if (editingPost.id) {
         await api.updateBlogPost(editingPost.id, editingPost);
@@ -431,8 +448,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
       setIsEditingBlog(false);
       const bData = await api.getBlogPosts({ limit: api.ADMIN_LIST_LIMIT });
       setBlogPosts(bData);
-    } catch (err: any) {
-      showNotification(`Error saving post: ${err.message}`);
+    } catch (err: unknown) {
+      setBlogErrors(fieldErrorsOf(err));
+      showNotification(`Error saving post: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   };
 
@@ -1423,6 +1441,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                         readTime: '5 min read',
                         tags: ['courier', 'ecommerce', 'bangladesh'],
                       });
+                      setBlogErrors({});
                       setIsEditingBlog(true);
                     }}
                     className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 text-white font-semibold text-xs shadow-xs hover:bg-indigo-700 transition-colors cursor-pointer"
@@ -1450,47 +1469,59 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                     <div>
-                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Article Title</label>
+                      <label htmlFor="blog-title" className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Article Title</label>
                       <input
+                        id="blog-title"
                         type="text"
                         required
                         value={editingPost.title}
                         onChange={(e) => setEditingPost({ ...editingPost, title: e.target.value })}
+                        aria-describedby={blogErrors.title ? 'blog-title-error' : undefined}
                         className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                       />
+                      <FieldError id="blog-title-error" message={blogErrors.title} />
                     </div>
                     <div>
-                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">URL Slug</label>
+                      <label htmlFor="blog-slug" className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">URL Slug</label>
                       <input
+                        id="blog-slug"
                         type="text"
                         required
                         value={editingPost.slug}
                         onChange={(e) => setEditingPost({ ...editingPost, slug: e.target.value })}
+                        aria-describedby={blogErrors.slug ? 'blog-slug-error' : undefined}
                         className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white font-mono"
                       />
+                      <FieldError id="blog-slug-error" message={blogErrors.slug} />
                     </div>
                   </div>
 
                   <div className="text-xs">
-                    <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Excerpt (Meta Description)</label>
+                    <label htmlFor="blog-excerpt" className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Excerpt (Meta Description)</label>
                     <textarea
+                      id="blog-excerpt"
                       rows={2}
                       required
                       value={editingPost.excerpt}
                       onChange={(e) => setEditingPost({ ...editingPost, excerpt: e.target.value })}
+                      aria-describedby={blogErrors.excerpt ? 'blog-excerpt-error' : undefined}
                       className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white resize-none"
                     />
+                    <FieldError id="blog-excerpt-error" message={blogErrors.excerpt} />
                   </div>
 
                   <div className="text-xs">
-                    <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Markdown Body Content</label>
+                    <label htmlFor="blog-content" className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Markdown Body Content</label>
                     <textarea
+                      id="blog-content"
                       rows={8}
                       required
                       value={editingPost.content}
                       onChange={(e) => setEditingPost({ ...editingPost, content: e.target.value })}
+                      aria-describedby={blogErrors.content ? 'blog-content-error' : undefined}
                       className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white font-mono text-xs"
                     />
+                    <FieldError id="blog-content-error" message={blogErrors.content} />
                   </div>
 
                   <div className="pt-2 flex justify-end gap-2">
@@ -1521,6 +1552,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                         <button
                           onClick={() => {
                             setEditingPost(post);
+                            setBlogErrors({});
                             setIsEditingBlog(true);
                           }}
                           className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-white/5 cursor-pointer"
@@ -1625,78 +1657,99 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
               <form onSubmit={handleSaveSettings} className="p-6 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1B] space-y-4 shadow-xs">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                   <div>
-                    <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Brand Site Name</label>
+                    <label htmlFor="settings-siteName" className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Brand Site Name</label>
                     <input
+                      id="settings-siteName"
                       type="text"
                       value={settings.siteName}
                       onChange={(e) => setSettings({ ...settings, siteName: e.target.value })}
+                      aria-describedby={settingsErrors.siteName ? 'settings-siteName-error' : undefined}
                       className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white font-semibold"
                     />
+                    <FieldError id="settings-siteName-error" message={settingsErrors.siteName} />
                   </div>
 
                   <div>
-                    <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Default Locale</label>
+                    <label htmlFor="settings-defaultLocale" className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Default Locale</label>
                     <select
+                      id="settings-defaultLocale"
                       value={settings.defaultLocale}
-                      onChange={(e) => setSettings({ ...settings, defaultLocale: e.target.value as any })}
+                      onChange={(e) => setSettings({ ...settings, defaultLocale: e.target.value as unknown as SiteSettings['defaultLocale'] })}
+                      aria-describedby={settingsErrors.defaultLocale ? 'settings-defaultLocale-error' : undefined}
                       className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white font-medium"
                     >
                       <option value="en">English (Default)</option>
                       <option value="bn">Bangla (বাংলা)</option>
                     </select>
+                    <FieldError id="settings-defaultLocale-error" message={settingsErrors.defaultLocale} />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                   <div>
-                    <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Support Phone</label>
+                    <label htmlFor="settings-supportPhone" className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Support Phone</label>
                     <input
+                      id="settings-supportPhone"
                       type="text"
                       value={settings.supportPhone}
                       onChange={(e) => setSettings({ ...settings, supportPhone: e.target.value })}
+                      aria-describedby={settingsErrors.supportPhone ? 'settings-supportPhone-error' : undefined}
                       className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white font-mono"
                     />
+                    <FieldError id="settings-supportPhone-error" message={settingsErrors.supportPhone} />
                   </div>
 
                   <div>
-                    <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">WhatsApp Number (e.g. 8801894828290)</label>
+                    <label htmlFor="settings-whatsappNumber" className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">WhatsApp Number (e.g. 8801894828290)</label>
                     <input
+                      id="settings-whatsappNumber"
                       type="text"
                       value={settings.whatsappNumber}
                       onChange={(e) => setSettings({ ...settings, whatsappNumber: e.target.value })}
+                      aria-describedby={settingsErrors.whatsappNumber ? 'settings-whatsappNumber-error' : undefined}
                       className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white font-mono"
                     />
+                    <FieldError id="settings-whatsappNumber-error" message={settingsErrors.whatsappNumber} />
                   </div>
                 </div>
 
                 <div className="text-xs">
-                  <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Corporate Physical Address</label>
+                  <label htmlFor="settings-address" className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Corporate Physical Address</label>
                   <input
+                    id="settings-address"
                     type="text"
                     value={settings.address}
                     onChange={(e) => setSettings({ ...settings, address: e.target.value })}
+                    aria-describedby={settingsErrors.address ? 'settings-address-error' : undefined}
                     className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                   />
+                  <FieldError id="settings-address-error" message={settingsErrors.address} />
                 </div>
 
                 <div className="text-xs">
-                  <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Global SEO Title</label>
+                  <label htmlFor="settings-seoTitle" className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Global SEO Title</label>
                   <input
+                    id="settings-seoTitle"
                     type="text"
                     value={settings.seoTitle}
                     onChange={(e) => setSettings({ ...settings, seoTitle: e.target.value })}
+                    aria-describedby={settingsErrors.seoTitle ? 'settings-seoTitle-error' : undefined}
                     className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                   />
+                  <FieldError id="settings-seoTitle-error" message={settingsErrors.seoTitle} />
                 </div>
 
                 <div className="text-xs">
-                  <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Global Meta Description</label>
+                  <label htmlFor="settings-seoDescription" className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Global Meta Description</label>
                   <textarea
+                    id="settings-seoDescription"
                     rows={2}
                     value={settings.seoDescription}
                     onChange={(e) => setSettings({ ...settings, seoDescription: e.target.value })}
+                    aria-describedby={settingsErrors.seoDescription ? 'settings-seoDescription-error' : undefined}
                     className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white resize-none"
                   />
+                  <FieldError id="settings-seoDescription-error" message={settingsErrors.seoDescription} />
                 </div>
 
                 <div className="pt-2 flex justify-end">

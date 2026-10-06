@@ -1,9 +1,9 @@
 import { eq } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { pricingPlansTable } from '@/db/schema';
-import { asObject, errorMessage, fail, logServerError, ok, parseId } from '@/lib/json';
-import { readPricingPlanPatch } from '@/lib/pricing';
+import { errorMessage, fail, logServerError, ok, parseId } from '@/lib/json';
 import { invalidateDomains } from '@/lib/revalidate';
+import { pricingPlanUpdate } from '@/lib/validation';
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -11,19 +11,16 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const id = parseId(rawId);
     if (id === null) return fail('Invalid plan id', 400);
 
-    const { monthlyPrice, annualPrice, ...rest } = readPricingPlanPatch(
-      asObject(await req.json()),
-    );
-    if (
-      (monthlyPrice !== undefined && monthlyPrice < 0) ||
-      (annualPrice !== undefined && annualPrice < 0)
-    ) {
-      return fail('Prices must be non-negative', 400);
+    // `slug` is creatable but not updatable: it is the stable identifier, and the strict
+    // schema rejects it here rather than silently dropping it.
+    const parsed = pricingPlanUpdate.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) {
+      return fail('Validation failed', 400, { issues: parsed.error.issues });
     }
 
     const [updated] = await getDb()
       .update(pricingPlansTable)
-      .set({ ...rest, monthlyPrice, annualPrice, updatedAt: new Date() })
+      .set({ ...parsed.data, updatedAt: new Date() })
       .where(eq(pricingPlansTable.id, id))
       .returning();
     if (!updated) return fail('Pricing plan not found', 404);

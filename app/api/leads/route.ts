@@ -4,7 +4,6 @@ import { requireAdminRole } from '@/lib/authz';
 import { getDb } from '@/db/client';
 import { leadsTable } from '@/db/schema';
 import {
-  asObject,
   errorMessage,
   fail,
   failWithRequestId,
@@ -25,6 +24,7 @@ import { paginate, parsePage } from '@/lib/paginate';
 import { clientIp as clientIpOf, requestId } from '@/lib/request';
 import { hitLimit } from '@/lib/rateLimit';
 import { verifyTurnstile } from '@/lib/turnstile';
+import { leadCreate } from '@/lib/validation';
 
 // Registers the Resend adapter on import. No call site changes when it becomes active.
 import '@/lib/notifyResend';
@@ -175,31 +175,29 @@ export async function POST(req: Request) {
       return fail('Too many requests. Please try again in a few minutes or call us directly.', 429);
     }
 
-    const body = asObject(await req.json());
-    const name = readString(body.name).trim();
-    const phone = readString(body.phone).trim();
-    const clientIp = clientIpOf(req);
-    if (!name) return fail('Name is required', 400);
-    if (phone.length < 8) return fail('A valid phone number is required', 400);
-
-    // Consent is a legal prerequisite, not a preference: without it there is no lawful
-    // basis to store the PII, let alone send a conversion event to Meta.
-    if (body.consentGiven !== true) {
-      return fail('Consent to be contacted is required before submitting this form', 400);
+    const parsed = leadCreate.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) {
+      return fail('Validation failed', 400, { issues: parsed.error.issues });
     }
-    const consentText =
-      readString(body.consentText).trim().slice(0, 120) || PRIVACY_POLICY_VERSION;
+    // Trimmed after validation: the shape/length bounds already held on the raw input.
+    const name = parsed.data.name.trim();
+    const phone = parsed.data.phone.trim();
+    const clientIp = clientIpOf(req);
+    // Consent is a legal prerequisite, not a preference: without it there is no lawful
+    // basis to store the PII, let alone send a conversion event to Meta. `consentGiven`
+    // is `z.literal(true)`, so reaching here means it was given.
+    const consentText = (parsed.data.consentText?.trim().slice(0, 120) || PRIVACY_POLICY_VERSION);
 
     // Bot check (Task 14 §2). Skipped when Turnstile is not provisioned (local dev); an
     // explicit siteverify rejection is a 400 and the lead is never stored. Consent is
     // validated first so an invalid submission costs no external call.
-    const turnstile = await verifyTurnstile(readString(body.turnstileToken), ip);
+    const turnstile = await verifyTurnstile(parsed.data.turnstileToken ?? '', ip);
     if (!turnstile.ok) {
       console.warn(`[leads] turnstile rejected a submission: ${turnstile.reason}`);
       return fail('Human verification failed. Please refresh the page and try again.', 400);
     }
 
-const source = readString(body.source, 'landing_page_lead_form');
+    const source = parsed.data.source ?? 'landing_page_lead_form';
 
     /**
      * The lead row and its opening timeline entry commit together.
@@ -217,16 +215,16 @@ const source = readString(body.source, 'landing_page_lead_form');
         .values({
           name,
           phone,
-          email: readString(body.email).trim(),
-          dailyVolume: readString(body.dailyVolume, '150 – 500 orders / day'),
-          note: readString(body.note).trim(),
+          email: parsed.data.email?.trim() ?? '',
+          dailyVolume: parsed.data.dailyVolume ?? '150 – 500 orders / day',
+          note: parsed.data.note?.trim() ?? '',
           source,
-          utmSource: readString(body.utmSource),
-          utmCampaign: readString(body.utmCampaign),
+          utmSource: parsed.data.utmSource ?? '',
+          utmCampaign: parsed.data.utmCampaign ?? '',
           // --- tracking + consent (Task 13) ---------------------------------------------
-          fbp: readString(body.fbp).trim().slice(0, MAX_TRACKING_VALUE),
-          fbc: readString(body.fbc).trim().slice(0, MAX_TRACKING_VALUE),
-          eventId: readEventId(body.eventId),
+          fbp: parsed.data.fbp?.trim().slice(0, MAX_TRACKING_VALUE) ?? '',
+          fbc: parsed.data.fbc?.trim().slice(0, MAX_TRACKING_VALUE) ?? '',
+          eventId: readEventId(parsed.data.eventId),
           clientIp,
           userAgent: readString(req.headers.get('user-agent')).slice(0, MAX_USER_AGENT),
           consentGiven: true,

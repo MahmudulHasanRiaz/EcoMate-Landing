@@ -80,6 +80,8 @@ async function fetchListData<T>(path: string, params?: PageParams): Promise<T[]>
   return page.data;
 }
 
+import { throwApiError } from '../components/admin/fieldErrors';
+
 export async function getSettings(): Promise<SiteSettings> {
   const res = await fetch(`${API_BASE}/settings`);
   if (!res.ok) throw new Error('Failed to fetch settings');
@@ -92,7 +94,7 @@ export async function updateSettings(data: Partial<SiteSettings>): Promise<SiteS
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to update settings');
+  if (!res.ok) await throwApiError(res, 'Failed to update settings');
   return res.json();
 }
 
@@ -108,7 +110,7 @@ export async function updateSection(id: number, data: Partial<LandingSection>): 
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to update section');
+  if (!res.ok) await throwApiError(res, 'Failed to update section');
   return res.json();
 }
 
@@ -184,10 +186,7 @@ export async function submitLead(leadData: {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(leadData),
   });
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.error || 'Failed to submit demo request');
-  }
+  if (!res.ok) await throwApiError(res, 'Failed to submit demo request');
   return res.json();
 }
 
@@ -242,10 +241,7 @@ export async function updateLead(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(patch),
   });
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.error || 'Failed to update lead');
-  }
+  if (!res.ok) await throwApiError(res, 'Failed to update lead');
   return res.json();
 }
 
@@ -318,7 +314,7 @@ export async function createBlogPost(post: Partial<BlogPost>): Promise<BlogPost>
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(post),
   });
-  if (!res.ok) throw new Error('Failed to create post');
+  if (!res.ok) await throwApiError(res, 'Failed to create post');
   return res.json();
 }
 
@@ -328,7 +324,7 @@ export async function updateBlogPost(id: number, post: Partial<BlogPost>): Promi
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(post),
   });
-  if (!res.ok) throw new Error('Failed to update post');
+  if (!res.ok) await throwApiError(res, 'Failed to update post');
   return res.json();
 }
 
@@ -409,10 +405,7 @@ export async function saveSectionContent(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ locale, content, status }),
   });
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.error || 'Failed to save section content');
-  }
+  if (!res.ok) await throwApiError(res, 'Failed to save section content');
   return res.json();
 }
 

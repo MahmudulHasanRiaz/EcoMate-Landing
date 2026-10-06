@@ -2,7 +2,6 @@ import { desc, isNull, sql } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { blogPostsTable } from '@/db/schema';
 import {
-  asObject,
   errorMessage,
   fail,
   failWithRequestId,
@@ -10,10 +9,12 @@ import {
   logServerError,
   ok,
 } from '@/lib/json';
-import { readBlogPostCreate } from '@/lib/blog';
+import { assertSlugAvailable } from '@/lib/guard';
 import { paginate } from '@/lib/paginate';
 import { requestId } from '@/lib/request';
 import { invalidateDomains } from '@/lib/revalidate';
+import { sanitizeHtml } from '@/lib/sanitize';
+import { blogPostCreate } from '@/lib/validation';
 
 /** Paginated (Task 16 §4). Public: this route is the index feed, not an admin surface. */
 export async function GET(req: Request) {
@@ -49,9 +50,37 @@ export async function GET(req: Request) {
 // NEVER `.values(body)` — mass assignment on insert is the same hole as on update.
 export async function POST(req: Request) {
   try {
-    const row = readBlogPostCreate(asObject(await req.json()));
-    if (!row.slug || !row.title) return fail('slug and title are required', 400);
-    const [created] = await getDb().insert(blogPostsTable).values(row).returning();
+    // Validate first (shape + length): a 120KB payload is rejected by length before it
+    // ever reaches the sanitizer.
+    const parsed = blogPostCreate.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) {
+      return fail('Validation failed', 400, { issues: parsed.error.issues });
+    }
+    const slugGuard = await assertSlugAvailable('blog_posts', parsed.data.slug);
+    if (!slugGuard.ok) return fail(slugGuard.reason, 409);
+    const { ogImageUrl: _ogImage, publishedAt, ...rest } = parsed.data;
+    void _ogImage;
+    const [created] = await getDb()
+      .insert(blogPostsTable)
+      .values({
+        slug: rest.slug,
+        title: rest.title,
+        excerpt: rest.excerpt ?? '',
+        // Sanitized after validation: the length bound already held on the raw input,
+        // and sanitizing can only shrink it.
+        content: sanitizeHtml(rest.content),
+        author: rest.author ?? 'EcoMate Engineering Team',
+        category: rest.category ?? 'Operations & Fulfillment',
+        tags: rest.tags ?? [],
+        featuredImageUrl: rest.featuredImageUrl ?? '',
+        readTime: rest.readTime ?? '5 min read',
+        status: rest.status ?? 'draft',
+        seoTitle: rest.seoTitle ?? '',
+        seoDescription: rest.seoDescription ?? '',
+        canonicalUrl: rest.canonicalUrl ?? '',
+        publishedAt: publishedAt ? new Date(publishedAt) : rest.status === 'published' ? new Date() : undefined,
+      })
+      .returning();
     // The blog index, the article page and the sitemap all read under this tag, so a new
     // draft is not searchable and a newly published one appears without a rebuild.
     invalidateDomains('blog');

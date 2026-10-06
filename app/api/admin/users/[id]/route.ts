@@ -10,14 +10,15 @@
  *  - a privilege change or password reset revokes **every** live session for that operator,
  *    because a session that keeps working after a role change is a privilege-escalation bug.
  */
-import { and, count, eq, ne } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { adminAuditLogsTable, adminUsersTable, sessionsTable } from '@/db/schema';
 import { requireAdminRole } from '@/lib/authz';
-import { asObject, errorMessage, fail, logServerError, ok, parseId } from '@/lib/json';
-import { parseAdminRole, readPassword } from '@/lib/operators';
+import { errorMessage, fail, logServerError, ok, parseId } from '@/lib/json';
+import { assertNotLastSuperadmin, assertNotSelfDeactivate } from '@/lib/guard';
 import { hashPassword, passwordPolicyError } from '@/lib/password';
 import { clientIp } from '@/lib/request';
+import { operatorUpdate } from '@/lib/validation';
 
 const OPERATOR_COLUMNS = {
   id: adminUsersTable.id,
@@ -30,21 +31,6 @@ const OPERATOR_COLUMNS = {
   createdAt: adminUsersTable.createdAt,
   updatedAt: adminUsersTable.updatedAt,
 };
-
-/** True when another active superadmin remains, i.e. losing this one is safe. */
-async function hasAnotherActiveSuperadmin(operatorId: number): Promise<boolean> {
-  const [others] = await getDb()
-    .select({ total: count() })
-    .from(adminUsersTable)
-    .where(
-      and(
-        eq(adminUsersTable.role, 'superadmin'),
-        eq(adminUsersTable.isActive, true),
-        ne(adminUsersTable.id, operatorId),
-      ),
-    );
-  return (others?.total ?? 0) > 0;
-}
 
 export async function PUT(
   request: Request,
@@ -62,22 +48,18 @@ export async function PUT(
     const [target] = await db.select().from(adminUsersTable).where(eq(adminUsersTable.id, id)).limit(1);
     if (!target) return fail('Operator not found', 404);
 
-    const body = asObject(await request.json().catch(() => null));
-
-    const roleRaw = body.role;
-    const nextRole = roleRaw === undefined ? undefined : parseAdminRole(roleRaw);
-    if (roleRaw !== undefined && nextRole === null) {
-      return fail('role must be one of superadmin, admin, editor', 400);
+    const parsed = operatorUpdate.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) {
+      return fail('Validation failed', 400, { issues: parsed.error.issues });
     }
-    const nextActive = typeof body.isActive === 'boolean' ? body.isActive : undefined;
-    const nextPassword = body.password === undefined ? undefined : readPassword(body.password);
-    if (nextPassword !== undefined) {
-      const policyError = passwordPolicyError(nextPassword);
-      if (policyError) return fail(policyError, 400);
-    }
+    const { role: nextRole, isActive: nextActive, password: nextPassword } = parsed.data;
 
     if (nextRole === undefined && nextActive === undefined && nextPassword === undefined) {
       return fail('No supported fields supplied', 400);
+    }
+    if (nextPassword !== undefined) {
+      const policyError = passwordPolicyError(nextPassword);
+      if (policyError) return fail(policyError, 400);
     }
 
     const roleChanged = nextRole !== undefined && nextRole !== target.role;
@@ -89,8 +71,14 @@ export async function PUT(
       target.role === 'superadmin' &&
       target.isActive &&
       ((roleChanged && nextRole !== 'superadmin') || deactivating);
-    if (losingSuperadmin && !(await hasAnotherActiveSuperadmin(target.id))) {
-      return fail('Cannot remove the last active superadmin', 409);
+    if (losingSuperadmin) {
+      const lastGuard = await assertNotLastSuperadmin(target.id);
+      if (!lastGuard.ok) return fail(lastGuard.reason, 409);
+    }
+    if (deactivating) {
+      // An admin cannot lock themselves out mid-session by deactivating their own account.
+      const selfGuard = assertNotSelfDeactivate(guard.actorId, target.id);
+      if (!selfGuard.ok) return fail(selfGuard.reason, 409);
     }
 
     const actions: string[] = [];
@@ -153,9 +141,12 @@ export async function DELETE(
     const [target] = await db.select().from(adminUsersTable).where(eq(adminUsersTable.id, id)).limit(1);
     if (!target) return fail('Operator not found', 404);
 
-    if (target.isActive && target.role === 'superadmin' && !(await hasAnotherActiveSuperadmin(target.id))) {
-      return fail('Cannot remove the last active superadmin', 409);
+    if (target.isActive && target.role === 'superadmin') {
+      const lastGuard = await assertNotLastSuperadmin(target.id);
+      if (!lastGuard.ok) return fail(lastGuard.reason, 409);
     }
+    const selfGuard = assertNotSelfDeactivate(guard.actorId, target.id);
+    if (!selfGuard.ok) return fail(selfGuard.reason, 409);
 
     const ip = clientIp(request);
     const actorId = guard.actorId;

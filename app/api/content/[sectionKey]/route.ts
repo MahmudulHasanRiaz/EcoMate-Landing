@@ -9,12 +9,8 @@ import { and, eq, isNull, sql } from 'drizzle-orm';
 import { updateTag } from 'next/cache';
 import { getDb } from '@/db/client';
 import { landingContentTable } from '@/db/schema';
-import { asObject, errorMessage, fail, logServerError, ok, optionalObject } from '@/lib/json';
-import type { Locale } from '@/src/types/landing';
-
-// Section keys are ours (hero, complexity, …), not user copy: a strict shape keeps a typo
-// from creating an unreachable row and keeps the key usable in a cache tag.
-const SECTION_KEY = /^[a-z][a-z0-9._-]{0,63}$/;
+import { errorMessage, fail, logServerError, ok } from '@/lib/json';
+import { contentUpsert } from '@/lib/validation';
 
 interface RouteContext {
   params: Promise<{ sectionKey: string }>;
@@ -51,15 +47,19 @@ export async function GET(req: Request, { params }: RouteContext) {
 export async function PUT(req: Request, { params }: RouteContext) {
   try {
     const sectionKey = (await params).sectionKey;
-    if (!SECTION_KEY.test(sectionKey)) return fail('Invalid section key', 400);
 
     // NEVER spread the body into `.set()` / `.values()`: it is attacker-controlled and
-    // would let a caller write id, version, deleted_at or another tenant's locale.
-    const body = asObject(await req.json());
-    const locale: Locale = body.locale === 'bn' ? 'bn' : 'en';
-    const content = optionalObject(body.content);
-    if (!content) return fail('content must be a JSON object', 400);
-    const status = body.status === 'draft' ? 'draft' : 'published';
+    // would let a caller write id, version, deleted_at or another tenant's locale. The
+    // section key travels in the URL, so it is merged with the body and validated as one
+    // strict object — an unknown key or a malformed section key is a 400, not a new row.
+    const body: unknown = await req.json().catch(() => null);
+    const candidate =
+      typeof body === 'object' && body !== null ? { ...(body as object), sectionKey } : null;
+    const parsed = contentUpsert.safeParse(candidate);
+    if (!parsed.success) {
+      return fail('Validation failed', 400, { issues: parsed.error.issues });
+    }
+    const { locale, content, status } = parsed.data;
 
     const db = getDb();
     const [row] = await db

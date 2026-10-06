@@ -3,6 +3,7 @@ import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { getDb } from '@/db/client';
 import { mediaAssetsTable } from '@/db/schema';
 import { errorMessage, fail, logServerError, ok, parseId } from '@/lib/json';
+import { assertMediaNotInUse } from '@/lib/guard';
 
 /** Soft-deleted rows younger than this still count as references to their R2 key. */
 const REFERENCE_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
@@ -36,6 +37,11 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
       .where(eq(mediaAssetsTable.id, id))
       .limit(1);
     if (!asset) return fail('Media asset not found', 404);
+
+    // Referential guard: a key still embedded in live content cannot be deleted out
+    // from under the page that serves it. Names the conflicting entity in the 409.
+    const inUse = await assertMediaNotInUse(asset.key);
+    if (!inUse.ok) return fail(inUse.reason ?? 'Media asset is still in use', 409);
 
     const cutoff = new Date(Date.now() - REFERENCE_RETENTION_MS);
     const [stillReferenced] = await db

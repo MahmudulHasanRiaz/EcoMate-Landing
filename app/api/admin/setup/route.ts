@@ -15,11 +15,12 @@ import { count, sql } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { adminAuditLogsTable, adminUsersTable } from '@/db/schema';
 import { envString } from '@/lib/env';
-import { asObject, errorMessage, fail, logServerError, ok, readString } from '@/lib/json';
-import { isValidEmail, normalizeEmail, readPassword } from '@/lib/operators';
+import { errorMessage, fail, logServerError, ok } from '@/lib/json';
+import { normalizeEmail, readPassword } from '@/lib/operators';
 import { hashPassword, passwordPolicyError, timingSafeStringEqual } from '@/lib/password';
 import { clientIp } from '@/lib/request';
 import { createTotpEnrollment } from '@/lib/totp';
+import { setupCreate } from '@/lib/validation';
 
 export async function POST(request: Request): Promise<Response> {
   try {
@@ -28,16 +29,20 @@ export async function POST(request: Request): Promise<Response> {
       return fail('Setup is not enabled on this deployment', 503);
     }
 
-    const body = asObject(await request.json().catch(() => null));
-    const token = readString(body.token);
-    const email = normalizeEmail(body.email);
-    const password = readPassword(body.password);
+    const parsed = setupCreate.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) {
+      return fail('Validation failed', 400, { issues: parsed.error.issues });
+    }
+    // Normalized before validation by the schema (trim + lowercase); re-normalizing here
+    // is idempotent and keeps the single `normalizeEmail` home for the transform.
+    const token = parsed.data.token;
+    const email = normalizeEmail(parsed.data.email);
+    const password = readPassword(parsed.data.password);
 
     // Constant-time: a fast `===` here leaks the token prefix byte by byte.
     if (!timingSafeStringEqual(token, configuredToken)) {
       return fail('Invalid setup token', 403);
     }
-    if (!isValidEmail(email)) return fail('A valid email address is required', 400);
     const policyError = passwordPolicyError(password);
     if (policyError) return fail(policyError, 400);
 

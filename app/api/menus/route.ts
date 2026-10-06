@@ -15,23 +15,13 @@ import { and, asc, eq, inArray } from 'drizzle-orm';
 import { updateTag } from 'next/cache';
 import { getDb } from '@/db/client';
 import { menuItemsTable, menusTable } from '@/db/schema';
-import {
-  asObject,
-  errorMessage,
-  fail,
-  logServerError,
-  ok,
-  readBoolean,
-  readNumber,
-  readString,
-  readStringArray,
-} from '@/lib/json';
+import { errorMessage, fail, logServerError, ok } from '@/lib/json';
 import { requireAdminRole } from '@/lib/authz';
 import { canWriteContent } from '@/lib/roles';
 import { isLocale } from '@/lib/locales';
+import { menuCreate, menuReplace, type MENU_KEYS } from '@/lib/validation';
 import type { Locale } from '@/src/types/landing';
 
-const MENU_KEYS = ['main', 'footer'] as const;
 type MenuKey = (typeof MENU_KEYS)[number];
 
 export interface MenuPayload {
@@ -41,26 +31,11 @@ export interface MenuPayload {
 }
 
 function readMenuKey(value: unknown, fallback: MenuKey = 'main'): MenuKey {
-  return MENU_KEYS.includes(value as MenuKey) ? (value as MenuKey) : fallback;
+  return value === 'main' || value === 'footer' ? value : fallback;
 }
 
 function isMenuKey(value: unknown): value is MenuKey {
-  return MENU_KEYS.includes(value as MenuKey);
-}
-
-/**
- * One menu with its visible, top-level items in display order.
- *
- * `href` is validated for shape, not allowlisted against a set of pages: navigation may point
- * at an anchor (`#pricing`), a locale path (`/bn`) or an external URL, and all three are
- * legitimate. What is refused is a `javascript:` or `data:` URL, which is the only way this
- * column could become an injection vector — an admin is trusted with copy, not with script.
- */
-const SAFE_HREF = /^(#|\/(?!\/)|https?:\/\/|mailto:|tel:)/;
-
-function readHref(raw: string): string | null {
-  const href = raw.trim();
-  return href !== '' && SAFE_HREF.test(href) ? href : null;
+  return value === 'main' || value === 'footer';
 }
 
 export async function GET(req: Request) {
@@ -69,7 +44,7 @@ export async function GET(req: Request) {
     const keyParam = url.searchParams.get('key');
     const localeParam = url.searchParams.get('locale');
 
-    const keys: MenuKey[] = isMenuKey(keyParam) ? [keyParam] : [...MENU_KEYS];
+    const keys: MenuKey[] = isMenuKey(keyParam) ? [keyParam] : ['main', 'footer'];
     const locale: Locale | null = localeParam ? (isLocale(localeParam) ? localeParam : null) : null;
     if (localeParam && !locale) return fail('Invalid locale', 400);
 
@@ -80,7 +55,7 @@ export async function GET(req: Request) {
       .where(locale ? eq(menusTable.locale, locale) : undefined)
       .orderBy(asc(menusTable.key), asc(menusTable.locale));
 
-    const wanted = menus.filter((menu) => keys.includes(readMenuKey(menu.key)));
+    const wanted = menus.filter((menu) => isMenuKey(menu.key));
     if (wanted.length === 0) return ok([] as MenuPayload[]);
 
     const items = await db
@@ -89,18 +64,20 @@ export async function GET(req: Request) {
       .where(inArray(menuItemsTable.menuId, wanted.map((menu) => menu.id)))
       .orderBy(asc(menuItemsTable.sortOrder), asc(menuItemsTable.id));
 
-    const payload: MenuPayload[] = wanted.map((menu) => ({
-      key: readMenuKey(menu.key),
-      locale: (isLocale(menu.locale) ? menu.locale : 'en') as Locale,
-      items: items
-        .filter((item) => item.menuId === menu.id && item.isVisible && item.parentId === null)
-        .map((item) => ({
-          label: item.label,
-          href: item.href,
-          sortOrder: item.sortOrder,
-          isVisible: item.isVisible,
-        })),
-    }));
+    const payload: MenuPayload[] = wanted
+      .filter((menu) => keys.includes(readMenuKey(menu.key)))
+      .map((menu) => ({
+        key: readMenuKey(menu.key),
+        locale: (isLocale(menu.locale) ? menu.locale : 'en') as Locale,
+        items: items
+          .filter((item) => item.menuId === menu.id && item.isVisible && item.parentId === null)
+          .map((item) => ({
+            label: item.label,
+            href: item.href,
+            sortOrder: item.sortOrder,
+            isVisible: item.isVisible,
+          })),
+      }));
     return ok(payload);
   } catch (e) {
     logServerError('GET /api/menus', e);
@@ -121,13 +98,13 @@ export async function POST(req: Request) {
   if (!canWriteContent(guard.role)) return fail('Editors cannot edit navigation', 403);
 
   try {
-    const body = asObject(await req.json());
-    const key = readMenuKey(body.key);
-    const locale: Locale = isLocale(body.locale) ? body.locale : 'en';
-    const label = readString(body.label).trim();
-    const href = readHref(readString(body.href));
-    if (!label) return fail('label is required', 400);
-    if (!href) return fail('href must be a safe path, anchor or http(s) URL', 400);
+    const parsed = menuCreate.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) {
+      return fail('Validation failed', 400, { issues: parsed.error.issues });
+    }
+    const key = parsed.data.key;
+    const locale: Locale = parsed.data.locale ?? 'en';
+    const { label, href } = parsed.data;
 
     const db = getDb();
     const created = await db.transaction(async (tx) => {
@@ -168,28 +145,20 @@ export async function PUT(req: Request) {
   if (!canWriteContent(guard.role)) return fail('Editors cannot edit navigation', 403);
 
   try {
-    const body = asObject(await req.json());
-    const key = readMenuKey(body.key);
-    const locale: Locale = isLocale(body.locale) ? body.locale : 'en';
-    const rawItems = readStringArray(body.items);
-
-    const parsed: { label: string; href: string; sortOrder: number; isVisible: boolean }[] = [];
-    for (const [index, raw] of rawItems.entries()) {
-      const item = asObject(raw);
-      const label = readString(item.label).trim();
-      const href = readHref(readString(item.href));
-      if (!label || !href) {
-        return fail(`items[${index}] needs a label and a safe href`, 400);
-      }
-      parsed.push({
-        label,
-        href,
-        // Default to the array position so a client that does not send `sortOrder` still
-        // stores the order it sent them in.
-        sortOrder: item.sortOrder === undefined ? index : readNumber(item.sortOrder, index),
-        isVisible: readBoolean(item.isVisible, true),
-      });
+    const parsed = menuReplace.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) {
+      return fail('Validation failed', 400, { issues: parsed.error.issues });
     }
+    const key = parsed.data.key;
+    const locale: Locale = parsed.data.locale ?? 'en';
+    // Default to the array position so a client that does not send `sortOrder` still
+    // stores the order it sent them in.
+    const items = parsed.data.items.map((item, index) => ({
+      label: item.label,
+      href: item.href,
+      sortOrder: item.sortOrder ?? index,
+      isVisible: item.isVisible ?? true,
+    }));
 
     const db = getDb();
     const [menu] = await db
@@ -204,10 +173,10 @@ export async function PUT(req: Request) {
       // beyond itself, and the ids change on every save, which is why no external table
       // references them.
       await tx.delete(menuItemsTable).where(eq(menuItemsTable.menuId, menu.id));
-      if (parsed.length === 0) return [];
+      if (items.length === 0) return [];
       return tx
         .insert(menuItemsTable)
-        .values(parsed.map((item) => ({ ...item, menuId: menu.id })))
+        .values(items.map((item) => ({ ...item, menuId: menu.id })))
         .returning();
     });
 

@@ -20,11 +20,11 @@ import { eq } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { adminAuditLogsTable, adminUsersTable } from '@/db/schema';
 import { envString } from '@/lib/env';
-import { asObject, errorMessage, fail, logServerError, ok, readString } from '@/lib/json';
-import { isValidEmail, normalizeEmail } from '@/lib/operators';
+import { errorMessage, fail, logServerError, ok } from '@/lib/json';
 import { timingSafeStringEqual } from '@/lib/password';
 import { clientIp } from '@/lib/request';
 import { createTotpEnrollment, storedTotpMatches } from '@/lib/totp';
+import { setupTotp } from '@/lib/validation';
 
 export async function POST(request: Request): Promise<Response> {
   try {
@@ -33,15 +33,17 @@ export async function POST(request: Request): Promise<Response> {
       return fail('Setup is not enabled on this deployment', 503);
     }
 
-    const body = asObject(await request.json().catch(() => null));
+    const parsed = setupTotp.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) {
+      return fail('Validation failed', 400, { issues: parsed.error.issues });
+    }
 
     // Constant-time: a fast `===` here leaks the token prefix byte by byte.
-    if (!timingSafeStringEqual(readString(body.token), configuredToken)) {
+    if (!timingSafeStringEqual(parsed.data.token, configuredToken)) {
       return fail('Invalid setup token', 403);
     }
 
-    const email = normalizeEmail(body.email);
-    if (!isValidEmail(email)) return fail('A valid email address is required', 400);
+    const email = parsed.data.email;
 
     const db = getDb();
     const [admin] = await db
@@ -61,7 +63,7 @@ export async function POST(request: Request): Promise<Response> {
 
     const ip = clientIp(request);
 
-    if (body.reissue === true) {
+    if (parsed.data.reissue === true) {
       const enrollment = await createTotpEnrollment(email);
       await db.transaction(async (tx) => {
         await tx
@@ -83,7 +85,7 @@ export async function POST(request: Request): Promise<Response> {
       });
     }
 
-    const code = readString(body.code).trim();
+    const code = (parsed.data.code ?? '').trim();
     if (!(await storedTotpMatches(admin.totpSecret, code))) {
       return fail('That code is not valid. Check your device clock and try again.', 400);
     }

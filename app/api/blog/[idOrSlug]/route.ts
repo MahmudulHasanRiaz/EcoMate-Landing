@@ -2,7 +2,6 @@ import { and, eq, isNull } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { blogPostsTable } from '@/db/schema';
 import {
-  asObject,
   errorMessage,
   fail,
   isUniqueViolation,
@@ -10,8 +9,9 @@ import {
   ok,
   parseId,
 } from '@/lib/json';
-import { readBlogPostPatch } from '@/lib/blog';
 import { invalidateDomains } from '@/lib/revalidate';
+import { sanitizeHtml } from '@/lib/sanitize';
+import { blogPostUpdate } from '@/lib/validation';
 
 /**
  * `/api/blog/[idOrSlug]`
@@ -46,10 +46,23 @@ export async function PUT(req: Request, { params }: { params: Promise<{ idOrSlug
     const id = parseId(idOrSlug);
     if (id === null) return fail('Invalid post id', 400);
 
-    const patch = readBlogPostPatch(asObject(await req.json()));
+    const parsed = blogPostUpdate.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) {
+      return fail('Validation failed', 400, { issues: parsed.error.issues });
+    }
+    // `slug` is not updatable (stable, indexed, SEO-visible identifier) and has no column
+    // `og_image_url` — both are stripped before the write rather than spread in.
+    const { ogImageUrl: _ogImage, publishedAt, content, ...rest } = parsed.data;
+    void _ogImage;
     const [updated] = await getDb()
       .update(blogPostsTable)
-      .set(patch)
+      .set({
+        ...rest,
+        ...(content !== undefined ? { content: sanitizeHtml(content) } : {}),
+        // `null` (or absent) leaves the column alone — never silently re-dated.
+        ...(typeof publishedAt === 'string' ? { publishedAt: new Date(publishedAt) } : {}),
+        updatedAt: new Date(),
+      })
       .where(eq(blogPostsTable.id, id))
       .returning();
     if (!updated) return fail('Blog post not found', 404);

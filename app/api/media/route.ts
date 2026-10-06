@@ -2,17 +2,16 @@ import { desc, isNull, sql } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { mediaAssetsTable } from '@/db/schema';
 import {
-  asObject,
   errorMessage,
   fail,
   failWithRequestId,
   isUniqueViolation,
   logServerError,
   ok,
-  readString,
 } from '@/lib/json';
 import { paginate } from '@/lib/paginate';
 import { requestId } from '@/lib/request';
+import { mediaCreate } from '@/lib/validation';
 
 /** Paginated (Task 16 §4): the media library is a growing list, not a fixed set. */
 export async function GET(req: Request) {
@@ -45,23 +44,24 @@ export async function GET(req: Request) {
 // NEVER `.values(body)` — allowlist every column this endpoint may write.
 export async function POST(req: Request) {
   try {
-    const body = asObject(await req.json());
-    const row = {
-      key: readString(body.key).trim(),
-      title: readString(body.title).trim(),
-      url: readString(body.url).trim(),
-      altText: readString(body.altText).trim(),
-      category: readString(body.category, 'general').trim() || 'general',
-    };
-    if (!row.key || !row.title) return fail('key and title are required', 400);
-    if (!row.url) return fail('url is required', 400);
+    const parsed = mediaCreate.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) {
+      return fail('Validation failed', 400, { issues: parsed.error.issues });
+    }
     // An asset created through the admin *is* the publish — there is no separate draft flag on
-    // `media_assets`. Accepting a row without alt text would put an unlabelled image into the
-    // library, where nothing later forces it to be labelled: a screen reader announces a file
-    // name, and an unnamed decorative image is indistinguishable from a broken one. Refusing
-    // the write is the only point where the asset is still editable.
-    if (!row.altText) return fail('altText is required before an asset can be published', 400);
-    const [created] = await getDb().insert(mediaAssetsTable).values(row).returning();
+    // `media_assets`, so the schema requires non-empty alt text on this path: accepting a row
+    // without it would put an unlabelled image into the library, where nothing later forces
+    // it to be labelled.
+    const [created] = await getDb()
+      .insert(mediaAssetsTable)
+      .values({
+        key: parsed.data.key.trim(),
+        title: parsed.data.title.trim(),
+        url: parsed.data.url,
+        altText: parsed.data.altText.trim(),
+        category: parsed.data.category ?? 'general',
+      })
+      .returning();
     return ok(created, 201);
   } catch (e) {
     logServerError('POST /api/media', e, requestId(req));

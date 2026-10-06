@@ -21,21 +21,16 @@ import { and, asc, eq, ne } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { redirectsTable } from '@/db/schema';
 import {
-  asObject,
   errorMessage,
   fail,
   isUniqueViolation,
   logServerError,
   ok,
-  parseId,
-  readNumber,
-  readString,
 } from '@/lib/json';
 import { requireAdminRole } from '@/lib/authz';
 import { canWriteContent } from '@/lib/roles';
 import { resetRedirectCache } from '@/lib/redirects';
-
-const ALLOWED_STATUS_CODES = [301, 302, 307, 308] as const;
+import { redirectCreate, redirectDelete, redirectUpdate } from '@/lib/validation';
 
 /** Prefixes a redirect may never claim, because they are not public documents. */
 const RESERVED_PREFIXES = ['/admin', '/api', '/_next', '/_vercel'];
@@ -47,37 +42,21 @@ function normalisePath(raw: string): string | null {
   return path.length > 1 && path.endsWith('/') ? path.slice(0, -1) : path;
 }
 
-function readStatusCode(value: unknown): number {
-  const code = readNumber(value, 308);
-  return (ALLOWED_STATUS_CODES as readonly number[]).includes(code) ? code : 308;
-}
-
-export async function GET() {
-  try {
-    const rows = await getDb()
-      .select()
-      .from(redirectsTable)
-      .orderBy(asc(redirectsTable.id));
-    return ok(rows);
-  } catch (e) {
-    logServerError('GET /api/redirects', e);
-    return fail(errorMessage(e));
-  }
-}
-
-/** Shared validation for POST and PUT: returns an error string, or the normalised rule. */
-function validateRule(
-  body: Record<string, unknown>,
-): { fromPath: string; toPath: string; statusCode: number } | string {
-  const fromPath = normalisePath(readString(body.fromPath));
-  const toPath = normalisePath(readString(body.toPath));
+/** Shared semantic validation for POST and PUT: returns an error string, or the normalised rule. */
+function validateRule(rule: { fromPath: string; toPath: string; statusCode?: 301 | 302 | 307 | 308 }): {
+  fromPath: string;
+  toPath: string;
+  statusCode: 301 | 302 | 307 | 308;
+} | string {
+  const fromPath = normalisePath(rule.fromPath);
+  const toPath = normalisePath(rule.toPath);
   if (!fromPath) return 'fromPath must be a site-absolute path starting with "/"';
   if (!toPath) return 'toPath must be a site-absolute path starting with "/"';
   if (fromPath === toPath) return 'fromPath and toPath must differ (that is an infinite redirect)';
   if (RESERVED_PREFIXES.some((prefix) => fromPath === prefix || fromPath.startsWith(`${prefix}/`))) {
     return `fromPath may not be under ${RESERVED_PREFIXES.join(', ')}`;
   }
-  return { fromPath, toPath, statusCode: readStatusCode(body.statusCode) };
+  return { fromPath, toPath, statusCode: rule.statusCode ?? 308 };
 }
 
 /** Reject a rule whose `toPath` is already the source of another rule. */
@@ -96,14 +75,30 @@ async function assertNoCycle(toPath: string, excludeId: number | null): Promise<
     : null;
 }
 
+export async function GET() {
+  try {
+    const rows = await getDb()
+      .select()
+      .from(redirectsTable)
+      .orderBy(asc(redirectsTable.id));
+    return ok(rows);
+  } catch (e) {
+    logServerError('GET /api/redirects', e);
+    return fail(errorMessage(e));
+  }
+}
+
 export async function POST(req: Request) {
   const guard = await requireAdminRole(['superadmin', 'admin', 'editor']);
   if (!guard.ok) return guard.response;
   if (!canWriteContent(guard.role)) return fail('Editors cannot manage redirects', 403);
 
   try {
-    const body = asObject(await req.json());
-    const rule = validateRule(body);
+    const parsed = redirectCreate.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) {
+      return fail('Validation failed', 400, { issues: parsed.error.issues });
+    }
+    const rule = validateRule(parsed.data);
     if (typeof rule === 'string') return fail(rule, 400);
 
     const cycle = await assertNoCycle(rule.toPath, null);
@@ -131,11 +126,12 @@ export async function PUT(req: Request) {
   if (!canWriteContent(guard.role)) return fail('Editors cannot manage redirects', 403);
 
   try {
-    const body = asObject(await req.json());
-    const id = parseId(readString(body.id));
-    if (id === null) return fail('Invalid redirect id', 400);
-
-    const rule = validateRule(body);
+    const parsed = redirectUpdate.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) {
+      return fail('Validation failed', 400, { issues: parsed.error.issues });
+    }
+    const { id } = parsed.data;
+    const rule = validateRule(parsed.data);
     if (typeof rule === 'string') return fail(rule, 400);
 
     const cycle = await assertNoCycle(rule.toPath, id);
@@ -162,13 +158,14 @@ export async function DELETE(req: Request) {
   if (!canWriteContent(guard.role)) return fail('Editors cannot manage redirects', 403);
 
   try {
-    const body = asObject(await req.json());
-    const id = parseId(readString(body.id));
-    if (id === null) return fail('Invalid redirect id', 400);
+    const parsed = redirectDelete.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) {
+      return fail('Validation failed', 400, { issues: parsed.error.issues });
+    }
 
     const [deleted] = await getDb()
       .delete(redirectsTable)
-      .where(eq(redirectsTable.id, id))
+      .where(eq(redirectsTable.id, parsed.data.id))
       .returning();
     if (!deleted) return fail('Redirect not found', 404);
     resetRedirectCache();

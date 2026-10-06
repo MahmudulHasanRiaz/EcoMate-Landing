@@ -21,6 +21,7 @@ import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { requireAdminRole } from '@/lib/authz';
 import { errorMessage, fail, logServerError, ok } from '@/lib/json';
 import { hitLimit } from '@/lib/rateLimit';
+import { mediaUploadMeta } from '@/lib/validation';
 
 /**
  * Public origin for uploaded media. The R2 bucket is fronted by the custom domain
@@ -144,6 +145,19 @@ export async function POST(req: Request) {
     }
 
     const form = await req.formData();
+    // Accompanying meta fields are optional, but when present they are validated rather
+    // than trusted — the file sniffing below is unchanged.
+    const metaCandidate: Record<string, unknown> = {};
+    for (const field of ['title', 'altText', 'category'] as const) {
+      const value = form.get(field);
+      if (typeof value === 'string' && value !== '') metaCandidate[field] = value;
+    }
+    if (Object.keys(metaCandidate).length > 0) {
+      const meta = mediaUploadMeta.safeParse(metaCandidate);
+      if (!meta.success) {
+        return fail('Validation failed', 400, { issues: meta.error.issues });
+      }
+    }
     const file = form.get('file');
     if (!(file instanceof File)) return fail('file is required', 400);
     if (file.size === 0) return fail('file is empty', 400);

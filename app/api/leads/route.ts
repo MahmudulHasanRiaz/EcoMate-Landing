@@ -1,5 +1,6 @@
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { desc, eq, sql } from 'drizzle-orm';
+import { requireAdminRole } from '@/lib/authz';
 import { getDb } from '@/db/client';
 import { leadsTable } from '@/db/schema';
 import {
@@ -80,6 +81,14 @@ function readEventId(value: unknown): string {
  */
 export async function GET(req: Request) {
   const reqId = requestId(req);
+
+  // Role-gated, not merely session-gated. A lead row carries name, phone, email, client IP
+  // and user agent — personal data. The role model gives `editor` content access only, so an
+  // editor must not be able to page through every lead. This route was previously reachable by
+  // any signed-in role; the proxy only proves a session exists, not that it may see leads.
+  const guard = await requireAdminRole(['superadmin', 'admin']);
+  if (!guard.ok) return guard.response;
+
   try {
     if (wantsOverdue(req.url)) {
       const page = await paginate(

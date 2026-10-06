@@ -1,6 +1,14 @@
 import type { Metadata } from 'next';
 import { Hind_Siliguri, Instrument_Serif, JetBrains_Mono, Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
+import {
+  SITE_DESCRIPTION,
+  SITE_NAME,
+  SITE_TAGLINE,
+  SITE_URL,
+  organizationJsonLd,
+  serializeJsonLd,
+} from '@/lib/seo';
 
 const sans = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -28,21 +36,39 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ecomate.app'),
-  title: 'EcoMate — Your Entire E-commerce Operation, Managed From One Place',
-  description:
-    'EcoMate is the complete operating platform for scaling e-commerce businesses. Unify online stores, showrooms, inventory, smart packing, couriers, finance, and marketing.',
-  // Ported from the Vite index.html head so the App Router shell carries the
-  // same share-card meta the prototype shipped.
+  // Every relative URL below (canonical, OG, sitemap) resolves against this origin, so the
+  // deployed host and the declared canonical can never drift apart.
+  metadataBase: new URL(SITE_URL),
+  title: `${SITE_NAME} — ${SITE_TAGLINE}`,
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  alternates: {
+    canonical: '/',
+    // hreflang: only `en` is a real route today. The `bn` alternate is added by the
+    // locale-routing task in the same change that ships `/bn` — advertising a language
+    // alternate that 404s is worse than declaring a single language. `x-default` marks
+    // this route as the fallback for unmatched languages.
+    languages: { en: '/', 'x-default': '/' },
+  },
+  // Ported from the Vite index.html head so the App Router shell carries the same
+  // share-card meta the prototype shipped.
   openGraph: {
-    title: 'EcoMate — Your Entire E-commerce Operation, Managed From One Place',
+    type: 'website',
+    url: SITE_URL,
+    siteName: SITE_NAME,
+    locale: 'en_US',
+    title: `${SITE_NAME} — ${SITE_TAGLINE}`,
     description:
       'Manage orders, multi-warehouse inventory, smart barcode packing, couriers, POS showrooms, double-entry finance and marketing from one central control center.',
-    type: 'website',
+    // No `images` entry yet: there is no OG asset to point at, and a URL that 404s is worse
+    // than an omitted image. Task 15 resolves OG images from R2 `featuredImageUrl`.
   },
   twitter: {
     card: 'summary_large_image',
+    title: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    description: SITE_DESCRIPTION,
   },
+  robots: { index: true, follow: true },
   other: {
     'theme-color': '#F2F3F9',
   },
@@ -55,6 +81,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`scroll-smooth ${sans.variable} ${serif.variable} ${bangla.variable} ${mono.variable}`}
     >
       <body className="bg-[#F2F3F9] text-slate-900 antialiased selection:bg-indigo-600 selection:text-white dark:bg-[#07080E] dark:text-slate-100">
+        {/* Site-wide Organization node. Rendered server-side so no JavaScript is needed for
+            crawlers to see it; `serializeJsonLd` escapes `<` so content can never break out
+            of the script element. */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(organizationJsonLd()) }}
+        />
         {children}
       </body>
     </html>

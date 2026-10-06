@@ -16,6 +16,7 @@ import { ArrowLeft } from 'lucide-react';
 import { getCaseStudies, getCaseStudy } from '@/lib/content';
 import { formatDate } from '@/lib/format';
 import { LOCALES, isLocale } from '@/lib/locales';
+import { PRERENDER_PROBE_SLUG } from '@/lib/prerender-probe';
 import {
   absoluteUrl,
   articleJsonLd,
@@ -39,13 +40,17 @@ const CRUMBS = {
  * Enumerate every published study under both locales.
  *
  * Same reasoning as the blog page: a dynamic route with no build-time list cannot be
- * prerendered under Cache Components. An unreachable database yields an empty list and the
- * route renders on demand instead.
+ * prerendered under Cache Components. Note that the empty case is not only an outage —
+ * `getCaseStudies` returns `null` for a table with nothing published in it — and Cache
+ * Components rejects a zero-entry result in both cases, so the empty case emits one probe
+ * entry per locale instead. See `lib/prerender-probe.ts` for the full rationale.
  */
 export async function generateStaticParams() {
-  const studies = await getCaseStudies().catch(() => null);
-  if (!studies) return [];
-  return LOCALES.flatMap((locale) => studies.map((study) => ({ locale, slug: study.slug })));
+  const studies = (await getCaseStudies().catch(() => null)) ?? [];
+  const entries = LOCALES.flatMap((locale) => studies.map((study) => ({ locale, slug: study.slug })));
+  return entries.length > 0
+    ? entries
+    : LOCALES.map((locale) => ({ locale, slug: PRERENDER_PROBE_SLUG }));
 }
 
 export async function generateMetadata({ params }: CaseStudyPageProps): Promise<Metadata> {
@@ -85,6 +90,9 @@ export async function generateMetadata({ params }: CaseStudyPageProps): Promise<
 export default async function CaseStudyPage({ params }: CaseStudyPageProps) {
   const { locale, slug } = await params;
   if (!isLocale(locale)) notFound();
+  // Unconditional, and ahead of the read: the prerender probe must 404 regardless of database
+  // state or of an admin having typed the same string as a slug. See `lib/prerender-probe.ts`.
+  if (slug === PRERENDER_PROBE_SLUG) notFound();
 
   const study = await getCaseStudy(slug);
   if (!study) notFound();

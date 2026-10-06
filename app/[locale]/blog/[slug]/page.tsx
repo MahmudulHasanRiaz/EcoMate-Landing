@@ -20,10 +20,18 @@
  * cannot be enumerated at build has no shell to prerender — Next refuses it outright rather
  * than degrading. So the list is enumerated here, one entry per (locale, slug) pair.
  *
- * When the database is unreachable the list is empty and nothing is prerendered; the route
- * still works, because `dynamicParams` stays at its default (`true`) and the first request for
- * a slug renders it on demand and then holds it under the `getBlogPost` cache profile. That is
- * the same degradation every other read in `lib/content.ts` makes.
+ * When the database is unreachable there is no list to enumerate, and an empty result is
+ * *not* a degradation the build tolerates: Cache Components rejects a zero-entry
+ * `generateStaticParams` outright, because an unenumerated dynamic route has no shell it can
+ * validate. (An earlier version of this comment claimed the empty list "still works" and left
+ * the pages to render on demand. It does not — the build fails.) So the empty case emits one
+ * probe entry per locale instead; see `lib/prerender-probe.ts` for the full rationale and for
+ * why `instant = false` was rejected.
+ *
+ * Recovery still costs nothing: the probe is the only prerendered path, `dynamicParams` stays
+ * at its default (`true`), and the first request for a real slug renders it on demand and then
+ * holds it under the `getBlogPost` cache profile — the same degradation every other read in
+ * `lib/content.ts` makes.
  */
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
@@ -33,6 +41,7 @@ import { BlogContent } from '@/components/BlogContent';
 import { getBlogPost, getPublishedBlogPosts } from '@/lib/content';
 import { formatDate } from '@/lib/format';
 import { LOCALES, isLocale } from '@/lib/locales';
+import { PRERENDER_PROBE_SLUG } from '@/lib/prerender-probe';
 import {
   absoluteUrl,
   articleJsonLd,
@@ -50,9 +59,13 @@ interface BlogPageProps {
 const CRUMBS = { en: { home: 'Home' }, bn: { home: 'হোম' } } as const;
 
 export async function generateStaticParams() {
-  const posts = await getPublishedBlogPosts().catch(() => null);
-  if (!posts) return [];
-  return LOCALES.flatMap((locale) => posts.map((post) => ({ locale, slug: post.slug })));
+  // `null` means the read failed (database unreachable); an empty array means nothing is
+  // published. Both collapse to "no entries", which the build rejects — see the file header.
+  const posts = (await getPublishedBlogPosts().catch(() => null)) ?? [];
+  const entries = LOCALES.flatMap((locale) => posts.map((post) => ({ locale, slug: post.slug })));
+  return entries.length > 0
+    ? entries
+    : LOCALES.map((locale) => ({ locale, slug: PRERENDER_PROBE_SLUG }));
 }
 
 export async function generateMetadata({ params }: BlogPageProps): Promise<Metadata> {
@@ -96,6 +109,10 @@ export async function generateMetadata({ params }: BlogPageProps): Promise<Metad
 export default async function BlogPage({ params }: BlogPageProps) {
   const { locale, slug } = await params;
   if (!isLocale(locale)) notFound();
+  // The prerender probe exists only to keep this route buildable when the database gave us no
+  // slugs, so it is a 404 unconditionally — checked before the read so the outcome cannot
+  // depend on database state or on an admin having typed the same string as a slug.
+  if (slug === PRERENDER_PROBE_SLUG) notFound();
 
   const post = await getBlogPost(slug);
   // A draft, a soft-deleted post and a slug that never existed are the same response to a

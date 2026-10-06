@@ -5,6 +5,11 @@
  * `admin_users` must be empty. The token is compared in constant time and is meant to be
  * rotated/deleted after the first operator exists — once the table is non-empty this
  * endpoint can never create anything again, whatever the token is.
+ *
+ * Task 14 §6: the created superadmin starts with a *pending* TOTP secret. `authorize()`
+ * refuses a superadmin sign-in until the code is confirmed through
+ * `POST /api/admin/setup/totp`, so the second factor is established during setup rather
+ * than left optional.
  */
 import { count, sql } from 'drizzle-orm';
 import { getDb } from '@/db/client';
@@ -14,6 +19,7 @@ import { asObject, errorMessage, fail, logServerError, ok, readString } from '@/
 import { isValidEmail, normalizeEmail, readPassword } from '@/lib/operators';
 import { hashPassword, passwordPolicyError, timingSafeStringEqual } from '@/lib/password';
 import { clientIp } from '@/lib/request';
+import { createTotpEnrollment } from '@/lib/totp';
 
 export async function POST(request: Request): Promise<Response> {
   try {
@@ -36,6 +42,10 @@ export async function POST(request: Request): Promise<Response> {
     if (policyError) return fail(policyError, 400);
 
     const passwordHash = await hashPassword(password);
+    // Second factor material is generated before the transaction: if the encryption key is
+    // not configured, the request fails here rather than creating a superadmin that can
+    // never sign in (Task 14 §6 keeps the superadmin factor mandatory).
+    const enrollment = await createTotpEnrollment(email);
     const ip = clientIp(request);
     const db = getDb();
 
@@ -49,7 +59,14 @@ export async function POST(request: Request): Promise<Response> {
 
       const [created] = await tx
         .insert(adminUsersTable)
-        .values({ email, passwordHash, role: 'superadmin', isActive: true })
+        .values({
+          email,
+          passwordHash,
+          role: 'superadmin',
+          isActive: true,
+          totpSecret: enrollment.encrypted,
+          totpEnabled: false,
+        })
         .returning({
           id: adminUsersTable.id,
           email: adminUsersTable.email,
@@ -69,7 +86,20 @@ export async function POST(request: Request): Promise<Response> {
     if (!outcome.created) {
       return fail('Setup has already been completed', 410);
     }
-    return ok({ success: true, user: outcome.user }, 201);
+    return ok(
+      {
+        success: true,
+        user: outcome.user,
+        // Shown exactly once. `auth.ts` refuses a superadmin sign-in until the code from
+        // this secret is confirmed through `POST /api/admin/setup/totp`.
+        totp: {
+          uri: enrollment.uri,
+          secret: enrollment.secret,
+          qrDataUrl: enrollment.qrDataUrl,
+        },
+      },
+      201,
+    );
   } catch (error) {
     logServerError('admin.setup', error);
     return fail(errorMessage(error));

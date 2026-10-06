@@ -48,8 +48,11 @@ import {
 import { envString } from '@/lib/env';
 import { recordAudit } from '@/lib/audit';
 import { verifyPassword } from '@/lib/password';
+import { hitLimit } from '@/lib/rateLimit';
 import { clientIp } from '@/lib/request';
 import { isAdminRole, normalizeRole } from '@/lib/roles';
+import { applySecurityHeaders } from '@/lib/securityHeaders';
+import { storedTotpMatches } from '@/lib/totp';
 
 /** Absolute server-side session lifetime. The cookie slides; this does not. */
 const SESSION_MAX_AGE_SECONDS = 12 * 60 * 60;
@@ -133,16 +136,29 @@ export const authConfig = (): NextAuthConfig => {
         credentials: {
           email: { label: 'Email', type: 'email' },
           password: { label: 'Password', type: 'password' },
+          // Optional at the schema level so non-enrolled operators can still sign in; the
+          // policy (required once `totp_enabled`, mandatory for superadmins) lives in
+          // `authorize` below, where the database row is available.
+          code: { label: 'Authenticator code', type: 'text' },
         },
         async authorize(credentials, request) {
           const email =
             typeof credentials?.email === 'string' ? credentials.email.toLowerCase().trim() : '';
           const password = typeof credentials?.password === 'string' ? credentials.password : '';
+          const totpToken = typeof credentials?.code === 'string' ? credentials.code : '';
           if (!email || !password) return null;
 
           const db = getDb();
           const now = Date.now();
           const ip = clientIp(request);
+
+          // --- Distributed per-client limit (Task 14 §1, Cloudflare KV) ---
+          // Counts *attempts*, not failures, across the whole fleet; the DB checks below
+          // stay as the per-account/per-IP failure counters. Fail-open on a KV outage.
+          if (await hitLimit(`login:${ip || 'unknown'}`, 10, 600)) {
+            await recordAudit({ actorId: null, action: 'LOGIN_LOCKED', target: email, ip });
+            return null;
+          }
 
           // --- Per-account lockout (5 failures / 15 min) ---
           const [accountFailures] = await db
@@ -197,6 +213,39 @@ export const authConfig = (): NextAuthConfig => {
             return null;
           }
 
+          // --- Second factor (Task 14 §6) --------------------------------------------
+          const role = normalizeRole(adminUser.role);
+
+          // Superadmin is the account that can reset everyone else's 2FA, so it must not be
+          // reachable with a password alone. Enrolment is part of setup: the first
+          // superadmin receives the `otpauth://` material from `/api/admin/setup`, and a
+          // peer superadmin can reissue it (audited) if the device is lost.
+          if (role === 'superadmin' && !adminUser.totpEnabled) {
+            console.warn(`[auth] superadmin ${email} has no TOTP enrolment; refusing sign-in`);
+            await recordAudit({
+              actorId: adminUser.id,
+              action: 'LOGIN_TOTP_UNENROLLED',
+              target: email,
+              ip,
+            });
+            return null;
+          }
+
+          // Enrolled operators (any role) must present a valid code. A wrong or missing
+          // code is an ordinary LOGIN_FAIL so it feeds the lockout counters above.
+          if (adminUser.totpEnabled) {
+            const codeOk = await storedTotpMatches(adminUser.totpSecret, totpToken);
+            if (!codeOk) {
+              await recordAudit({
+                actorId: adminUser.id,
+                action: 'LOGIN_FAIL',
+                target: email,
+                ip,
+              });
+              return null;
+            }
+          }
+
           const sessionToken = newSessionToken();
           const userId = String(adminUser.id);
           const userAgent = (request.headers.get('user-agent') ?? '').slice(0, 400);
@@ -243,7 +292,7 @@ export const authConfig = (): NextAuthConfig => {
             id: userId,
             name: adminUser.email,
             email: adminUser.email,
-            role: normalizeRole(adminUser.role),
+            role,
             sessionToken,
           };
         },
@@ -304,8 +353,12 @@ export const authConfig = (): NextAuthConfig => {
         const isPublicAdminPage = pathname === '/admin/login' || pathname === '/admin/setup';
         const isPublicLeadPost = pathname === '/api/leads' && request.method === 'POST';
         // Bootstrap has to be reachable *before* any session exists — it is gated by the
-        // one-time SETUP_TOKEN plus an empty `admin_users`, not by a session.
-        const isBootstrap = pathname === '/api/admin/setup' && request.method === 'POST';
+        // one-time SETUP_TOKEN plus an empty `admin_users`, not by a session. The TOTP
+        // completion step is part of the same bootstrap flow: the account exists but cannot
+        // sign in until the enrolment code is confirmed.
+        const isBootstrap =
+          (pathname === '/api/admin/setup' || pathname === '/api/admin/setup/totp') &&
+          request.method === 'POST';
 
         const needsSession =
           (isAdminPage && !isPublicAdminPage) ||
@@ -317,15 +370,20 @@ export const authConfig = (): NextAuthConfig => {
 
         if (needsSession && !session?.user) return false;
 
+        // Every matched route leaves through one response so the Task 14 security headers
+        // (HSTS, nosniff, frame-deny, CSP, ...) are attached to pages and API responses
+        // alike. Returning `true` for the public routes would let Next build its own
+        // response and lose them.
+        const response = NextResponse.next();
+        applySecurityHeaders(response.headers);
+
         // Admin HTML must never be cached in a shared browser — a cached /admin response is
         // a credential leak. Cache Components removed `export const dynamic`, so the
         // header is set here instead of on the page.
         if (isAdminPage) {
-          const response = NextResponse.next();
           response.headers.set('Cache-Control', 'no-store, private');
-          return response;
         }
-        return true;
+        return response;
       },
     },
   };

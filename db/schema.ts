@@ -263,6 +263,14 @@ export const adminUsersTable = pgTable('admin_users', {
   passwordHash: text('password_hash').notNull(), // "pbkdf2$600000$salt$hash"
   role: text('role').notNull().default('editor'), // superadmin | admin | editor
   isActive: boolean('is_active').notNull().default(true),
+  /**
+   * TOTP shared secret, AES-256-GCM encrypted as `v1:<iv>:<ciphertext>` (Task 14 §6).
+   * Never plaintext: a leaked dump without the `TOTP_ENCRYPTION_KEY` runtime secret must
+   * not hand over the second factor.
+   */
+  totpSecret: text('totp_secret'),
+  /** Second factor confirmed with a valid code; login then requires one. */
+  totpEnabled: boolean('totp_enabled').notNull().default(false),
   lastLoginAt: timestamp('last_login_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),

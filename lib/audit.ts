@@ -11,7 +11,11 @@ import { adminAuditLogsTable } from '@/db/schema';
 export interface AuditEntry {
   /** `admin_users.id`, or `null` for events with no authenticated actor (failed logins). */
   actorId: number | null;
-  /** LOGIN_OK | LOGIN_FAIL | LOGIN_LOCKED | SETUP_SUPERADMIN | USER_CREATE | USER_UPDATE | USER_DEACTIVATE | PASSWORD_RESET | ROLE_CHANGE | SESSION_REVOKE */
+  /**
+   * LOGIN_OK | LOGIN_FAIL | LOGIN_LOCKED | LOGIN_TOTP_UNENROLLED | SETUP_SUPERADMIN |
+   * USER_CREATE | USER_UPDATE | USER_DEACTIVATE | PASSWORD_RESET | ROLE_CHANGE |
+   * SESSION_REVOKE | TOTP_ENROLL | TOTP_RESET
+   */
   action: string;
   target?: string;
   ip?: string;

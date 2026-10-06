@@ -4,12 +4,20 @@ import { getDb } from '@/db/client';
 import { leadsTable } from '@/db/schema';
 import { asObject, errorMessage, fail, logServerError, ok, readString } from '@/lib/json';
 import { dispatchLeadIntegrations } from '@/lib/leadDispatch';
+import { hitLimit } from '@/lib/rateLimit';
+import { verifyTurnstile } from '@/lib/turnstile';
 
-// Per-isolate best effort. A Worker has no shared memory across the fleet, so this is a
-// backstop in front of the WAF rule and the KV limiter (Task 14), not the only defence.
+// Per-isolate best effort, deliberately kept as the *backstop* behind the KV limiter
+// (Task 14 §1) and the WAF rule (Task 8): a Worker has no shared memory across the fleet,
+// so this map only covers one isolate's lifetime — but it also covers the case where KV is
+// not bound (local dev) or a KV call fails open.
 const WINDOW_MS = 600_000;
 const MAX_PER_WINDOW = 8;
 const hits = new Map<string, { count: number; expiresAt: number }>();
+
+/** Distributed window: 5 lead submissions per 10 minutes per source IP. */
+const KV_LIMIT_MAX = 5;
+const KV_LIMIT_WINDOW_SEC = 600;
 
 /** Version identifier stored on every consented lead (Task 13 §5, Task 20 §5). */
 const PRIVACY_POLICY_VERSION = 'privacy-v1';
@@ -71,6 +79,13 @@ export async function POST(req: Request) {
       for (const [key, value] of hits) if (value.expiresAt <= now) hits.delete(key);
     }
 
+    // Fleet-wide sliding window (Task 14 §1). Runs after the per-isolate backstop so a
+    // burst inside one isolate is rejected without a KV round-trip, and before any body
+    // parsing so an abusive caller never reaches Turnstile or the database.
+    if (await hitLimit(`lead:${ip}`, KV_LIMIT_MAX, KV_LIMIT_WINDOW_SEC)) {
+      return fail('Too many requests. Please try again in a few minutes or call us directly.', 429);
+    }
+
     const body = asObject(await req.json());
     const name = readString(body.name).trim();
     const phone = readString(body.phone).trim();
@@ -84,6 +99,15 @@ export async function POST(req: Request) {
     }
     const consentText =
       readString(body.consentText).trim().slice(0, 120) || PRIVACY_POLICY_VERSION;
+
+    // Bot check (Task 14 §2). Skipped when Turnstile is not provisioned (local dev); an
+    // explicit siteverify rejection is a 400 and the lead is never stored. Consent is
+    // validated first so an invalid submission costs no external call.
+    const turnstile = await verifyTurnstile(readString(body.turnstileToken), ip);
+    if (!turnstile.ok) {
+      console.warn(`[leads] turnstile rejected a submission: ${turnstile.reason}`);
+      return fail('Human verification failed. Please refresh the page and try again.', 400);
+    }
 
     const [lead] = await getDb()
       .insert(leadsTable)

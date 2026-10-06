@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { LandingContent, Locale } from '../types/landing';
 import { trackBrowserLead } from '../../components/MetaPixel';
+import { Turnstile, type TurnstileHandle } from '../../components/Turnstile';
 import {
   MessageSquare,
   PhoneCall,
@@ -54,6 +55,8 @@ export const FinalConversionSection: React.FC<FinalConversionProps> = ({ content
   const [formError, setFormError] = useState<string | null>(null);
   // Unticked by default: consent has to be an explicit act, never a pre-checked box.
   const [consentGiven, setConsentGiven] = useState(false);
+  // Turnstile widget handle: rendered lazily on submit, so nothing loads until then.
+  const turnstileRef = useRef<TurnstileHandle | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,6 +89,24 @@ export const FinalConversionSection: React.FC<FinalConversionProps> = ({ content
       // Shared with the server-side Conversions API event: Meta deduplicates the browser
       // and server `Lead` events on this id (Task 13 §4).
       const eventId = newEventId();
+
+      // Bot check (Task 14 §2): the widget is rendered only now and stays invisible unless
+      // Cloudflare asks for an interaction. `''` = Turnstile not configured (the server
+      // skips verification); `null` = challenge could not be completed → do not submit.
+      let turnstileToken = '';
+      const turnstile = turnstileRef.current;
+      if (turnstile) {
+        const token = await turnstile.getToken();
+        if (token === null) {
+          throw new Error(
+            locale === 'en'
+              ? 'Human verification failed. Please try again.'
+              : 'মানব যাচাইকরণ ব্যর্থ হয়েছে। আবার চেষ্টা করুন।'
+          );
+        }
+        turnstileToken = token;
+      }
+
       const response = await fetch('/api/leads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -101,6 +122,7 @@ export const FinalConversionSection: React.FC<FinalConversionProps> = ({ content
           eventId,
           fbp: readCookie('_fbp'),
           fbc: readCookie('_fbc'),
+          turnstileToken,
         }),
       });
 
@@ -354,6 +376,13 @@ export const FinalConversionSection: React.FC<FinalConversionProps> = ({ content
                     />
                     <span>{content.leadForm.consentLabel}</span>
                   </label>
+                </div>
+
+                {/* Turnstile (Task 14 §2). Renders nothing at all until the form is
+                    submitted, and even then only becomes visible if Cloudflare asks for an
+                    interaction — the mobile layout stays exactly as it was. */}
+                <div className="pt-1">
+                  <Turnstile ref={turnstileRef} className="flex justify-center" />
                 </div>
 
                 {/* Primary Submit Button */}

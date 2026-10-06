@@ -69,6 +69,12 @@ declare global {
     META_CAPI_TOKEN?: string;
     META_TEST_EVENT_CODE?: string;
     TURNSTILE_SECRET_KEY?: string;
+    /**
+     * AES-256-GCM key material for TOTP secrets at rest (`lib/totp.ts`). Rotation means
+     * re-enrolling every operator: old ciphertexts cannot be read with a new key.
+     * `AUTH_SECRET` is used as a domain-separated fallback when this is unset.
+     */
+    TOTP_ENCRYPTION_KEY?: string;
     GEMINI_API_KEY?: string;
     SENTRY_DSN?: string;
     RESEND_API_KEY?: string;

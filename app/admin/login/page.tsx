@@ -17,6 +17,7 @@ export default function AdminLoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -25,7 +26,9 @@ export default function AdminLoginPage() {
     setPending(true);
     setError(null);
     try {
-      const result = await signIn('credentials', { email, password, redirect: false });
+      // `code` is the TOTP factor (Task 14 §6). It is optional here because non-enrolled
+      // admins/editors may still sign in; the server enforces the policy.
+      const result = await signIn('credentials', { email, password, code, redirect: false });
       if (!result || result.error) {
         setError('Invalid email or password.');
         return;
@@ -71,6 +74,26 @@ export default function AdminLoginPage() {
             onChange={(event) => setPassword(event.target.value)}
             className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-indigo-400 dark:border-white/10 dark:bg-black/30"
           />
+        </label>
+
+        <label className="block">
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            Authenticator code
+          </span>
+          <input
+            type="text"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            pattern="[0-9]{6}"
+            maxLength={6}
+            placeholder="123456"
+            value={code}
+            onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
+            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-mono tracking-widest outline-none focus:border-indigo-400 dark:border-white/10 dark:bg-black/30"
+          />
+          <span className="mt-1 block text-[11px] text-slate-500 dark:text-slate-400">
+            Required once two-factor authentication is enabled on your account.
+          </span>
         </label>
 
         {error && (

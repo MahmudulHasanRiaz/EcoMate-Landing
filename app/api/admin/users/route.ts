@@ -18,6 +18,8 @@ const OPERATOR_COLUMNS = {
   email: adminUsersTable.email,
   role: adminUsersTable.role,
   isActive: adminUsersTable.isActive,
+  // Whether 2FA is active — never the encrypted secret itself (Task 14 §6).
+  totpEnabled: adminUsersTable.totpEnabled,
   lastLoginAt: adminUsersTable.lastLoginAt,
   createdAt: adminUsersTable.createdAt,
   updatedAt: adminUsersTable.updatedAt,

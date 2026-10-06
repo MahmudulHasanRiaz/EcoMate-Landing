@@ -59,11 +59,9 @@ jobs:
         run: npm run lint
 
       # Journaled migrations only — never db:push (see deploy.yml for why).
-      # KNOWN ISSUE (shared with production deploys): `drizzle-kit migrate`
-      # currently exits 1 silently in this repository (docs/RUNBOOK.md §9.1).
-      # Until that is fixed this step fails the preview rather than shipping
-      # code against an out-of-date preview schema — the correct failure
-      # direction, but it means previews are blocked too.
+      # `db:migrate` runs scripts/db-migrate.mjs: journal-driven, verbose, never
+      # silent (it replaced `drizzle-kit migrate`, which exited 1 with no error
+      # output on connection failure). Same contract — journaled SQL only.
       # Same DIRECT_URL shape rule as deploy.yml: the secret must hold the direct
       # port-5432 URL (or a session-mode pooler on 5432), never the transaction
       # pooler on 6543. Hostname/password never printed.

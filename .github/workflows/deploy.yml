@@ -182,27 +182,11 @@ jobs:
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
 
       - name: Apply DB migrations
-        # KNOWN ISSUE: `drizzle-kit migrate` exits 1 silently in this repository and has not yet
-        # been diagnosed. Until it is fixed, this step will fail the deploy rather than silently
-        # shipping code against an out-of-date schema — which is the correct failure direction,
-        # but it does mean deploys are blocked. Follow-up: capture `drizzle-kit migrate`
-        # stderr, confirm whether it is the journal/`__drizzle_migrations` bookkeeping or the
-        # connection, and fix the script rather than removing this step.
-        run: npm run db:migrate
-        env:
-          DIRECT_URL: ${{ secrets.DIRECT_URL }}
-
-      # Idempotent R2 bucket ensure. Runs on every manual deploy, creates the bucket
-      # ONLY when it does not exist, and never deletes, recreates or replaces an
-      # existing bucket or its data. The bucket name must match the `[env.*.r2_buckets]`
-      # `bucket_name` in wrangler.toml for the same environment (`ecomate-media-prod`
-      # for production, `ecomate-media-preview` for preview) — the deploy step below
-      # binds exactly that name via the native R2 Binding (`R2_BUCKET`), so no
-      # Access Key / Secret Key is ever stored in application secrets.
-      # Uses only the existing CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID secrets.
-      # Custom-domain attachment (`wrangler r2 bucket domain ... --custom-domain
-      # media.ecomate.app`) stays a one-time manual step: it needs DNS in place and
-      # must not run blindly on every deploy.
+        # `db:migrate` runs scripts/db-migrate.mjs: a journal-driven runner that
+        # prints every decision and every error verbosely. It replaced
+        # `drizzle-kit migrate`, which exited 1 silently on connection failure
+        # (undiagnosable in deploy logs, 2026-10-06). Same contract — journaled
+        # SQL only, never push/diff — plus idempotent completion for legacy rows.
       - name: Ensure R2 bucket exists (idempotent, never deletes)
         run: |
           ENV_NAME="${{ github.event.inputs.environment || 'production' }}"

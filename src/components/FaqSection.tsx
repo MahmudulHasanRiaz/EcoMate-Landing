@@ -15,7 +15,7 @@ export const FaqSection: React.FC = () => {
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-14">
-          <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-700 dark:text-indigo-400 mb-2 sm:mb-3">
+          <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-700 dark:text-indigo-300 mb-2 sm:mb-3">
             <HelpCircle className="h-3.5 w-3.5" />
             <span>{content.faq.eyebrow}</span>
           </div>
@@ -75,7 +75,7 @@ export const FaqSection: React.FC = () => {
             <h4 className="text-sm font-bold text-slate-900 dark:text-white">
               {locale === 'en' ? 'Have a specific operational question not listed here?' : 'আপনার ব্যবসার বিশেষ কোনো অপারেশন সংক্রান্ত প্রশ্ন আছে?'}
             </h4>
-            <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+            <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
               {locale === 'en' ? 'Talk directly with our Dhaka technical operations specialist on WhatsApp.' : 'আমাদের ঢাকা টেকনিক্যাল অপারেশন টিমের সাথে সরাসরি হোয়াটসঅ্যাপে কথা বলুন।'}
             </p>
           </div>

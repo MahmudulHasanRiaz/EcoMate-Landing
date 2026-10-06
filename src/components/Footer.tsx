@@ -18,7 +18,7 @@ export const Footer: React.FC = () => {
 
   const platformLinks: readonly NavItem[] = menu ?? DEFAULT_PLATFORM_LINKS;
   return (
-    <footer className="border-t border-slate-200 dark:border-white/[0.08] bg-slate-100 dark:bg-[#05060A] text-slate-600 dark:text-slate-400 text-xs pt-14 pb-28 md:pb-14 transition-colors">
+    <footer className="border-t border-slate-200 dark:border-white/[0.08] bg-slate-100 dark:bg-[#05060A] text-slate-600 dark:text-slate-300 text-xs pt-14 pb-28 md:pb-14 transition-colors">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10">
           {/* Brand Col (col-span-2) */}
@@ -46,7 +46,7 @@ export const Footer: React.FC = () => {
             <ul className="space-y-2 text-xs">
               {platformLinks.map((item) => (
                 <li key={item.href}>
-                  <a href={item.href} className="hover:text-slate-900 dark:hover:text-white transition-colors">
+                  <a href={item.href} className="hover:text-slate-900 dark:hover:text-white transition-colors dark:text-slate-300">
                     {item.label}
                   </a>
                 </li>
@@ -61,27 +61,27 @@ export const Footer: React.FC = () => {
             </h4>
             <ul className="space-y-2 text-xs">
               <li>
-                <a href="#tour" className="hover:text-slate-900 dark:hover:text-white transition-colors">
+                <a href="#tour" className="hover:text-slate-900 dark:hover:text-white transition-colors dark:text-slate-300">
                   Smart Packing Workspace
                 </a>
               </li>
               <li>
-                <a href="#pos-showrooms" className="hover:text-slate-900 dark:hover:text-white transition-colors">
+                <a href="#pos-showrooms" className="hover:text-slate-900 dark:hover:text-white transition-colors dark:text-slate-300">
                   Showroom Cloud POS
                 </a>
               </li>
               <li>
-                <a href="#tour" className="hover:text-slate-900 dark:hover:text-white transition-colors">
+                <a href="#tour" className="hover:text-slate-900 dark:hover:text-white transition-colors dark:text-slate-300">
                   Courier Reconciliation
                 </a>
               </li>
               <li>
-                <a href="#inventory-finance" className="hover:text-slate-900 dark:hover:text-white transition-colors">
+                <a href="#inventory-finance" className="hover:text-slate-900 dark:hover:text-white transition-colors dark:text-slate-300">
                   Double-Entry Ledger
                 </a>
               </li>
               <li>
-                <a href="#marketing" className="hover:text-slate-900 dark:hover:text-white transition-colors">
+                <a href="#marketing" className="hover:text-slate-900 dark:hover:text-white transition-colors dark:text-slate-300">
                   Server-Side Meta CAPI
                 </a>
               </li>
@@ -96,13 +96,13 @@ export const Footer: React.FC = () => {
             <ul className="space-y-2 text-xs">
               <li className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
                 <PhoneCall className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
-                <a href={`tel:${content.footer.phone}`} className="hover:text-slate-900 dark:hover:text-white font-mono-numbers font-medium">
+                <a href={`tel:${content.footer.phone}`} className="hover:text-slate-900 dark:hover:text-white font-mono-numbers font-medium dark:text-slate-300">
                   {content.footer.phone}
                 </a>
               </li>
               <li className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
                 <Mail className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
-                <a href={`mailto:${content.footer.email}`} className="hover:text-slate-900 dark:hover:text-white font-medium">
+                <a href={`mailto:${content.footer.email}`} className="hover:text-slate-900 dark:hover:text-white font-medium dark:text-slate-300">
                   {content.footer.email}
                 </a>
               </li>

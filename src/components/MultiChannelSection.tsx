@@ -9,7 +9,7 @@ export const MultiChannelSection: React.FC = () => {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="max-w-3xl">
-          <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-700 dark:text-indigo-400 mb-2 sm:mb-3">
+          <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-700 dark:text-indigo-300 mb-2 sm:mb-3">
             <Globe className="h-3.5 w-3.5" />
             <span>{content.multiChannel.eyebrow}</span>
           </div>
@@ -32,7 +32,7 @@ export const MultiChannelSection: React.FC = () => {
                 Master SKU: LUX-POLO-NAVY-XL (Central Physical Stock: 350 Units)
               </h3>
             </div>
-            <div className="inline-flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-100/80 dark:bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-500/20 font-semibold self-start md:self-auto">
+            <div className="inline-flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-300 bg-emerald-100/80 dark:bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-500/20 font-semibold self-start md:self-auto">
               <CheckCircle2 className="h-3.5 w-3.5" />
               <span>Real-Time Allocation Lock</span>
             </div>
@@ -47,7 +47,7 @@ export const MultiChannelSection: React.FC = () => {
               </div>
               <p className="text-slate-900 dark:text-slate-200 font-semibold">Allocated: 180 Units</p>
               <p className="text-[11px] text-slate-600 mt-0.5 dark:text-slate-300">Auto-decrement upon customer checkout</p>
-              <div className="mt-2 text-[10px] font-mono text-indigo-700 dark:text-indigo-400">Price: ৳ 1,450 (Standard)</div>
+              <div className="mt-2 text-[10px] font-mono text-indigo-700 dark:text-indigo-300">Price: ৳ 1,450 (Standard)</div>
             </div>
 
             <div className="p-3 sm:p-3.5 rounded-xl bg-white dark:bg-black/40 border border-indigo-100 dark:border-white/[0.06] shadow-2xs">
@@ -72,7 +72,7 @@ export const MultiChannelSection: React.FC = () => {
           </div>
 
           {/* Synchronized Rules Banner */}
-          <div className="p-2.5 rounded-lg bg-white/60 dark:bg-black/30 border border-indigo-200/60 dark:border-white/[0.04] flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-slate-600 dark:text-slate-400">
+          <div className="p-2.5 rounded-lg bg-white/60 dark:bg-black/30 border border-indigo-200/60 dark:border-white/[0.04] flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-slate-600 dark:text-slate-300">
             <span className="flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
               <strong>Central Guardrail:</strong> When total stock reaches zero, buy buttons disable across ALL stores simultaneously.
@@ -118,11 +118,11 @@ export const MultiChannelSection: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="mt-5 pt-3.5 border-t border-slate-100 dark:border-white/[0.06] text-[11px] sm:text-xs text-slate-600 dark:text-slate-400 flex items-center justify-between">
+                <div className="mt-5 pt-3.5 border-t border-slate-100 dark:border-white/[0.06] text-[11px] sm:text-xs text-slate-600 dark:text-slate-300 flex items-center justify-between">
                   <span>
                     {isRoadmap ? 'Under Active Roadmap' : 'Connected to Core Engine'}
                   </span>
-                  <span className="font-mono text-indigo-600 dark:text-indigo-400 font-semibold">
+                  <span className="font-mono text-indigo-600 dark:text-indigo-300 font-semibold">
                     {isRoadmap ? 'Roadmap' : 'Production Ready'}
                   </span>
                 </div>

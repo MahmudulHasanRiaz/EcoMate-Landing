@@ -14,7 +14,7 @@ export const PricingSection: React.FC = () => {
         {/* Section Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6 mb-8 sm:mb-12">
           <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-700 dark:text-indigo-400 mb-2 sm:mb-3">
+            <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-700 dark:text-indigo-300 mb-2 sm:mb-3">
               <Sparkles className="h-3.5 w-3.5" />
               <span>{content.pricing.eyebrow}</span>
             </div>
@@ -83,7 +83,7 @@ export const PricingSection: React.FC = () => {
                     <div>
                       <div className="mb-4">
                         <h3 className="text-xl font-bold text-slate-900 dark:text-white">{plan.name}</h3>
-                        <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+                        <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
                           {plan.tierSubtitle}
                         </p>
                       </div>
@@ -95,7 +95,7 @@ export const PricingSection: React.FC = () => {
                         <span className="text-4xl sm:text-5xl font-extrabold text-slate-900 dark:text-white font-mono-numbers">
                           {formatMoney(price, locale)}
                         </span>
-                        <span className="text-xs text-slate-600 dark:text-slate-400 font-mono">/ month</span>
+                        <span className="text-xs text-slate-600 dark:text-slate-300 font-mono">/ month</span>
                       </div>
 
                       {/* Volume & Scale Limits */}
@@ -116,7 +116,7 @@ export const PricingSection: React.FC = () => {
 
                       {/* Included Feature List */}
                       <div className="space-y-3 text-xs mb-8">
-                        <span className="text-slate-600 dark:text-slate-400 font-bold uppercase text-[10px] tracking-wider block">
+                        <span className="text-slate-600 dark:text-slate-300 font-bold uppercase text-[10px] tracking-wider block">
                           Included Capabilities
                         </span>
                         {plan.features.map((feat, idx) => (
@@ -151,7 +151,7 @@ export const PricingSection: React.FC = () => {
           /* MODE 2: PRICING HIDDEN / CONTACT SALES */
           <div className="rounded-3xl border border-indigo-200 dark:border-indigo-500/30 bg-gradient-to-b from-indigo-50/70 to-white dark:from-[#111327] dark:to-[#0C0E1B] p-8 sm:p-12 shadow-xl shadow-indigo-100/50 max-w-4xl mx-auto">
             <div className="max-w-2xl">
-              <span className="text-xs font-mono uppercase tracking-wider text-indigo-700 dark:text-indigo-400 font-bold">
+              <span className="text-xs font-mono uppercase tracking-wider text-indigo-700 dark:text-indigo-300 font-bold">
                 Custom Architecture Consultation
               </span>
               <h3 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mt-2 leading-tight">

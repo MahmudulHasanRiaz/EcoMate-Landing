@@ -21,7 +21,7 @@ export const LossPreventionSection: React.FC = () => {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="max-w-3xl">
-          <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 mb-2 sm:mb-3">
+          <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 mb-2 sm:mb-3">
             <ShieldCheck className="h-3.5 w-3.5" />
             <span>{content.lossPrevention.eyebrow}</span>
           </div>
@@ -36,10 +36,10 @@ export const LossPreventionSection: React.FC = () => {
         {/* Visual Courier Intelligence Trust-Score Matrix */}
         <div className="mt-8 sm:mt-12 rounded-2xl border border-slate-200 dark:border-white/10 bg-white/70 dark:bg-[#0A0C16] p-4 sm:p-7 backdrop-blur-md shadow-sm">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-2 border-b border-slate-200/80 dark:border-white/[0.08] pb-3 mb-5">
-            <span className="text-[11px] sm:text-xs font-mono font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+            <span className="text-[11px] sm:text-xs font-mono font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
               {locale === 'en' ? 'Pre-Dispatch Courier Intelligence in Action' : 'ডিসপ্যাচের আগে কুরিয়ার হিস্ট্রি বিশ্লেষণ'}
             </span>
-            <span className="text-[10px] sm:text-[11px] font-mono text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2.5 py-0.5 rounded-full border border-indigo-200 dark:border-indigo-500/20 font-semibold">
+            <span className="text-[10px] sm:text-[11px] font-mono text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/10 px-2.5 py-0.5 rounded-full border border-indigo-200 dark:border-indigo-500/20 font-semibold">
               ● Cross-Courier Aggregate Telemetry (Steadfast + Pathao)
             </span>
           </div>
@@ -85,7 +85,7 @@ export const LossPreventionSection: React.FC = () => {
           <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1A] p-5 sm:p-8 flex flex-col justify-between shadow-sm">
             <div>
               <div className="flex items-center justify-between mb-3.5">
-                <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-rose-700 dark:text-rose-400 flex items-center gap-1.5">
+                <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-rose-700 dark:text-rose-300 flex items-center gap-1.5">
                   <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-rose-700 dark:text-rose-400" />
                   <span>The Preventable Packing Leak</span>
                 </span>
@@ -99,14 +99,14 @@ export const LossPreventionSection: React.FC = () => {
               </h3>
 
               <div className="p-3 sm:p-3.5 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/[0.04] mb-3.5 text-xs text-slate-700 dark:text-slate-300 space-y-1">
-                <p className="text-slate-600 dark:text-slate-400 font-medium text-[11px]">The Chain Reaction of a Wrong Size Dispatch:</p>
+                <p className="text-slate-600 dark:text-slate-300 font-medium text-[11px]">The Chain Reaction of a Wrong Size Dispatch:</p>
                 <p className="text-rose-700 dark:text-rose-300">1. Wrong SKU packed (Size 41 instead of 42)</p>
                 <p className="text-rose-700 dark:text-rose-300">2. Customer rejects parcel at doorstep</p>
                 <p className="text-rose-700 dark:text-rose-300">3. Merchant pays forward + return delivery fees</p>
                 <p className="text-rose-700 dark:text-rose-300">4. Capital blocked for 10-14 days while parcel returns</p>
               </div>
 
-              <h4 className="text-xs sm:text-sm font-semibold text-emerald-700 dark:text-emerald-400 mt-3 flex items-center gap-1.5">
+              <h4 className="text-xs sm:text-sm font-semibold text-emerald-700 dark:text-emerald-300 mt-3 flex items-center gap-1.5">
                 <CheckCircle2 className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
                 <span>{content.lossPrevention.packingStory.solutionHeading}</span>
               </h4>
@@ -115,7 +115,7 @@ export const LossPreventionSection: React.FC = () => {
               </p>
             </div>
 
-            <div className="mt-5 pt-3.5 border-t border-slate-100 dark:border-white/[0.06] text-xs text-slate-600 dark:text-slate-400 font-medium">
+            <div className="mt-5 pt-3.5 border-t border-slate-100 dark:border-white/[0.06] text-xs text-slate-600 dark:text-slate-300 font-medium">
               Outcome: Zero wrong shipments reach the courier truck.
             </div>
           </div>
@@ -124,7 +124,7 @@ export const LossPreventionSection: React.FC = () => {
           <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1A] p-5 sm:p-8 flex flex-col justify-between shadow-sm">
             <div>
               <div className="flex items-center justify-between mb-3.5">
-                <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-rose-700 dark:text-rose-400 flex items-center gap-1.5">
+                <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-rose-700 dark:text-rose-300 flex items-center gap-1.5">
                   <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-rose-700 dark:text-rose-400" />
                   <span>The Serial Returner Drain</span>
                 </span>
@@ -138,14 +138,14 @@ export const LossPreventionSection: React.FC = () => {
               </h3>
 
               <div className="p-3 sm:p-3.5 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/[0.04] mb-3.5 text-xs text-slate-700 dark:text-slate-300 space-y-1">
-                <p className="text-slate-600 dark:text-slate-400 font-medium text-[11px]">The Cost of Blind Dispatch:</p>
+                <p className="text-slate-600 dark:text-slate-300 font-medium text-[11px]">The Cost of Blind Dispatch:</p>
                 <p className="text-rose-700 dark:text-rose-300">1. Impulsive buyer places COD order without intent</p>
                 <p className="text-rose-700 dark:text-rose-300">2. Dispatched blindly without delivery history check</p>
                 <p className="text-rose-700 dark:text-rose-300">3. Customer phone switched off upon delivery attempt</p>
                 <p className="text-rose-700 dark:text-rose-300">4. Merchant absorbs full courier return cost with zero sale</p>
               </div>
 
-              <h4 className="text-xs sm:text-sm font-semibold text-emerald-700 dark:text-emerald-400 mt-3 flex items-center gap-1.5">
+              <h4 className="text-xs sm:text-sm font-semibold text-emerald-700 dark:text-emerald-300 mt-3 flex items-center gap-1.5">
                 <CheckCircle2 className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
                 <span>{content.lossPrevention.fraudStory.solutionHeading}</span>
               </h4>
@@ -154,7 +154,7 @@ export const LossPreventionSection: React.FC = () => {
               </p>
             </div>
 
-            <div className="mt-5 pt-3.5 border-t border-slate-100 dark:border-white/[0.06] text-xs text-slate-600 dark:text-slate-400 font-medium">
+            <div className="mt-5 pt-3.5 border-t border-slate-100 dark:border-white/[0.06] text-xs text-slate-600 dark:text-slate-300 font-medium">
               Outcome: Mandatory advance delivery charge on serial cancelers.
             </div>
           </div>
@@ -171,7 +171,7 @@ export const LossPreventionSection: React.FC = () => {
                 <h3 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
                   {content.lossPrevention.calculator.title}
                 </h3>
-                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-0.5">
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-0.5">
                   See how much capital your business can protect with barcode verification and courier intelligence.
                 </p>
               </div>
@@ -260,7 +260,7 @@ export const LossPreventionSection: React.FC = () => {
               <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
                 {locale === 'en' ? 'Stop bleeding delivery margins this week.' : 'এই সপ্তাহ থেকেই কুরিয়ার লস ও ভুল ডেলিভারির টাকা বাঁচান।'}
               </p>
-              <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
+              <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5">
                 {locale === 'en' ? 'Walk through your exact numbers with an operations specialist.' : 'আপনার বর্তমান পার্সেল ভলিউম অনুযায়ী ফ্রি আরওআই (ROI) অডিট করান।'}
               </p>
             </div>
@@ -277,7 +277,7 @@ export const LossPreventionSection: React.FC = () => {
                 href="https://wa.me/8801894828290?text=Hello%20EcoMate%20Team%2C%20I%20want%20to%20calculate%20savings%20for%20my%20order%20volume."
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 hover:bg-emerald-100 transition-colors cursor-pointer"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 hover:bg-emerald-100 transition-colors cursor-pointer"
               >
                 <span>WhatsApp</span>
               </a>

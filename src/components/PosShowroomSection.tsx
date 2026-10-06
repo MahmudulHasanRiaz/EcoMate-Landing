@@ -27,7 +27,7 @@ export const PosShowroomSection: React.FC = () => {
             <span className="text-[11px] sm:text-xs font-mono font-semibold uppercase tracking-wider text-purple-700 dark:text-purple-300">
               {locale === 'en' ? 'Showroom Counter Live Billing Flow' : 'শোরুম ক্যাশিয়ার কাউন্টার লাইভ বিলিং'}
             </span>
-            <span className="text-[10px] sm:text-[11px] font-mono text-emerald-700 dark:text-emerald-400 bg-emerald-100/80 dark:bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-500/20 font-semibold">
+            <span className="text-[10px] sm:text-[11px] font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-100/80 dark:bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-500/20 font-semibold">
               ● Banani Flagship Terminal #02 (Live)
             </span>
           </div>
@@ -58,7 +58,7 @@ export const PosShowroomSection: React.FC = () => {
               <p className="text-slate-600 dark:text-slate-300 text-xs">
                 Supports partial payments: customer pays ৳ 1,500 in Cash and ৳ 1,350 via bKash QR. Automatically recorded in cash drawer.
               </p>
-              <div className="mt-3 p-2 rounded bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/[0.04] font-mono text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold">
+              <div className="mt-3 p-2 rounded bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/[0.04] font-mono text-[11px] text-emerald-700 dark:text-emerald-300 font-semibold">
                 Cashier: Rifat Ahmed · Commission Logged
               </div>
             </div>
@@ -66,7 +66,7 @@ export const PosShowroomSection: React.FC = () => {
             {/* Step 3: Central Stock Auto-Deduction */}
             <div className="p-3.5 sm:p-4 rounded-xl bg-white dark:bg-black/40 border border-emerald-300 dark:border-emerald-500/30 shadow-2xs">
               <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
-                <span className="font-mono text-[10px] text-emerald-700 dark:text-emerald-400 font-bold">POS STEP 03</span>
+                <span className="font-mono text-[10px] text-emerald-700 dark:text-emerald-300 font-bold">POS STEP 03</span>
                 <span className="text-emerald-700 dark:text-emerald-400 font-medium font-mono">Zero Lag Sync</span>
               </div>
               <h4 className="font-bold text-slate-900 dark:text-white text-sm mb-1">Instant Warehouse Deduction</h4>

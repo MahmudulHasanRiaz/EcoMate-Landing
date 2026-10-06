@@ -167,7 +167,7 @@ export const FinalConversionSection: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 sm:gap-12 items-center">
           {/* Left Column: Direct Call & Conversions (col-span-5) */}
           <div className="lg:col-span-5 space-y-4 sm:space-y-6">
-            <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-700 dark:text-indigo-400">
+            <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
               <Sparkles className="h-3.5 w-3.5" />
               <span>{content.leadForm.eyebrow}</span>
             </div>
@@ -181,7 +181,7 @@ export const FinalConversionSection: React.FC = () => {
             </p>
 
             <div className="pt-2 sm:pt-4 space-y-2.5 sm:space-y-3">
-              <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+              <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">
                 Direct Channels Available Now:
               </p>
 
@@ -193,12 +193,12 @@ export const FinalConversionSection: React.FC = () => {
                 className="flex items-center justify-between p-3 sm:p-3.5 rounded-xl border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-950/20 hover:bg-emerald-100/70 dark:hover:bg-emerald-950/30 transition-all text-xs shadow-2xs cursor-pointer"
               >
                 <div className="flex items-center gap-2.5 sm:gap-3">
-                  <span className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 flex items-center justify-center font-bold text-xs">
+                  <span className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 flex items-center justify-center font-bold text-xs">
                     WA
                   </span>
                   <div>
                     <span className="font-bold text-slate-900 dark:text-white block">WhatsApp Live Chat</span>
-                    <span className="text-slate-600 dark:text-slate-400 text-[10px] sm:text-[11px]">Chat with an operations specialist</span>
+                    <span className="text-slate-600 dark:text-slate-300 text-[10px] sm:text-[11px]">Chat with an operations specialist</span>
                   </div>
                 </div>
                 <ArrowRight className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
@@ -212,12 +212,12 @@ export const FinalConversionSection: React.FC = () => {
                 className="flex items-center justify-between p-3 sm:p-3.5 rounded-xl border border-indigo-200 dark:border-indigo-500/30 bg-indigo-50 dark:bg-indigo-950/20 hover:bg-indigo-100/70 dark:hover:bg-indigo-950/30 transition-all text-xs shadow-2xs cursor-pointer"
               >
                 <div className="flex items-center gap-2.5 sm:gap-3">
-                  <span className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 flex items-center justify-center font-bold text-xs">
+                  <span className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-bold text-xs">
                     FB
                   </span>
                   <div>
                     <span className="font-bold text-slate-900 dark:text-white block">Facebook Messenger</span>
-                    <span className="text-slate-600 dark:text-slate-400 text-[10px] sm:text-[11px]">Direct message EcoMate page</span>
+                    <span className="text-slate-600 dark:text-slate-300 text-[10px] sm:text-[11px]">Direct message EcoMate page</span>
                   </div>
                 </div>
                 <ArrowRight className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
@@ -234,7 +234,7 @@ export const FinalConversionSection: React.FC = () => {
                   </span>
                   <div>
                     <span className="font-bold text-slate-900 dark:text-white block">Direct Phone Line</span>
-                    <span className="text-slate-600 dark:text-slate-400 text-[10px] sm:text-[11px] font-mono-numbers">+880 1894-828290</span>
+                    <span className="text-slate-600 dark:text-slate-300 text-[10px] sm:text-[11px] font-mono-numbers">+880 1894-828290</span>
                   </div>
                 </div>
                 <span className="text-slate-600 font-mono text-[10px] sm:text-[11px] dark:text-slate-300">Sun-Thu 9am-8pm</span>
@@ -269,7 +269,7 @@ export const FinalConversionSection: React.FC = () => {
                       // Consent is per submission: a new request needs a fresh, explicit tick.
                       setConsentGiven(false);
                     }}
-                    className="text-xs font-semibold text-indigo-700 dark:text-indigo-400 hover:text-indigo-800 underline cursor-pointer"
+                    className="text-xs font-semibold text-indigo-700 dark:text-indigo-300 hover:text-indigo-800 underline cursor-pointer"
                   >
                     Submit another consultation request
                   </button>

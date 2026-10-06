@@ -33,14 +33,14 @@ export const TeamOperationsSection: React.FC = () => {
                   <span className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 flex items-center justify-center text-amber-700 dark:text-amber-400">
                     <Shield className="h-4 w-4" />
                   </span>
-                  <span className="text-[10px] sm:text-[11px] font-mono text-slate-600 dark:text-slate-400 font-medium">Role #{idx + 1}</span>
+                  <span className="text-[10px] sm:text-[11px] font-mono text-slate-600 dark:text-slate-300 font-medium">Role #{idx + 1}</span>
                 </div>
 
                 <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mb-2">{item.role}</h3>
 
                 <div className="space-y-2.5 text-xs">
                   <div>
-                    <span className="text-slate-600 dark:text-slate-400 uppercase font-semibold text-[10px] tracking-wider block">
+                    <span className="text-slate-600 dark:text-slate-300 uppercase font-semibold text-[10px] tracking-wider block">
                       Responsibilities
                     </span>
                     <p className="text-slate-700 dark:text-slate-200 mt-0.5 leading-relaxed">
@@ -49,7 +49,7 @@ export const TeamOperationsSection: React.FC = () => {
                   </div>
 
                   <div>
-                    <span className="text-slate-600 dark:text-slate-400 uppercase font-semibold text-[10px] tracking-wider block">
+                    <span className="text-slate-600 dark:text-slate-300 uppercase font-semibold text-[10px] tracking-wider block">
                       Enforced Boundary
                     </span>
                     <p className="text-slate-600 dark:text-slate-300 mt-0.5 leading-relaxed">

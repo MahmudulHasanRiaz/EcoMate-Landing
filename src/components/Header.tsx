@@ -125,7 +125,7 @@ export const Header: React.FC = () => {
             {/* Quick call, tablet and up only to protect 360px widths */}
             <a
               href="tel:+8801894828290"
-              className="hidden items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium whitespace-nowrap text-slate-600 transition-colors duration-200 hover:text-slate-950 md:inline-flex dark:text-slate-400 dark:hover:text-white"
+              className="hidden items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium whitespace-nowrap text-slate-600 transition-colors duration-200 hover:text-slate-950 md:inline-flex dark:text-slate-300 dark:hover:text-white"
             >
               <PhoneCall className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
               <span className="font-mono-numbers">01894-828290</span>

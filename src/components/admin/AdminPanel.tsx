@@ -374,7 +374,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                     {sections.length}
                   </p>
                   <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1 font-medium">
-                    100% database-configured
+                    Fully database-configured
                   </p>
                 </div>
 
@@ -908,7 +908,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
               <div className="p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-500/30 text-xs text-indigo-900 dark:text-indigo-200">
                 <p className="font-bold">Architecture Contract Note:</p>
                 <p className="mt-1 leading-relaxed">
-                  The public marketing website and CMS are 100% self-contained. The external License Management Portal is accessed strictly as an integration recipient. If the external portal is unavailable or offline, zero data is lost.
+                  The public marketing website and CMS are fully self-contained. The external License Management Portal is accessed strictly as an integration recipient. If the external portal is unavailable or offline, zero data is lost.
                 </p>
               </div>
 

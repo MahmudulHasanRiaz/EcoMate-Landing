@@ -155,7 +155,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
                     <div>
                       <a
                         href="#lead-form"
-                        className={`w-full py-3.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 whitespace-nowrap text-center transition-all cursor-pointer ${
+                        className={`w-full py-3.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 text-center leading-snug transition-all cursor-pointer ${
                           isPopular
                             ? 'bg-gradient-to-r from-indigo-600 via-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-300/50 hover:brightness-105'
                             : 'bg-white border border-slate-300 text-slate-900 hover:bg-slate-50 dark:bg-white/[0.05] dark:border-white/10 dark:text-white dark:hover:bg-white/10'

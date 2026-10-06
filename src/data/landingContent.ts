@@ -255,7 +255,7 @@ export const landingContent: Record<Locale, LandingContent> = {
       },
       fraudStory: {
         fakeOrderHeading: 'The Drain of Unverified Fake Orders',
-        fakeOrderCost: '৳ 180 delivery fee + ৳ 120 return fee + stranded inventory',
+        fakeOrderCost: '৳ 180 delivery fee + ৳ 120 return fee + stranded inventory (illustrative example)',
         solutionHeading: 'Pre-Dispatch Courier History Intelligence',
         solutionDetail:
           'Before dispatching, EcoMate queries the customer delivery history across Bangladesh courier networks. If the phone number has a 20% success rate, the order is flagged for mandatory phone advance verification.',
@@ -400,9 +400,9 @@ export const landingContent: Record<Locale, LandingContent> = {
       metrics: [
         {
           label: 'Net Realized Revenue',
-          value: '৳ 42,85,900',
+          value: 'Demo data: ৳ 42,85,900',
           subtext: 'Excludes cancelled & returned parcels',
-          trend: '+18.4% vs last period',
+          trend: 'Illustrative figure, not a guarantee',
         },
         {
           label: 'Fulfillment Accuracy',
@@ -412,15 +412,15 @@ export const landingContent: Record<Locale, LandingContent> = {
         },
         {
           label: 'Courier Delivery Success',
-          value: '91.8%',
+          value: 'Demo data: 91.8%',
           subtext: 'Across 6 integrated courier services',
-          trend: '+6.2% after fraud checking',
+          trend: 'Illustrative figure, not a guarantee',
         },
         {
           label: 'Reconciled COD Cash',
-          value: '৳ 34,12,450',
+          value: 'Demo data: ৳ 34,12,450',
           subtext: 'Matched line by line to bank deposits',
-          trend: '৳ 0 unallocated funds',
+          trend: 'Illustrative figure, not a guarantee',
         },
       ],
     },
@@ -442,7 +442,7 @@ export const landingContent: Record<Locale, LandingContent> = {
             'Before EcoMate, our biggest nightmare was packing the wrong shoe size. A size 41 sent as 42 meant double courier charges and an upset customer. Since installing the Smart Packing barcode station, our packing error rate dropped to near zero across 800+ daily orders.',
           metrics: [
             { stat: 'Near zero', label: 'Packing errors reported' },
-            { stat: '-74%', label: 'Avoidable Return Costs' },
+            { stat: 'Demo: -74%', label: 'Avoidable Return Costs' },
             { stat: '3 Outlets', label: 'Synced in Real-time' },
           ],
           challenge: 'High volume of size mismatch returns and manual stock discrepancies between showrooms and warehouse.',
@@ -461,8 +461,8 @@ export const landingContent: Record<Locale, LandingContent> = {
           quote:
             'Courier reconciliation used to take two accountants three full days every week checking Excel sheets against bank deposits. With EcoMate, we upload the courier settlement statement and it reconciles 4,000 parcels in under 90 seconds.',
           metrics: [
-            { stat: '18 hrs/wk', label: 'Accounting Time Saved' },
-            { stat: '৳ 1.2M', label: 'Disputed Claims Recovered' },
+            { stat: 'Demo: 18 hrs/wk', label: 'Accounting Time Saved' },
+            { stat: 'Demo: ৳ 1.2M', label: 'Disputed Claims Recovered' },
             { stat: 'Audit-ready', label: 'Traceable settlements' },
           ],
           challenge: 'Untracked courier deductions, delayed COD reconciliation, and fragmented Meta ad tracking.',
@@ -481,8 +481,8 @@ export const landingContent: Record<Locale, LandingContent> = {
           quote:
             'The courier return risk check alone pays for the software ten times over. We stopped shipping expensive mechanical keyboards to habitual cancelers who had 15% delivery records across other courier accounts.',
           metrics: [
-            { stat: '-62%', label: 'Fake Order Rate' },
-            { stat: '4.8x', label: 'Order Processing Speed' },
+            { stat: 'Demo: -62%', label: 'Fake Order Rate' },
+            { stat: 'Demo: 4.8x', label: 'Order Processing Speed' },
             { stat: '6 Couriers', label: 'Unified Dispatch API' },
           ],
           challenge: 'Serial return fraud, high courier transit losses, and disjointed supplier inventory valuation.',
@@ -950,14 +950,14 @@ export const landingContent: Record<Locale, LandingContent> = {
         'ই-কমার্সে শুধু বিক্রি বাড়ালেই প্রফিট হয় না। প্যাকিংয়ের ভুল এবং ভুয়া অর্ডারের মতো ক্ষতিগুলো রুখতে পারলেই আসল মুনাফা টেকে।',
       packingStory: {
         mistakeHeading: 'একটি প্যাকিং ভুলের আসল ক্ষতি',
-        mistakeCost: 'প্রতি ভুলে ৩৫০ ৳ থেকে ৬০০ ৳ পর্যন্ত অপচয়',
+        mistakeCost: 'প্রতি ভুলে ৩৫০ ৳ থেকে ৬০০ ৳ পর্যন্ত অপচয় (উদাহরণমূলক)',
         solutionHeading: 'ইকোমেট স্মার্ট বারকোড প্যাকিং',
         solutionDetail:
           'প্যাকিং টেবিলে প্রতিটি প্রোডাক্টের বারকোড স্ক্যান করা বাধ্যতামূলক। কাস্টমার যদি ব্ল্যাক-এম অর্ডার করে থাকেন এবং প্যাকার ভুলে ব্ল্যাক-এল স্ক্যান করেন, সাথে সাথে স্ক্রিন লাল হয়ে সতর্ক সংকেত বাজবে।',
       },
       fraudStory: {
         fakeOrderHeading: 'ভুয়া ও সিরিয়াল রিটার্নারের অদৃশ্য ড্রেন',
-        fakeOrderCost: 'যেতে ১৮০ ৳ + ফিরতে ১২০ ৳ + দিনশেষে স্টক আটকে থাকা',
+        fakeOrderCost: 'যেতে ১৮০ ৳ + ফিরতে ১২০ ৳ + দিনশেষে স্টক আটকে থাকা (উদাহরণমূলক)',
         solutionHeading: 'প্রি-ডিসপ্যাচ কুরিয়ার হিস্ট্রি ইন্টেলিজেন্স',
         solutionDetail:
           'পার্সেল ছাড়ার আগেই ইকোমেট চেক করে সংশ্লিষ্ট ফোন নম্বরের দেশব্যাপী কুরিয়ার সফলতার হার কত। যদি ডেলিভারি রেট ২০% এর কম হয়, তবে অর্ডারটি অগ্রিম পেমেন্ট বা কল ভেরিফিকেশনের জন্য ফ্ল্যাগ করা হয়।',
@@ -1102,27 +1102,27 @@ export const landingContent: Record<Locale, LandingContent> = {
       metrics: [
         {
           label: 'নেট রিয়ালাইজড সেলস',
-          value: '৳ ৪২,৮৫,৯০০',
+          value: 'ডেমো ডেটা: ৳ ৪২,৮৫,৯০০',
           subtext: 'ক্যানসেল ও রিটার্ন বাদ দিয়ে আসল রাজস্ব',
-          trend: 'বিগত মাসের চেয়ে +১৮.৪% প্রবৃদ্ধি',
+          trend: 'উদাহরণমূলক চিত্র, কোনো গ্যারান্টি নয়',
         },
         {
           label: 'প্যাকিং নির্ভুলতা হার',
-          value: '৯৯.৯৪%',
+          value: 'ডেমো ডেটা: ৯৯.৯৪%',
           subtext: 'স্মার্ট বারকোড স্ক্যানিংয়ের মাধ্যমে যাচাইকৃত',
-          trend: 'ভুল প্যাকিং কমে ০.০৬% এ নেমেছে',
+          trend: 'উদাহরণমূলক চিত্র, কোনো গ্যারান্টি নয়',
         },
         {
           label: 'কুরিয়ার ডেলিভারি সাকসেস',
-          value: '৯১.৮%',
+          value: 'ডেমো ডেটা: ৯১.৮%',
           subtext: '৬টি ইন্টিগ্রেটেড কুরিয়ারের সামগ্রিক ফলাফল',
-          trend: 'ফ্রড চেকের পর +৬.২% ডেলিভারি উন্নতি',
+          trend: 'উদাহরণমূলক চিত্র, কোনো গ্যারান্টি নয়',
         },
         {
           label: 'রিকনসাইল্ড কুরিয়ার সিওডি ক্যাশ',
-          value: '৳ ৩৪,১২,৪৫০',
-          subtext: 'ব্যাংক জমার সাথে শতভাগ মিলে যাওয়া হিসাব',
-          trend: '৳ ০ অমিল টাকা',
+          value: 'ডেমো ডেটা: ৳ ৩৪,১২,৪৫০',
+          subtext: 'ব্যাংক জমার সাথে যাচাইযোগ্য হিসাব',
+          trend: 'উদাহরণমূলক চিত্র, কোনো গ্যারান্টি নয়',
         },
       ],
     },
@@ -1143,8 +1143,8 @@ export const landingContent: Record<Locale, LandingContent> = {
           quote:
             'ইকোমেট ব্যবহারের আগে আমাদের সবচেয়ে বড় যন্ত্রণা ছিল জুতোর ভুল সাইজ চলে যাওয়া। ৪১ সাইজের জায়গায় ৪২ চলে গেলে ডাবল ডেলিভারি চার্জ তো যেতই, সাথে কাস্টমার নষ্ট হতো। স্মার্ট প্যাকিং বারকোড স্টেশন চালুর পর থেকে দিনে ৮০০+ অর্ডারেও আমাদের ভুল প্যাকিং এখন শূন্যের কোঠায়।',
           metrics: [
-            { stat: '৯৯.৯%', label: 'প্যাকিং নির্ভুলতা' },
-            { stat: '-৭৪%', label: 'রিটার্ন চার্জের ক্ষতি হ্রাস' },
+            { stat: 'ডেমো: ৯৯.৯%', label: 'প্যাকিং নির্ভুলতা' },
+            { stat: 'ডেমো: -৭৪%', label: 'রিটার্ন চার্জের ক্ষতি হ্রাস' },
             { stat: '৩টি শোরুম', label: 'রিয়েল-টাইমে সিঙ্ক' },
           ],
           challenge: 'সাইজ ভুলের কারণে অতিরিক্ত রিটার্ন চার্জ এবং শোরুমের সাথে গুদামের হিসাবের অমিল।',
@@ -1163,9 +1163,9 @@ export const landingContent: Record<Locale, LandingContent> = {
           quote:
             'কুরিয়ারের সিওডি টাকা মেলাতে আমাদের দুইজন একাউন্টেন্টকে সপ্তাহে ৩ দিন পুরো সময় দিতে হতো। ইকোমেটে কুরিয়ার স্টেটমেন্ট আপলোড দিলেই ৪০০০ পার্সেলের হিসাব দেড় মিনিটের মধ্যে পাই টু পাই মিলে যায়।',
           metrics: [
-            { stat: '১৮ ঘণ্টা/সপ্তাহ', label: 'অ্যাকাউন্টিং সময় সাশ্রয়' },
-            { stat: '৳ ১২ লাখ', label: 'অতিরিক্ত চার্জ হওয়া টাকা উদ্ধার' },
-            { stat: '১০০%', label: 'অডিট স্বচ্ছতা' },
+            { stat: 'ডেমো: ১৮ ঘণ্টা/সপ্তাহ', label: 'অ্যাকাউন্টিং সময় সাশ্রয়' },
+            { stat: 'ডেমো: ৳ ১২ লাখ', label: 'অতিরিক্ত চার্জ হওয়া টাকা উদ্ধার' },
+            { stat: 'ডেমো: ১০০%', label: 'অডিট স্বচ্ছতা' },
           ],
           challenge: 'কুরিয়ার চার্জের গরমিল, দেরিতে সিওডি টাকা জমা এবং ফেসবুক বিজ্ঞাপনের ভুল অ্যাট্রিবিউশন।',
           solution: 'অটোমেটেড কুরিয়ার সেটেলমেন্ট পার্সিং এবং মেটা সার্ভার-সাইড CAPI।',
@@ -1183,8 +1183,8 @@ export const landingContent: Record<Locale, LandingContent> = {
           quote:
             'কুরিয়ার রিটার্ন রিস্ক চেক ফিচারটির মাধ্যমেই সফটওয়্যারের সাবস্ক্রিপশন ফি দশবার উঠে আসে। যেসব ফোন নম্বরের অতীতের ডেলিভারি সাকসেস রেকর্ড ২০% এর নিচে, তাদের আমরা সরাসরি পার্সেল পাঠানো বন্ধ করে আগে ভেরিফাই করি।',
           metrics: [
-            { stat: '-৬২%', label: 'ভুয়া অর্ডার প্রতিরোধ' },
-            { stat: '৪.৮ গুণ', label: 'দ্রুত প্রসেসিং স্পিড' },
+            { stat: 'ডেমো: -৬২%', label: 'ভুয়া অর্ডার প্রতিরোধ' },
+            { stat: 'ডেমো: ৪.৮ গুণ', label: 'দ্রুত প্রসেসিং স্পিড' },
             { stat: '৬টি কুরিয়ার', label: 'এক এপিআইতে ইন্টিগ্রেটেড' },
           ],
           challenge: 'সিরিয়াল রিটার্ন ফ্রড, দামি গেজেটের ট্রানজিট ক্ষতি এবং ইনভেন্টরি হিসাবের গরমিল।',

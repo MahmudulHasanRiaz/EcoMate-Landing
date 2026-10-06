@@ -215,6 +215,9 @@ export const Hero: React.FC<HeroProps> = ({ content, locale }) => {
                 <span className="text-xs font-mono text-slate-500 dark:text-slate-400 ml-1.5 hidden md:inline">
                   EcoMate Central Operations Console · v4.2
                 </span>
+                <span className="ml-1 shrink-0 whitespace-nowrap rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
+                  Demo data
+                </span>
               </div>
 
               {/* Interactive View Switcher Tabs inside the Hero Frame */}
@@ -293,13 +296,17 @@ export const Hero: React.FC<HeroProps> = ({ content, locale }) => {
 
                     <div className="rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50/80 dark:bg-white/[0.02] p-4">
                       <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                        <span>{locale === 'en' ? 'Courier Delivery Rate' : 'কুরিয়ার সাকসেস রেট'}</span>
+                        <span>{locale === 'en' ? 'Courier Risk Pre-Check' : 'কুরিয়ার সাকসেস রেট'}</span>
                         <span className="text-emerald-600 dark:text-emerald-400 font-medium">Steadfast + Pathao</span>
                       </div>
-                      <p className="mt-2 text-xl sm:text-2xl font-bold text-slate-900 dark:text-white font-mono-numbers">
-                        92.4%
+                      <p className="mt-2 text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400 font-mono-numbers">
+                        {locale === 'en' ? 'Checked' : 'সম্পন্ন'}
                       </p>
-                      <p className="text-[11px] text-slate-500 mt-1">Fraud check prevented 84 fake orders</p>
+                      <p className="text-[11px] text-slate-500 mt-1">
+                        {locale === 'en'
+                          ? 'Per-courier delivery history reviewed before dispatch'
+                          : 'ডিসপ্যাচের আগে প্রতিটি কুরিয়ারে ডেলিভারি হিস্ট্রি যাচাই করা হয়'}
+                      </p>
                     </div>
 
                     <div className="rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50/80 dark:bg-white/[0.02] p-4">

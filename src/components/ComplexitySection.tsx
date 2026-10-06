@@ -11,7 +11,7 @@ export const ComplexitySection: React.FC<ComplexitySectionProps> = ({ content, l
   const [selectedProblem, setSelectedProblem] = useState<ProblemItem>(content.complexity.problems[0]);
 
   return (
-    <section id="growth-complexity" className="relative py-14 md:py-24 border-t border-slate-200 dark:border-white/[0.06] bg-slate-50/70 dark:bg-[#080910] transition-colors">
+    <section id="growth-complexity" className="relative py-14 md:py-24 border-t border-slate-200 dark:border-white/[0.06] bg-slate-50 dark:bg-[#080910] transition-colors">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Section Header with Integrated Friction Context */}
         <div className="max-w-3xl">

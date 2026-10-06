@@ -76,7 +76,7 @@ export const MarketingSection: React.FC<MarketingSectionProps> = ({ content, loc
           {content.marketing.features.map((feature, idx) => (
             <div
               key={idx}
-              className="rounded-2xl border border-slate-200 dark:border-white/[0.08] bg-slate-50/70 dark:bg-[#0C0E1B] p-5 sm:p-7 flex flex-col justify-between hover:border-rose-300 dark:hover:border-rose-500/30 transition-all shadow-2xs"
+              className="rounded-2xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#0C0E1B] p-5 sm:p-7 flex flex-col justify-between hover:border-rose-300 dark:hover:border-rose-500/30 transition-all shadow-2xs"
             >
               <div>
                 <div className="flex items-center justify-between mb-2.5">

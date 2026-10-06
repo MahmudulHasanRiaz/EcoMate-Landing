@@ -35,7 +35,11 @@ export const MobileStickyBar: React.FC<MobileStickyBarProps> = ({ content, local
     e.preventDefault();
     const element = document.querySelector('#lead-form');
     if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
+      // The bar is fixed to the viewport bottom, so a plain scrollIntoView leaves the
+      // form's submit button behind it. Scroll short of the section by the bar's height.
+      const offset = window.innerHeight * 0.12 + 16;
+      const top = element.getBoundingClientRect().top + window.scrollY - offset;
+      window.scrollTo({ top, behavior: 'smooth' });
     }
   };
 

@@ -15,7 +15,7 @@ export const CustomerProofSection: React.FC<CustomerProofProps> = ({ content, lo
   const supportingStudies = content.proof.caseStudies.slice(1);
 
   return (
-    <section id="case-studies" className="relative py-14 md:py-24 border-t border-slate-200 dark:border-white/[0.06] bg-slate-50/50 dark:bg-[#080910] transition-colors">
+    <section id="case-studies" className="relative py-14 md:py-24 border-t border-slate-200 dark:border-white/[0.06] bg-slate-50 dark:bg-[#080910] transition-colors">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="max-w-3xl">
@@ -80,7 +80,7 @@ export const CustomerProofSection: React.FC<CustomerProofProps> = ({ content, lo
 
                 <div className="lg:col-span-5 rounded-xl border border-slate-200/80 dark:border-white/10 bg-white/90 dark:bg-black/50 p-5 space-y-4 shadow-2xs">
                   <span className="text-xs font-mono uppercase tracking-wider text-slate-500 font-semibold block">
-                    Verified Operational Metrics
+                    Illustrative Metrics (Demo Data)
                   </span>
                   <div className="grid grid-cols-3 gap-2 text-center">
                     {featuredStudy.metrics.map((m, idx) => (

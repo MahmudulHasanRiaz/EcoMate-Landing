@@ -95,7 +95,7 @@ export const EcosystemSection: React.FC<EcosystemSectionProps> = ({ content, loc
                   className={`p-3 sm:p-3.5 rounded-xl border text-left transition-all relative cursor-pointer ${
                     isActive
                       ? 'border-indigo-500 bg-indigo-50/90 dark:bg-indigo-950/40 shadow-xs ring-1 ring-indigo-500/20'
-                      : 'border-slate-200 bg-slate-50/70 hover:bg-white hover:border-slate-300 dark:border-white/[0.08] dark:bg-white/[0.02] dark:hover:bg-white/[0.05]'
+                      : 'border-slate-200 bg-slate-50 hover:bg-white hover:border-slate-300 dark:border-white/[0.08] dark:bg-white/[0.02] dark:hover:bg-white/[0.05]'
                   }`}
                 >
                   <div className="mb-1.5 sm:mb-2">{getIcon(node.iconName)}</div>
@@ -135,7 +135,7 @@ export const EcosystemSection: React.FC<EcosystemSectionProps> = ({ content, loc
               {activeNode.items.map((item, idx) => (
                 <div
                   key={idx}
-                  className="rounded-xl border border-slate-200 dark:border-white/[0.06] bg-slate-50/70 dark:bg-white/[0.02] p-3 sm:p-4 flex items-start gap-2.5"
+                  className="rounded-xl border border-slate-200 dark:border-white/[0.06] bg-slate-50 dark:bg-white/[0.02] p-3 sm:p-4 flex items-start gap-2.5"
                 >
                   <div className="h-4 w-4 sm:h-5 sm:w-5 rounded-full bg-indigo-100 dark:bg-indigo-500/20 flex items-center justify-center shrink-0 mt-0.5 text-indigo-600 dark:text-indigo-400">
                     <Check className="h-3 w-3" />

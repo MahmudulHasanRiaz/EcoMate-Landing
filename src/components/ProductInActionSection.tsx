@@ -48,7 +48,7 @@ export const ProductInActionSection: React.FC<ProductInActionProps> = ({
   };
 
   return (
-    <section id="tour" className="relative py-14 md:py-24 border-t border-slate-200 dark:border-white/[0.06] bg-slate-50/50 dark:bg-[#07080E] transition-colors">
+    <section id="tour" className="relative py-14 md:py-24 border-t border-slate-200 dark:border-white/[0.06] bg-slate-50 dark:bg-[#07080E] transition-colors">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="max-w-3xl">
@@ -132,14 +132,21 @@ export const ProductInActionSection: React.FC<ProductInActionProps> = ({
             </div>
 
             {/* Right 7 Cols: Contextual Live Simulated Workspace Screen */}
-            <div className="lg:col-span-7 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/90 dark:bg-black/60 p-5 sm:p-6 space-y-4 shadow-sm">
+            <div className="lg:col-span-7 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/60 p-5 sm:p-6 space-y-4 shadow-sm">
               {/* Top console bar */}
               <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/[0.08] pb-3 text-xs">
                 <div className="flex items-center gap-2">
                   <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 inline-block" />
                   <span className="font-mono font-medium text-slate-800 dark:text-slate-300">EcoMate // {activeModule.name}</span>
                 </div>
-                <span className="font-mono text-[11px] text-slate-500 font-medium">Live Workspace Session</span>
+                <div className="flex items-center gap-2">
+                  <span className="shrink-0 whitespace-nowrap rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
+                    Demo data
+                  </span>
+                  <span className="hidden font-mono text-[11px] text-slate-500 font-medium sm:inline">
+                    Simulated Workspace
+                  </span>
+                </div>
               </div>
 
               {/* Module-Specific Rich UI Composition */}

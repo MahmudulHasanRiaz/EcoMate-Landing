@@ -151,7 +151,7 @@ export const FulfillmentPipelineSection: React.FC<FulfillmentPipelineProps> = ({
           </div>
 
           {/* Active Step Deep-Dive System Card */}
-          <div className="mt-6 sm:mt-8 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-[#0B0D19] p-5 sm:p-10 shadow-md dark:shadow-2xl relative overflow-hidden">
+          <div className="mt-6 sm:mt-8 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0B0D19] p-5 sm:p-10 shadow-md dark:shadow-2xl relative overflow-hidden">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-center">
               {/* Left Column: Narrative description */}
               <div className="lg:col-span-7 space-y-3 sm:space-y-4">

@@ -9,7 +9,7 @@ interface TeamOperationsProps {
 
 export const TeamOperationsSection: React.FC<TeamOperationsProps> = ({ content, locale }) => {
   return (
-    <section id="team" className="relative py-14 md:py-24 border-t border-slate-200 dark:border-white/[0.06] bg-slate-50/50 dark:bg-[#080910] transition-colors">
+    <section id="team" className="relative py-14 md:py-24 border-t border-slate-200 dark:border-white/[0.06] bg-slate-50 dark:bg-[#080910] transition-colors">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="max-w-3xl">

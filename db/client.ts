@@ -57,7 +57,14 @@ export function getDb(): Database {
     //                  statements do not survive PgBouncer in transaction mode.
     // max:1          -> a Workers isolate serves one request at a time; Hyperdrive
     //                  already multiplexes across the fleet.
-    client = postgres(url, { prepare: false, max: 1 });
+    // connect_timeout:10 -> without this, a blackholed network (SYN dropped, no RST —
+    //                  exactly what GitHub runners hit against an unreachable Supabase
+    //                  host) hangs TCP connect for minutes. Next's prerender cache-fill
+    //                  timeout fires first, failing the whole build with a misleading
+    //                  "Filling a cache during prerender timed out". Ten seconds bounds
+    //                  every failure mode to fast-and-loud, so callers degrade to the
+    //                  static fallback instead of hanging the build (2026-10-06).
+    client = postgres(url, { prepare: false, max: 1, connect_timeout: 10 });
     cached = drizzle(client, { schema });
     cachedUrl = url;
   }

@@ -163,6 +163,36 @@ jobs:
         env:
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
 
+      # Idempotent R2 bucket ensure. Runs on every manual deploy, creates the bucket
+      # ONLY when it does not exist, and never deletes, recreates or replaces an
+      # existing bucket or its data. The bucket name must match the `[env.*.r2_buckets]`
+      # `bucket_name` in wrangler.toml for the same environment (`ecomate-media-prod`
+      # for production, `ecomate-media-preview` for preview) — the deploy step below
+      # binds exactly that name via the native R2 Binding (`R2_BUCKET`), so no
+      # Access Key / Secret Key is ever stored in application secrets.
+      # Uses only the existing CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID secrets.
+      # Custom-domain attachment (`wrangler r2 bucket domain ... --custom-domain
+      # media.ecomate.app`) stays a one-time manual step: it needs DNS in place and
+      # must not run blindly on every deploy.
+      - name: Ensure R2 bucket exists (idempotent, never deletes)
+        run: |
+          ENV_NAME="${{ github.event.inputs.environment || 'production' }}"
+          if [ "$ENV_NAME" = "preview" ]; then
+            BUCKET="ecomate-media-preview"
+          else
+            BUCKET="ecomate-media-prod"
+          fi
+          if npx wrangler r2 bucket info "$BUCKET" >/dev/null 2>&1; then
+            echo "R2 bucket '$BUCKET' already exists — skipping creation (idempotent)."
+          else
+            echo "R2 bucket '$BUCKET' not found — creating it now..."
+            npx wrangler r2 bucket create "$BUCKET"
+            echo "R2 bucket '$BUCKET' created."
+          fi
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
       # The opennext CLI must drive the deploy. A plain `wrangler deploy` (what
       # `cloudflare/wrangler-action` runs) does not carry the opennext build output/args
       # and silently ships a broken or empty Worker. `--env` selects the matching

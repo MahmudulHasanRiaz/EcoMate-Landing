@@ -3,13 +3,43 @@ import { desc } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { leadsTable } from '@/db/schema';
 import { asObject, errorMessage, fail, logServerError, ok, readString } from '@/lib/json';
-import { dispatchLead } from '@/lib/licensePortal';
+import { dispatchLeadIntegrations } from '@/lib/leadDispatch';
 
 // Per-isolate best effort. A Worker has no shared memory across the fleet, so this is a
 // backstop in front of the WAF rule and the KV limiter (Task 14), not the only defence.
 const WINDOW_MS = 600_000;
 const MAX_PER_WINDOW = 8;
 const hits = new Map<string, { count: number; expiresAt: number }>();
+
+/** Version identifier stored on every consented lead (Task 13 §5, Task 20 §5). */
+const PRIVACY_POLICY_VERSION = 'privacy-v1';
+const MAX_TRACKING_VALUE = 200;
+const MAX_USER_AGENT = 512;
+
+/** `crypto.randomUUID` exists on Node 19+ and every Workers runtime; the fallback keeps a
+ *  lead submittable in exotic environments rather than failing the request. */
+function newEventId(): string {
+  try {
+    return crypto.randomUUID();
+  } catch {
+    const random = Math.random().toString(36).slice(2, 10);
+    return `lead-${Date.now().toString(36)}-${random}`;
+  }
+}
+
+/** Event ids come from the client; they are opaque identifiers, so constrain their shape. */
+function readEventId(value: unknown): string {
+  const candidate = readString(value).trim();
+  return /^[A-Za-z0-9._:-]{8,80}$/.test(candidate) ? candidate : newEventId();
+}
+
+function readClientIp(req: Request): string {
+  const direct = req.headers.get('cf-connecting-ip');
+  if (direct) return direct;
+  // `x-forwarded-for` is a comma-separated chain; the first entry is the client.
+  const forwarded = req.headers.get('x-forwarded-for');
+  return forwarded ? forwarded.split(',')[0]?.trim() ?? '' : '';
+}
 
 export async function GET() {
   try {
@@ -47,6 +77,14 @@ export async function POST(req: Request) {
     if (!name) return fail('Name is required', 400);
     if (phone.length < 8) return fail('A valid phone number is required', 400);
 
+    // Consent is a legal prerequisite, not a preference: without it there is no lawful
+    // basis to store the PII, let alone send a conversion event to Meta.
+    if (body.consentGiven !== true) {
+      return fail('Consent to be contacted is required before submitting this form', 400);
+    }
+    const consentText =
+      readString(body.consentText).trim().slice(0, 120) || PRIVACY_POLICY_VERSION;
+
     const [lead] = await getDb()
       .insert(leadsTable)
       .values({
@@ -58,15 +96,28 @@ export async function POST(req: Request) {
         source: readString(body.source, 'landing_page_lead_form'),
         utmSource: readString(body.utmSource),
         utmCampaign: readString(body.utmCampaign),
+        // --- tracking + consent (Task 13) ---------------------------------------------
+        fbp: readString(body.fbp).trim().slice(0, MAX_TRACKING_VALUE),
+        fbc: readString(body.fbc).trim().slice(0, MAX_TRACKING_VALUE),
+        eventId: readEventId(body.eventId),
+        clientIp: readClientIp(req),
+        userAgent: readString(req.headers.get('user-agent')).slice(0, MAX_USER_AGENT),
+        consentGiven: true,
+        consentAt: new Date(),
+        consentText,
       })
       .returning();
 
-    keepAlive(dispatchLead(lead.id));
+    // Meta CAPI + License Portal, both handed to the platform. `keepAlive` reuses
+    // `ctx.waitUntil` so a recycled isolate cannot cancel either dispatch — and the lead
+    // row is already committed, so a dispatch failure never loses the lead.
+    keepAlive(dispatchLeadIntegrations(lead.id));
 
     return ok(
       {
         success: true,
         leadId: lead.id,
+        eventId: lead.eventId,
         message:
           'Demo request registered successfully. Our operations team will reach out promptly.',
       },

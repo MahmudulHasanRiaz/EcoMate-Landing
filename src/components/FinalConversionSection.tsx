@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { LandingContent, Locale } from '../types/landing';
+import { trackBrowserLead } from '../../components/MetaPixel';
 import {
   MessageSquare,
   PhoneCall,
@@ -17,6 +18,28 @@ interface FinalConversionProps {
   locale: Locale;
 }
 
+/** Must match the version the server stores in `leads.consent_text` (Task 13 §5). */
+const CONSENT_TEXT_VERSION = 'privacy-v1';
+
+/** Read a first-party cookie value (`_fbp` / `_fbc`) without throwing on a locked document. */
+function readCookie(name: string): string {
+  if (typeof document === 'undefined') return '';
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : '';
+}
+
+/**
+ * One `event_id` for the browser pixel and the server CAPI call, so Meta deduplicates them.
+ * `randomUUID` needs a secure context; the fallback keeps submission working otherwise.
+ */
+function newEventId(): string {
+  try {
+    return crypto.randomUUID();
+  } catch {
+    return `lead-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+}
+
 export const FinalConversionSection: React.FC<FinalConversionProps> = ({ content, locale }) => {
   const [formData, setFormData] = useState({
     name: '',
@@ -29,6 +52,8 @@ export const FinalConversionSection: React.FC<FinalConversionProps> = ({ content
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  // Unticked by default: consent has to be an explicit act, never a pre-checked box.
+  const [consentGiven, setConsentGiven] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,9 +72,20 @@ export const FinalConversionSection: React.FC<FinalConversionProps> = ({ content
       );
       return;
     }
+    if (!consentGiven) {
+      setFormError(
+        locale === 'en'
+          ? 'Please tick the consent box so we are allowed to contact you.'
+          : 'যোগাযোগের অনুমতি দিতে অনুগ্রহ করে সম্মতির ঘরটি টিক দিন।'
+      );
+      return;
+    }
 
     setIsSubmitting(true);
     try {
+      // Shared with the server-side Conversions API event: Meta deduplicates the browser
+      // and server `Lead` events on this id (Task 13 §4).
+      const eventId = newEventId();
       const response = await fetch('/api/leads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -60,17 +96,40 @@ export const FinalConversionSection: React.FC<FinalConversionProps> = ({ content
           dailyVolume: formData.volume,
           note: formData.note.trim(),
           source: 'landing_page_lead_form',
+          consentGiven: true,
+          consentText: CONSENT_TEXT_VERSION,
+          eventId,
+          fbp: readCookie('_fbp'),
+          fbc: readCookie('_fbc'),
         }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || (locale === 'en' ? 'Submission error. Please try again or call directly.' : 'অনুরোধটি ব্যর্থ হয়েছে। আবার চেষ্টা করুন বা সরাসরি কল করুন।'));
+        const payload: unknown = await response.json().catch(() => null);
+        const serverMessage =
+          typeof payload === 'object' && payload !== null && typeof (payload as { error?: unknown }).error === 'string'
+            ? (payload as { error: string }).error
+            : '';
+        throw new Error(
+          serverMessage ||
+            (locale === 'en'
+              ? 'Submission error. Please try again or call directly.'
+              : 'অনুরোধটি ব্যর্থ হয়েছে। আবার চেষ্টা করুন বা সরাসরি কল করুন।')
+        );
       }
 
+      // Browser half of the deduplicated conversion. The server sends the other half with
+      // the same event_id from the POST handler.
+      trackBrowserLead(eventId);
       setIsSubmitted(true);
-    } catch (err: any) {
-      setFormError(err.message || (locale === 'en' ? 'Submission failed. Please call or WhatsApp us directly.' : 'অনুরোধটি পাঠানো সম্ভব হয়নি। সরাসরি ফোন বা হোয়াটসঅ্যাপে যোগাযোগ করুন।'));
+    } catch (err: unknown) {
+      setFormError(
+        err instanceof Error && err.message
+          ? err.message
+          : locale === 'en'
+            ? 'Submission failed. Please call or WhatsApp us directly.'
+            : 'অনুরোধটি পাঠানো সম্ভব হয়নি। সরাসরি ফোন বা হোয়াটসঅ্যাপে যোগাযোগ করুন।'
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -189,6 +248,8 @@ export const FinalConversionSection: React.FC<FinalConversionProps> = ({ content
     volume: content.leadForm.volumeOptions[1] || '150-500 orders / day',
                         note: '',
                       });
+                      // Consent is per submission: a new request needs a fresh, explicit tick.
+                      setConsentGiven(false);
                     }}
                     className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 underline cursor-pointer"
                   >
@@ -278,6 +339,21 @@ export const FinalConversionSection: React.FC<FinalConversionProps> = ({ content
                     placeholder={content.leadForm.notePlaceholder}
                     className="w-full px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors resize-none"
                   />
+                </div>
+
+                {/* Consent — legally required before we may store PII or fire a conversion
+                    event, and unticked by default. The server rejects a POST without it. */}
+                <div className="pt-1">
+                  <label className="flex items-start gap-2.5 text-[11px] sm:text-xs text-slate-600 dark:text-slate-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={consentGiven}
+                      onChange={(e) => setConsentGiven(e.target.checked)}
+                      aria-required="true"
+                      className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 dark:border-white/20 dark:bg-black/40"
+                    />
+                    <span>{content.leadForm.consentLabel}</span>
+                  </label>
                 </div>
 
                 {/* Primary Submit Button */}

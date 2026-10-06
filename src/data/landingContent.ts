@@ -690,6 +690,8 @@ export const landingContent: Record<Locale, LandingContent> = {
       successMessage:
         'Thank you! An EcoMate operations specialist will reach out within 2 hours to confirm your personalized walkthrough.',
       privacyNote: 'Strictly confidential. We never share your phone number or business data.',
+      consentLabel:
+        'I consent to EcoMate storing this request and contacting me about it. I can ask for deletion at any time.',
     },
     footer: {
       tagline: 'The complete e-commerce business operating platform for scaling brands.',
@@ -1392,6 +1394,8 @@ export const landingContent: Record<Locale, LandingContent> = {
       successMessage:
         'ধন্যবাদ! ইকোমেটের একজন অপারেশন স্পেশালিস্ট আগামী ২ ঘণ্টার মধ্যে কল করে ডেমোর সময়সূচি নির্ধারণ করবেন।',
       privacyNote: 'সম্পূর্ণ গোপনীয়। আমরা কখনোই আপনার ফোন নম্বর বা ব্যবসায়িক তথ্য অন্য কোথাও শেয়ার করি না।',
+      consentLabel:
+        'আমি সম্মত যে ইকোমেট এই তথ্য সংরক্ষণ করবে এবং আমার সাথে যোগাযোগ করবে। আমি যেকোনো সময় তথ্য মুছতে বলতে পারি।',
     },
     footer: {
       tagline: 'স্কেলিং ই-কমার্স ও রিটেইল ব্যবসার সম্পূর্ণ অপারেটিং প্ল্যাটফর্ম।',

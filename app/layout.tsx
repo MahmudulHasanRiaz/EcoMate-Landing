@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Hind_Siliguri, Instrument_Serif, JetBrains_Mono, Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
+import { MetaPixel } from '@/components/MetaPixel';
 import {
   SITE_DESCRIPTION,
   SITE_NAME,
@@ -88,6 +89,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: serializeJsonLd(organizationJsonLd()) }}
         />
+        {/* Meta browser pixel. Renders nothing until NEXT_PUBLIC_META_PIXEL_ID is set, and
+            the Lead event it fires shares its event_id with the server-side CAPI call so
+            Meta deduplicates the pair (Task 13). */}
+        <MetaPixel />
         {children}
       </body>
     </html>

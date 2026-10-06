@@ -96,9 +96,29 @@ export const leadsTable = pgTable('leads', {
   licensePortalStatus: text('license_portal_status').notNull().default('Pending'), // Pending, Synced, Failed
   licensePortalError: text('license_portal_error').default(''),
   licensePortalSyncedAt: timestamp('license_portal_synced_at'),
+  // --- Server-side conversion tracking (Task 13) ------------------------------------
+  fbp: text('fbp').default(''),          // _fbp browser cookie value at submit time
+  fbc: text('fbc').default(''),          // _fbc click-id cookie value at submit time
+  eventId: text('event_id').default(''), // shared browser + CAPI deduplication id
+  clientIp: text('client_ip').default(''),
+  userAgent: text('user_agent').default(''),
+  metaCapiStatus: text('meta_capi_status').notNull().default('Pending'), // Pending | Sent | Failed | Skipped
+  metaCapiError: text('meta_capi_error').default(''),
+  metaCapiSentAt: timestamp('meta_capi_sent_at'),
+  // --- Consent (legal prerequisite, not a preference) --------------------------------
+  consentGiven: boolean('consent_given').notNull().default(false),
+  consentAt: timestamp('consent_at'),
+  consentText: text('consent_text').default(''), // exact privacy-policy version accepted
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
+}, (t) => [
+  // A tracked lead must carry the timestamp it was consented at; storing the consent text
+  // without the moment (or vice versa) is exactly the record a regulator would reject.
+  check('leads_consent_recorded_at_consent',
+    sql`${t.consentGiven} = false OR (${t.consentAt} IS NOT NULL AND ${t.consentText} <> '')`),
+  check('leads_meta_capi_status_valid',
+    sql`${t.metaCapiStatus} IN ('Pending', 'Sent', 'Failed', 'Skipped')`),
+]);
 
 // 5. Testimonials Table (Multi-format: quotes, videos, audio/podcast)
 export const testimonialsTable = pgTable('testimonials', {

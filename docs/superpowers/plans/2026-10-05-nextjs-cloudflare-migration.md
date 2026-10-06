@@ -297,12 +297,26 @@ Rules: the single LCP/hero image gets `priority`; everything else stays lazy. Ev
 Run: `npm run dev`
 Expected: `✓ Ready on http://localhost:3000`, page renders hero + sections, no console errors. `/api/*` will 404 until Task 4 — that is expected; AdminPanel data comes later.
 
+- [ ] **Step 4b: Turn on TypeScript `strict` mode, now while the tree is small**
+
+`tsconfig.json` currently carries an explicit `strict: false` (inherited from the AI-Studio scaffold). That is the single highest-value thing to change in this task: enabling strict mode across 22 existing components is cheap today and expensive after 24 tasks of new code land on top of an untyped baseline.
+
+Set `"strict": true` and fix every error it surfaces across `src/`. Expect the usual clusters from generated React code:
+- `useState` initialised without a type — annotate explicitly
+- optional/possibly-undefined from `?.` chains and array indexing
+- `any` on API and component props — replace with the real type from `src/types/landing.ts`
+- null vs undefined mismatches on optional props
+
+Do not paper over errors with `!` or `as any`. If a genuine gap remains, type it as `unknown` and narrow it. Record the count fixed in the commit body.
+
+Verify: `npx tsc --noEmit` clean **with strict on**. Then re-run `npm run lint` (same command) to confirm parity.
+
 - [ ] **Step 5: Delete Vite entry files, commit**
 
 ```bash
 git rm src/main.tsx index.html vite.config.ts
-git add app/layout.tsx app/globals.css app/page.tsx src/components
-git commit -m "feat: port landing UI to Next.js App Router with next/font and next/image"
+git add app/layout.tsx app/globals.css app/page.tsx src/components tsconfig.json
+git commit -m "feat: port landing UI to Next.js App Router, enable TypeScript strict"
 ```
 
 ---

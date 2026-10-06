@@ -1,21 +1,18 @@
 import React, { useState } from 'react';
-import { LandingContent, Locale, ProblemItem } from '../types/landing';
+import { useLanding } from '@/components/shell/useLanding';
+import type { ProblemItem } from '../types/landing';
 import { AlertCircle, ArrowRight, CheckCircle2, ShieldAlert, Sparkles, TrendingDown } from 'lucide-react';
 
-interface ComplexitySectionProps {
-  content: LandingContent;
-  locale: Locale;
-}
-
-export const ComplexitySection: React.FC<ComplexitySectionProps> = ({ content, locale }) => {
+export const ComplexitySection: React.FC = () => {
+  const { content, locale } = useLanding();
   const [selectedProblem, setSelectedProblem] = useState<ProblemItem>(content.complexity.problems[0]);
 
   return (
-    <section id="growth-complexity" className="relative py-14 md:py-24 border-t border-slate-200 dark:border-white/[0.06] bg-slate-50/70 dark:bg-[#080910] transition-colors">
+    <section id="growth-complexity" className="relative py-14 md:py-24 border-t border-slate-200 dark:border-white/[0.06] bg-slate-50 dark:bg-[#080910] transition-colors">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Section Header with Integrated Friction Context */}
         <div className="max-w-3xl">
-          <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-rose-600 dark:text-rose-400 mb-2 sm:mb-3">
+          <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-rose-700 dark:text-rose-300 mb-2 sm:mb-3">
             <ShieldAlert className="h-3.5 w-3.5" />
             <span>{content.complexity.eyebrow}</span>
           </div>
@@ -30,7 +27,7 @@ export const ComplexitySection: React.FC<ComplexitySectionProps> = ({ content, l
         {/* Visual Architectural Contrast: Disconnected Chaos vs Unified Control */}
         <div className="mt-8 sm:mt-12 rounded-2xl border border-slate-200 dark:border-white/10 bg-white/70 dark:bg-[#0B0D18]/90 backdrop-blur-xl p-5 sm:p-8 shadow-sm">
           <div className="text-center max-w-2xl mx-auto mb-6 sm:mb-8">
-            <span className="text-[11px] sm:text-xs font-mono font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+            <span className="text-[11px] sm:text-xs font-mono font-semibold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
               {locale === 'en' ? 'Operational Architecture Comparison' : 'অপারেশনাল আর্কিটেকচার তুলনা'}
             </span>
             <h3 className="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white mt-1">
@@ -43,7 +40,7 @@ export const ComplexitySection: React.FC<ComplexitySectionProps> = ({ content, l
             <div className="rounded-xl border border-rose-200/80 dark:border-rose-500/20 bg-rose-50/40 dark:bg-rose-950/10 p-5 sm:p-6 flex flex-col justify-between relative overflow-hidden">
               <div>
                 <div className="flex items-center justify-between pb-3 border-b border-rose-200/60 dark:border-rose-500/20">
-                  <span className="text-xs font-bold uppercase tracking-wider text-rose-700 dark:text-rose-400 flex items-center gap-1.5">
+                  <span className="text-xs font-bold uppercase tracking-wider text-rose-700 dark:text-rose-300 flex items-center gap-1.5">
                     <span className="h-2 w-2 rounded-full bg-rose-500 inline-block" />
                     {locale === 'en' ? 'Fragmented Operation (Without EcoMate)' : 'টুকরো টুকরো অপারেশন (ইকোমেট ছাড়া)'}
                   </span>
@@ -56,25 +53,25 @@ export const ComplexitySection: React.FC<ComplexitySectionProps> = ({ content, l
                 <div className="my-5 space-y-2.5">
                   <div className="flex items-center justify-between p-2.5 rounded-lg bg-white/80 dark:bg-black/30 border border-rose-200/60 dark:border-white/[0.04] text-xs">
                     <span className="font-medium text-slate-800 dark:text-slate-200">Online Store & Facebook Orders</span>
-                    <span className="font-mono text-[11px] text-rose-600 dark:text-rose-400 font-semibold">Unlinked Excel Sheet ✗</span>
+                    <span className="font-mono text-[11px] text-rose-700 dark:text-rose-300 font-semibold">Unlinked Excel Sheet ✗</span>
                   </div>
 
                   <div className="flex justify-center my-0.5">
-                    <span className="text-[10px] font-mono text-rose-500/80 dark:text-rose-400/80">↓ Manual copy-pasting between tabs</span>
+                    <span className="text-[10px] font-mono text-rose-700 dark:text-rose-400/80">↓ Manual copy-pasting between tabs</span>
                   </div>
 
                   <div className="flex items-center justify-between p-2.5 rounded-lg bg-white/80 dark:bg-black/30 border border-rose-200/60 dark:border-white/[0.04] text-xs">
                     <span className="font-medium text-slate-800 dark:text-slate-200">Showroom POS & Warehouse Bin</span>
-                    <span className="font-mono text-[11px] text-rose-600 dark:text-rose-400 font-semibold">Stock Desync & Oversell ✗</span>
+                    <span className="font-mono text-[11px] text-rose-700 dark:text-rose-300 font-semibold">Stock Desync & Oversell ✗</span>
                   </div>
 
                   <div className="flex justify-center my-0.5">
-                    <span className="text-[10px] font-mono text-rose-500/80 dark:text-rose-400/80">↓ Verbal calls & unverified packing slips</span>
+                    <span className="text-[10px] font-mono text-rose-700 dark:text-rose-400/80">↓ Verbal calls & unverified packing slips</span>
                   </div>
 
                   <div className="flex items-center justify-between p-2.5 rounded-lg bg-white/80 dark:bg-black/30 border border-rose-200/60 dark:border-white/[0.04] text-xs">
                     <span className="font-medium text-slate-800 dark:text-slate-200">Courier Delivery & COD Return</span>
-                    <span className="font-mono text-[11px] text-rose-600 dark:text-rose-400 font-semibold">Blind Dispatch & Lost Cash ✗</span>
+                    <span className="font-mono text-[11px] text-rose-700 dark:text-rose-300 font-semibold">Blind Dispatch & Lost Cash ✗</span>
                   </div>
                 </div>
               </div>
@@ -88,7 +85,7 @@ export const ComplexitySection: React.FC<ComplexitySectionProps> = ({ content, l
             <div className="rounded-xl border border-emerald-200/80 dark:border-emerald-500/20 bg-emerald-50/40 dark:bg-emerald-950/10 p-5 sm:p-6 flex flex-col justify-between relative overflow-hidden">
               <div>
                 <div className="flex items-center justify-between pb-3 border-b border-emerald-200/60 dark:border-emerald-500/20">
-                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
                     <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
                     {locale === 'en' ? 'Disciplined Pipeline (With EcoMate)' : 'একীভূত ডিসিপ্লিনড অপারেশন (ইকোমেট)'}
                   </span>
@@ -101,25 +98,25 @@ export const ComplexitySection: React.FC<ComplexitySectionProps> = ({ content, l
                 <div className="my-5 space-y-2.5">
                   <div className="flex items-center justify-between p-2.5 rounded-lg bg-white/80 dark:bg-black/30 border border-emerald-200/60 dark:border-white/[0.04] text-xs">
                     <span className="font-medium text-slate-800 dark:text-slate-200">All Sales Channels (Web + POS)</span>
-                    <span className="font-mono text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">Instant Order Ingestion ✓</span>
+                    <span className="font-mono text-[11px] text-emerald-700 dark:text-emerald-300 font-semibold">Instant Order Ingestion ✓</span>
                   </div>
 
                   <div className="flex justify-center my-0.5">
-                    <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400">↓ Automated courier fraud check & reservation</span>
+                    <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-300">↓ Automated courier fraud check & reservation</span>
                   </div>
 
                   <div className="flex items-center justify-between p-2.5 rounded-lg bg-white/80 dark:bg-black/30 border border-emerald-200/60 dark:border-white/[0.04] text-xs">
                     <span className="font-medium text-slate-800 dark:text-slate-200">Barcode Audio Verification Station</span>
-                    <span className="font-mono text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">Zero Mismatch Guarantee ✓</span>
+                    <span className="font-mono text-[11px] text-emerald-700 dark:text-emerald-300 font-semibold">Zero Mismatch Guarantee ✓</span>
                   </div>
 
                   <div className="flex justify-center my-0.5">
-                    <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400">↓ Auto-generated consignment & tracking SMS</span>
+                    <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-300">↓ Auto-generated consignment & tracking SMS</span>
                   </div>
 
                   <div className="flex items-center justify-between p-2.5 rounded-lg bg-white/80 dark:bg-black/30 border border-emerald-200/60 dark:border-white/[0.04] text-xs">
                     <span className="font-medium text-slate-800 dark:text-slate-200">Automated Courier COD Reconciliation</span>
-                    <span className="font-mono text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">Bank Matched ✓</span>
+                    <span className="font-mono text-[11px] text-emerald-700 dark:text-emerald-300 font-semibold">Bank Matched ✓</span>
                   </div>
                 </div>
               </div>
@@ -135,7 +132,7 @@ export const ComplexitySection: React.FC<ComplexitySectionProps> = ({ content, l
         <div className="mt-8 sm:mt-12 grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
           {/* Left Column: Problem Selector Pills (col-span-5) */}
           <div className="lg:col-span-5 space-y-2">
-            <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2 px-1">
+            <div className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-2 px-1">
               {content.complexity.frictionTitle}
             </div>
 
@@ -156,7 +153,7 @@ export const ComplexitySection: React.FC<ComplexitySectionProps> = ({ content, l
                       <p className={`text-xs sm:text-sm font-semibold transition-colors ${isSelected ? 'text-indigo-950 dark:text-white' : 'text-slate-800 dark:text-slate-300'}`}>
                         {problem.title}
                       </p>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1">
+                      <p className="text-[11px] text-slate-600 dark:text-slate-300 line-clamp-1">
                         {problem.consequence}
                       </p>
                     </div>
@@ -178,14 +175,14 @@ export const ComplexitySection: React.FC<ComplexitySectionProps> = ({ content, l
 
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 dark:border-white/[0.08] pb-3.5 mb-5">
               <div>
-                <span className="text-[10px] sm:text-[11px] font-mono text-indigo-600 dark:text-indigo-400 uppercase tracking-wider font-semibold">
+                <span className="text-[10px] sm:text-[11px] font-mono text-indigo-700 dark:text-indigo-300 uppercase tracking-wider font-semibold">
                   Module: {selectedProblem.module}
                 </span>
                 <h3 className="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white mt-0.5">
                   {selectedProblem.title}
                 </h3>
               </div>
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20">
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-500/20">
                 Operational Leak
               </span>
             </div>
@@ -194,7 +191,7 @@ export const ComplexitySection: React.FC<ComplexitySectionProps> = ({ content, l
               {/* Consequence Box */}
               <div className="rounded-xl border border-rose-200 dark:border-rose-500/20 bg-rose-50/70 dark:bg-rose-950/10 p-3.5 sm:p-4">
                 <div className="flex items-start gap-3">
-                  <TrendingDown className="h-4 w-4 sm:h-5 sm:w-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+                  <TrendingDown className="h-4 w-4 sm:h-5 sm:w-5 text-rose-700 dark:text-rose-400 shrink-0 mt-0.5" />
                   <div>
                     <h4 className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-rose-800 dark:text-rose-300">
                       Consequence & Real Commercial Loss
@@ -212,7 +209,7 @@ export const ComplexitySection: React.FC<ComplexitySectionProps> = ({ content, l
               {/* EcoMate Solution Box */}
               <div className="rounded-xl border border-emerald-200 dark:border-emerald-500/20 bg-emerald-50/70 dark:bg-emerald-950/10 p-3.5 sm:p-4">
                 <div className="flex items-start gap-3">
-                  <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                  <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-700 dark:text-emerald-400 shrink-0 mt-0.5" />
                   <div>
                     <h4 className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
                       The EcoMate Solution
@@ -220,7 +217,7 @@ export const ComplexitySection: React.FC<ComplexitySectionProps> = ({ content, l
                     <p className="mt-1 text-xs sm:text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
                       {selectedProblem.solution}
                     </p>
-                    <div className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                    <div className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
                       <Sparkles className="h-3.5 w-3.5" />
                       <span>{content.complexity.controlledTitle}</span>
                     </div>
@@ -229,7 +226,7 @@ export const ComplexitySection: React.FC<ComplexitySectionProps> = ({ content, l
               </div>
             </div>
 
-            <div className="mt-6 pt-4 border-t border-slate-200 dark:border-white/[0.06] flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+            <div className="mt-6 pt-4 border-t border-slate-200 dark:border-white/[0.06] flex items-center justify-between text-xs text-slate-600 dark:text-slate-300">
               <span className="hidden sm:inline">Eliminates guesswork across your daily operation</span>
               <a
                 href="#lead-form"

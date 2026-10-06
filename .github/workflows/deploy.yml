@@ -1,4 +1,8 @@
-name: Production Deployment - Cloudflare Pages (Manual Trigger Only)
+name: Production Deployment - Cloudflare Workers (Manual Trigger Only)
+
+# Least privilege: nothing here creates releases or comments, so read is enough.
+permissions:
+  contents: read
 
 on:
   workflow_dispatch:
@@ -27,13 +31,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        # Pinned by SHA (see ci.yml for why); `# v4` keeps Dependabot updates working.
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Setup Node.js (v24)
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
           cache: 'npm'
+
+      # Verifies setup-node actually delivered Node 24. This MUST run after
+      # setup-node: checking before it would test the runner-image default Node
+      # (v20), not our toolchain — that ordering bug failed CI on PR #1.
+      - name: Assert Node floor (24)
+        run: node -e "if (parseInt(process.versions.node.split('.')[0], 10) < 24) { console.error('Node 24+ required'); process.exit(1); }"
 
       - name: Install dependencies (Strict frozen lockfile)
         run: npm ci
@@ -41,57 +52,168 @@ jobs:
       - name: TypeScript typecheck & lint
         run: npm run lint
 
+      # Same guarantee as CI, at deploy time: browser-bundled values must be
+      # public. See ci.yml for the SITE_KEY rationale.
+      - name: Assert no secrets behind NEXT_PUBLIC_
+        run: |
+          secretish=$(grep -rEn 'NEXT_PUBLIC_[A-Z0-9_]*(TOKEN|SECRET|PASSWORD|PRIVATE_KEY|API_KEY)' wrangler.toml .env.example lib app 2>/dev/null || true)
+          keyish=$(grep -rEn 'NEXT_PUBLIC_[A-Z0-9_]*KEY' wrangler.toml .env.example lib app 2>/dev/null | grep -v 'SITE_KEY' || true)
+          if [ -n "$secretish$keyish" ]; then
+            echo "$secretish$keyish"
+            echo "::error::A NEXT_PUBLIC_ variable looks like a secret. Move the real value to a Worker secret."
+            exit 1
+          fi
+          echo "no secrets behind NEXT_PUBLIC_"
+
+      # See .github/workflows/ci.yml for the full explanation: `opennextjs-cloudflare
+      # build` runs `npm run build` internally, so the package.json build script must
+      # never call `opennextjs-cloudflare build` (unbounded recursion).
+      - name: Assert no opennext build recursion
+        run: |
+          node -e "
+            const pkg = require('./package.json');
+            const script = String((pkg.scripts && pkg.scripts.build) || '');
+            if (/opennextjs-cloudflare\s+build/.test(script)) {
+              console.error('::error::package.json \"build\" calls opennextjs-cloudflare build, which recurses without bound. It must run the Next.js build (\"next build\").');
+              process.exit(1);
+            }
+            console.log('package.json build script is recursion-safe:', script);
+          "
+
+      # The opennext CLI produces the deployable Worker bundle (`.open-next`); it runs
+      # `npm run build` (`next build`) internally. The package.json build script must
+      # never point back at `opennextjs-cloudflare build` — that recurses without bound.
       - name: Build production bundle
-        run: npm run build
+        run: npx opennextjs-cloudflare build
+        env:
+          # Required at build time under `cacheComponents: true`: cached data functions
+          # run during the build with no Hyperdrive binding, and `db/client.ts` falls back
+          # to DIRECT_URL. The migration step below reuses the same secret.
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
 
       - name: Verify build artifact integrity
         run: |
-          if [ ! -f dist/index.html ]; then
-            echo "::error::CRITICAL: dist/index.html missing! Aborting deployment."
+          if [ ! -d .open-next ]; then
+            echo "::error::CRITICAL: .open-next build output missing! Aborting deployment."
             exit 1
           fi
-          echo "Build integrity confirmed. Artifacts ready for Cloudflare deployment."
+          echo "Build integrity confirmed. .open-next bundle ready for Cloudflare."
 
       - name: Archive build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: cloudflare-dist-bundle
-          path: dist
+          name: opennext-bundle
+          path: .open-next
           retention-days: 2
+          if-no-files-found: error
 
   deploy_to_cloudflare:
-    name: 2. Cloudflare Pages Deployment
+    name: 2. Cloudflare Workers Deployment
     needs: [build_and_verify]
     if: success()
     runs-on: ubuntu-latest
     environment:
       name: ${{ github.event.inputs.environment || 'production' }}
-      url: ${{ steps.deploy_step.outputs.deployment-url }}
     steps:
       - name: Checkout repository for configuration
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup Node.js (v24)
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: 'npm'
+
+      # Verifies setup-node actually delivered Node 24. This MUST run after
+      # setup-node: checking before it would test the runner-image default Node
+      # (v20), not our toolchain — that ordering bug failed CI on PR #1.
+      - name: Assert Node floor (24)
+        run: node -e "if (parseInt(process.versions.node.split('.')[0], 10) < 24) { console.error('Node 24+ required'); process.exit(1); }"
+
+      # The opennext CLI that drives the deploy is a project dependency, so the deploy job
+      # needs its own install.
+      - name: Install dependencies (Strict frozen lockfile)
+        run: npm ci
 
       - name: Download build artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: cloudflare-dist-bundle
-          path: dist
+          name: opennext-bundle
+          path: .open-next
 
-      - name: Deploy to Cloudflare via Wrangler
-        id: deploy_step
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy
+      # `migrate` (journaled SQL from `drizzle/`), never `push` (live schema diff).
+      #
+      # `db:push` reconciles the database to `db/schema.ts` by whatever means it judges
+      # necessary, which on Postgres includes DROPPING columns it believes are unused. Against a
+      # production leads table that is data loss performed by a deploy step, and it is not
+      # reversible from git. Migrations only ever apply the statements that were generated,
+      # reviewed and committed.
+      - name: Assert no db:push in this workflow
+        run: |
+          # Invocation patterns only — see ci.yml for why the broad pattern was retired.
+          if grep -rnE 'npm run db:pu[s]h|drizzle-kit[[:space:]]+pu[s]h' .github/workflows/; then
+            echo "::error::db:push found in a deploy workflow. It reconciles the live schema by dropping columns and is not safe in production. Use db:migrate."
+            exit 1
+          fi
+          echo "no db:push in any deploy workflow"
+
+      - name: Apply DB migrations
+        # KNOWN ISSUE: `drizzle-kit migrate` exits 1 silently in this repository and has not yet
+        # been diagnosed. Until it is fixed, this step will fail the deploy rather than silently
+        # shipping code against an out-of-date schema — which is the correct failure direction,
+        # but it does mean deploys are blocked. Follow-up: capture `drizzle-kit migrate`
+        # stderr, confirm whether it is the journal/`__drizzle_migrations` bookkeeping or the
+        # connection, and fix the script rather than removing this step.
+        run: npm run db:migrate
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+
+      # Idempotent R2 bucket ensure. Runs on every manual deploy, creates the bucket
+      # ONLY when it does not exist, and never deletes, recreates or replaces an
+      # existing bucket or its data. The bucket name must match the `[env.*.r2_buckets]`
+      # `bucket_name` in wrangler.toml for the same environment (`ecomate-media-prod`
+      # for production, `ecomate-media-preview` for preview) — the deploy step below
+      # binds exactly that name via the native R2 Binding (`R2_BUCKET`), so no
+      # Access Key / Secret Key is ever stored in application secrets.
+      # Uses only the existing CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID secrets.
+      # Custom-domain attachment (`wrangler r2 bucket domain ... --custom-domain
+      # media.ecomate.app`) stays a one-time manual step: it needs DNS in place and
+      # must not run blindly on every deploy.
+      - name: Ensure R2 bucket exists (idempotent, never deletes)
+        run: |
+          ENV_NAME="${{ github.event.inputs.environment || 'production' }}"
+          if [ "$ENV_NAME" = "preview" ]; then
+            BUCKET="ecomate-media-preview"
+          else
+            BUCKET="ecomate-media-prod"
+          fi
+          if npx wrangler r2 bucket info "$BUCKET" >/dev/null 2>&1; then
+            echo "R2 bucket '$BUCKET' already exists — skipping creation (idempotent)."
+          else
+            echo "R2 bucket '$BUCKET' not found — creating it now..."
+            npx wrangler r2 bucket create "$BUCKET"
+            echo "R2 bucket '$BUCKET' created."
+          fi
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
+      # The opennext CLI must drive the deploy. A plain `wrangler deploy` (what
+      # `cloudflare/wrangler-action` runs) does not carry the opennext build output/args
+      # and silently ships a broken or empty Worker. `--env` selects the matching
+      # `[env.*]` block in wrangler.toml (Task 21 §1): deploying without it would
+      # fall back to the top-level dev bindings.
+      - name: Deploy to Cloudflare via opennext
+        run: npx opennextjs-cloudflare deploy --env ${{ github.event.inputs.environment || 'production' }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          NODE_ENV: production
+
       - name: Output Deployment Confirmation
         run: |
           echo "=========================================================="
-          echo " Cloudflare Pages Deployment Completed Successfully"
+          echo " Cloudflare Workers Deployment Completed Successfully"
           echo " Environment: ${{ github.event.inputs.environment }}"
           echo " Notes: ${{ github.event.inputs.deployment_notes }}"
           echo " Triggered by: ${{ github.actor }}"

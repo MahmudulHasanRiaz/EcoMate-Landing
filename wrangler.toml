@@ -1,3 +1,175 @@
 name = "ecomate-landing"
-compatibility_date = "2024-09-23"
-assets = { directory = "dist", not_found_handling = "single-page-application" }
+# Current date, not a stale one: Cloudflare enables new platform behaviour on/after
+# this date, and opennext + Next 16 rely on it. 2025-09-01 was already 13 months
+# behind at the time of writing. Verify with `npx wrangler deploy --dry-run`
+# before the first real deploy, and bump it whenever wrangler warns.
+compatibility_date = "2026-06-01"
+compatibility_flags = ["nodejs_compat"]
+
+# ---------------------------------------------------------------------------
+# Bindings. Each id below is created once against the real Cloudflare account;
+# the two placeholders must be replaced with the ids those commands print.
+# ---------------------------------------------------------------------------
+
+# Postgres through Hyperdrive (required by db/client.ts). Create with:
+#   npx wrangler hyperdrive create ecomate-db --connection-string="postgresql://postgres:PASSWORD@db.REF.supabase.co:6543/postgres?pgbouncer=true"
+[[hyperdrive]]
+binding = "HYPERDRIVE"
+id = "PASTE_HYPERDRIVE_ID_FROM_STEP_1"
+
+# R2 bucket backing the media library (app/api/media/*). Create with:
+#   npx wrangler r2 bucket create ecomate-media
+# then attach the public custom domain that next.config.ts images.remotePatterns and the
+# upload handler's CDN URL both expect:
+#   npx wrangler r2 bucket domain ecomate-media --custom-domain media.ecomate.app
+[[r2_buckets]]
+binding = "R2_BUCKET"
+bucket_name = "ecomate-media"
+
+# KV namespace for rate-limit counters (Task 14 lib/rateLimit.ts). Create with:
+#   npx wrangler kv namespace create RATE_LIMIT_KV
+#   npx wrangler kv namespace create RATE_LIMIT_KV --preview  # preview counters stay separate
+[[kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+id = "PASTE_KV_ID" # from: npx wrangler kv namespace create RATE_LIMIT_KV
+
+[vars]
+NEXT_PUBLIC_SITE_URL = "https://dev.ecomate.bd"
+NEXT_PUBLIC_DEFAULT_LOCALE = "en"
+NEXT_PUBLIC_META_PIXEL_ID = ""
+NEXT_PUBLIC_TURNSTILE_SITE_KEY = ""
+# R2_PUBLIC_ORIGIN: optional dedicated media CDN origin (e.g.
+# "https://media.dev.ecomate.bd" after `wrangler r2 bucket domain` + DNS).
+# Unset (default) = same-origin `/media/<key>` proxy, which needs no DNS.
+# R2_PUBLIC_ORIGIN = ""
+
+# Auth.js refuses to derive its origin from an untrusted Host header (UntrustedHost).
+# `auth.ts` reads this var explicitly (`trustHost: envString('AUTH_TRUST_HOST') === 'true'`)
+# rather than using a bare `trustHost: true`, so the value must be present on the Worker:
+# because an explicit boolean is passed, Auth.js' own fallbacks — `NODE_ENV !== "production"`
+# and `CF_PAGES` (Workers sets neither) — never apply. Without this line every
+# `/api/auth/*` request fails in production. Not a secret: it is a deployment property,
+# and it only enables host-derived origins on hostnames this zone already serves.
+AUTH_TRUST_HOST = "true"
+
+# Lead PII retention (Task 16 §6). A `[vars]` value rather than a secret: the retention window
+# is a policy number legal can change, and changing it should not require a secret rotation.
+# `app/api/cron/retention/route.ts` clamps it and falls back to 180 if this is missing or
+# nonsensical.
+RETENTION_DAYS = "180"
+
+# ---------------------------------------------------------------------------
+# Scheduled triggers
+# ---------------------------------------------------------------------------
+# 03:17 UTC daily, deliberately off the :00 stampede every other tenant hits — a retention job
+# that starts scanning at exactly 03:00 competes with everyone else's backups for the same
+# Postgres connections.
+#
+# Cloudflare Cron Triggers call the Worker URL with a plain GET and cannot attach a header, so
+# the route accepts the secret as an `x-cron-secret` header or a `?secret=` parameter, and it
+# FAILS CLOSED when CRON_SECRET is unset. See the route header before trusting that this fires.
+[triggers]
+# - 03:17 UTC daily: lead-PII retention sweep (`/api/cron/retention`), deliberately off the
+#   :00 stampede.
+# - Every 15 minutes: scheduled publishing (`/api/cron/publish`, Task 19 §6) — a marketing
+#   team scheduling a post for 10:00 expects it live at 10:00, not at tomorrow's 03:17, and
+#   the job is one indexed scan that no-ops when nothing is due.
+crons = ["17 3 * * *", "*/15 * * * *"]
+
+# ---------------------------------------------------------------------------
+# Environments (Task 21 §1). The top-level bindings above are LOCAL DEV ONLY.
+#
+# Why this exists: with a single flat config, one `deploy` without `--env`
+# silently repoints production at whatever the top level says. Named
+# environments make that impossible: a prod deploy must say `--env
+# production` (`npm run deploy:prod`), a PR preview must say `--env preview`
+# (`npm run deploy:preview`), and each carries its OWN Hyperdrive id, R2
+# bucket and KV namespace so preview traffic can never touch prod data.
+#
+# Secrets are per-env and never in this file:
+#   npx wrangler secret put AUTH_SECRET --env production
+#   npx wrangler secret put AUTH_SECRET --env preview
+# (repeat for TOTP_ENCRYPTION_KEY, SETUP_TOKEN, CRON_SECRET, META_CAPI_TOKEN,
+# TURNSTILE_SECRET_KEY, LICENSE_PORTAL_API_KEY, RESEND_API_KEY — see
+# docs/RUNBOOK.md §3 for the rotation matrix.)
+# ---------------------------------------------------------------------------
+
+# --- production ------------------------------------------------------------
+[[env.production.hyperdrive]]
+binding = "HYPERDRIVE"
+# Create with:
+#   npx wrangler hyperdrive create ecomate-db-prod --connection-string="postgresql://postgres:PASSWORD@db.REF.supabase.co:6543/postgres?pgbouncer=true"
+# then replace the placeholder with the id it prints.
+id = "PASTE_PROD_HYPERDRIVE_ID"
+
+[[env.production.r2_buckets]]
+binding = "R2_BUCKET"
+# Create with: npx wrangler r2 bucket create ecomate-media-prod
+# then attach the public custom domain the app expects:
+#   npx wrangler r2 bucket domain ecomate-media-prod --custom-domain media.ecomate.app
+bucket_name = "ecomate-media-prod"
+
+[[env.production.kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+# Create with: npx wrangler kv namespace create RATE_LIMIT_KV-prod
+id = "PASTE_PROD_KV_ID"
+
+[env.production.vars]
+NEXT_PUBLIC_SITE_URL = "https://dev.ecomate.bd"
+NEXT_PUBLIC_DEFAULT_LOCALE = "en"
+NEXT_PUBLIC_META_PIXEL_ID = ""
+NEXT_PUBLIC_TURNSTILE_SITE_KEY = ""
+# R2_PUBLIC_ORIGIN: optional dedicated media CDN origin (e.g.
+# "https://media.dev.ecomate.bd" after `wrangler r2 bucket domain` + DNS).
+# Unset (default) = same-origin `/media/<key>` proxy, which needs no DNS.
+# R2_PUBLIC_ORIGIN = ""
+AUTH_TRUST_HOST = "true"
+RETENTION_DAYS = "180"
+
+# Workers Logs, zero-config floor (Task 21 §5): structured JSON logs
+# (`api.error`, `lead.notify`, `cron.retention.*`) are queryable in the
+# dashboard without any further wiring.
+[env.production.observability]
+enabled = true
+
+# Production owns the crons. The retention sweep and the publish scheduler
+# must fire exactly once per tick — against the prod database, not preview's.
+[env.production.triggers]
+crons = ["17 3 * * *", "*/15 * * * *"]
+
+# --- preview (per-PR) ------------------------------------------------------
+[[env.preview.hyperdrive]]
+binding = "HYPERDRIVE"
+# Create with:
+#   npx wrangler hyperdrive create ecomate-db-preview --connection-string="postgresql://postgres:PASSWORD@db.PREVIEW_REF.supabase.co:6543/postgres?pgbouncer=true"
+# then replace the placeholder with the id it prints.
+id = "PASTE_PREVIEW_HYPERDRIVE_ID"
+
+[[env.preview.r2_buckets]]
+binding = "R2_BUCKET"
+# Create with: npx wrangler r2 bucket create ecomate-media-preview
+bucket_name = "ecomate-media-preview"
+
+[[env.preview.kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+# Create with: npx wrangler kv namespace create RATE_LIMIT_KV-preview
+id = "PASTE_PREVIEW_KV_ID"
+
+[env.preview.vars]
+# Replace with the real preview hostname once the preview worker has one
+# (workers.dev URL or preview.ecomate.app route) — see docs/RUNBOOK.md §15.
+NEXT_PUBLIC_SITE_URL = "https://preview.ecomate.app"
+NEXT_PUBLIC_DEFAULT_LOCALE = "en"
+NEXT_PUBLIC_META_PIXEL_ID = ""
+NEXT_PUBLIC_TURNSTILE_SITE_KEY = ""
+# R2_PUBLIC_ORIGIN: optional dedicated media CDN origin (e.g.
+# "https://media.dev.ecomate.bd" after `wrangler r2 bucket domain` + DNS).
+# Unset (default) = same-origin `/media/<key>` proxy, which needs no DNS.
+# R2_PUBLIC_ORIGIN = ""
+AUTH_TRUST_HOST = "true"
+RETENTION_DAYS = "180"
+
+# Deliberately NO [env.preview.triggers]: the retention sweep must not run
+# against the preview database (it would anonymise fixture leads and burn
+# pooled connections), and the publish scheduler must not publish preview
+# drafts. Preview gets traffic only, never crons.

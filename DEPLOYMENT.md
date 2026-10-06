@@ -4,6 +4,23 @@ This document explains the production deployment governance configured for EcoMa
 
 ---
 
+## ⚠️ Read first: build hazard
+
+**Do not set `package.json`'s `build` script to `opennextjs-cloudflare build`.** OpenNext
+resolves the Next.js build command as `npm run build`, so that value makes the build recurse
+without bound, spawn a chain of Node processes, and hang the machine. It must be
+`"build": "next build"`. CI enforces this with a blocking check.
+
+- Rules for contributors and agents: [`AGENTS.md`](./AGENTS.md)
+- Incident write-up: [`docs/incidents/2026-10-06-opennext-build-recursion.md`](./docs/incidents/2026-10-06-opennext-build-recursion.md)
+
+**Artifact path:** the deployable Worker bundle is `.open-next/` (hyphenated,
+`.open-next/worker.js`), produced by `npx opennextjs-cloudflare build`. References below to
+`dist/` / an SPA static export are from the earlier Vite/Pages setup and are superseded by
+the Worker deployment described in the migration plan.
+
+---
+
 ## 1. Architecture Flow
 
 ```

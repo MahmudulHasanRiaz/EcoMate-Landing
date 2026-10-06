@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* next/font self-hosts the families and defines --font-sans / --font-serif /
+   --font-bangla / --font-mono as CSS variables on <html> (see app/layout.tsx).
+   `@theme inline` maps the Tailwind font utilities onto those variables with
+   system fallbacks, inlining the stack into each utility so there is no
+   second --font-sans declaration on :root competing with next/font's. */
+@theme inline {
+  --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-serif), ui-serif, Georgia, serif;
+  --font-bangla: var(--font-bangla), var(--font-sans), sans-serif;
+  --font-mono: var(--font-mono), ui-monospace, monospace;
+}
+
+@layer base {
+  body {
+    font-family: var(--font-sans);
+    overflow-x: hidden;
+    background-color: #f2f3f9;
+    color: #0f172a;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  /* Floating header offset: anchors land below the glass pill, not under it */
+  section[id] {
+    scroll-margin-top: 84px;
+  }
+
+  /* Designed light system: indigo-tinted paper, not flat inversion.
+     Dark navy stays for dark mode. Light gets its own depth cues:
+     tinted borders, indigo-washed shadows, warmer slate text. */
+  :root {
+    --surface-light: #ffffff;
+    --surface-sunken-light: #eceef7;
+    --border-light: #dde1f0;
+    --shadow-tint-light: 99 102 241;
+  }
+}
+
+html.dark body {
+  background-color: #07080e;
+  color: #f1f5f9;
+}
+
+.font-serif-italic {
+  font-family: var(--font-serif);
+  font-style: italic;
+  letter-spacing: -0.01em;
+}
+
+.font-mono-numbers {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.font-bangla {
+  font-family: var(--font-bangla);
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+html.dark ::-webkit-scrollbar-track {
+  background: #07080e;
+}
+html.dark ::-webkit-scrollbar-thumb {
+  background: #1e2235;
+  border-radius: 3px;
+}
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}

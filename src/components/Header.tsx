@@ -1,26 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { EcoMateLogo } from './EcoMateLogo';
-import { LandingContent, Locale, Theme } from '../types/landing';
+import type { NavItem } from '../types/landing';
+import { useLanding } from '@/components/shell/useLanding';
 import { Globe, Menu, X, ArrowUpRight, PhoneCall, Sun, Moon, MessageCircle } from 'lucide-react';
 
-interface HeaderProps {
-  content: LandingContent;
-  locale: Locale;
-  theme: Theme;
-  onToggleLocale: () => void;
-  onToggleTheme: () => void;
-  onOpenLeadModal?: () => void;
-}
-
-export const Header: React.FC<HeaderProps> = ({
-  content,
-  locale,
-  theme,
-  onToggleLocale,
-  onToggleTheme,
-}) => {
+export const Header: React.FC = () => {
+  const {
+    content,
+    locale,
+    theme,
+    menu: navItems,
+    toggleLocale: onToggleLocale,
+    toggleTheme: onToggleTheme,
+  } = useLanding();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+
+  const nav: readonly NavItem[] = navItems ?? content.header.nav;
 
   const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     e.preventDefault();
@@ -87,7 +83,7 @@ export const Header: React.FC<HeaderProps> = ({
             aria-label="Primary"
             className="hidden min-w-0 flex-1 items-center justify-center gap-5 text-[13px] font-medium whitespace-nowrap text-slate-600 xl:flex 2xl:gap-7 2xl:text-sm dark:text-slate-300"
           >
-            {content.header.nav.map((item) => (
+            {nav.map((item) => (
               <a
                 key={item.href}
                 href={item.href}
@@ -129,7 +125,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Quick call, tablet and up only to protect 360px widths */}
             <a
               href="tel:+8801894828290"
-              className="hidden items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium whitespace-nowrap text-slate-600 transition-colors duration-200 hover:text-slate-950 md:inline-flex dark:text-slate-400 dark:hover:text-white"
+              className="hidden items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium whitespace-nowrap text-slate-600 transition-colors duration-200 hover:text-slate-950 md:inline-flex dark:text-slate-300 dark:hover:text-white"
             >
               <PhoneCall className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
               <span className="font-mono-numbers">01894-828290</span>
@@ -167,7 +163,7 @@ export const Header: React.FC<HeaderProps> = ({
             className="absolute inset-x-0 top-[calc(100%+8px)] overflow-hidden rounded-2xl border border-[#E0E4F2] bg-white/90 p-2 shadow-xl shadow-indigo-200/40 backdrop-blur-xl xl:hidden dark:border-white/10 dark:bg-[#0B0D18]/95 dark:shadow-black/60"
           >
             <nav aria-label="Mobile" className="flex flex-col">
-              {content.header.nav.map((item) => (
+              {nav.map((item) => (
                 <a
                   key={item.href}
                   href={item.href}

@@ -1,0 +1,101 @@
+'use client';
+
+/**
+ * Tracking-consent banner (Task 20 §5 — legally required, blocks tracking).
+ *
+ * No pixel, no CAPI, no analytics run until the visitor chooses. Choices:
+ * Accept all / Essential only. The choice persists in the `ecomate_consent`
+ * cookie (12 months) via `lib/consent.ts`; the per-lead record is written by
+ * the lead form + route (`consentGiven`, `consentAt`, `consentText`).
+ *
+ * Constraints honoured here:
+ * - sits ABOVE the mobile sticky CTA bar (`bottom-[13vh]` on mobile, `md:bottom-6`
+ *   on desktop — the bar is `z-40` capped at 12vh, this is `z-50`);
+ * - keyboard accessible (`role="dialog"`, labelled, focus moved in on show,
+ *   Escape dismisses to Essential-only);
+ * - `prefers-reduced-motion` respected (`motion-safe:` guards the entrance);
+ * - axe-clean: labelled dialog, real buttons, no positive-tabindex tricks.
+ */
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { getConsentChoice, setConsentChoice } from '@/lib/consent';
+
+export function ConsentBanner() {
+  const [visible, setVisible] = useState(false);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    // Show only when undecided. The pixel (`MetaPixel`) and the browser Lead
+    // event both read the same cookie, so nothing fires before this resolves.
+    if (getConsentChoice() === null) setVisible(true);
+    const onChange = () => setVisible(false);
+    window.addEventListener('ecomate-consent-changed', onChange);
+    return () => window.removeEventListener('ecomate-consent-changed', onChange);
+  }, []);
+
+  useEffect(() => {
+    if (!visible) return;
+    // Focus management: move focus into the dialog so keyboard users land on it.
+    const node = dialogRef.current;
+    const target = node?.querySelector<HTMLButtonElement>('button');
+    target?.focus();
+  }, [visible]);
+
+  const choose = useCallback((choice: 'accepted' | 'essential') => {
+    setConsentChoice(choice);
+    setVisible(false);
+  }, []);
+
+  useEffect(() => {
+    if (!visible) return;
+    const onKey = (event: KeyboardEvent) => {
+      // Escape dismisses to Essential-only: the privacy-safe default, never an
+      // implicit Accept-all.
+      if (event.key === 'Escape') choose('essential');
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [visible, choose]);
+
+  if (!visible) return null;
+
+  return (
+    <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="false"
+      aria-labelledby="consent-title"
+      aria-describedby="consent-description"
+      className="fixed inset-x-3 bottom-[13vh] z-50 motion-safe:animate-in motion-safe:slide-in-from-bottom motion-safe:duration-300 md:inset-x-auto md:bottom-6 md:right-6 md:w-[380px]"
+    >
+      <div className="rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-[#0C0E1C]/95">
+        <h2 id="consent-title" className="text-sm font-bold text-slate-900 dark:text-white">
+          We value your privacy
+        </h2>
+        <p id="consent-description" className="mt-1.5 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+          We use essential cookies to run the site, and — only with your permission —
+          Meta Pixel + Conversions API to measure ad performance. Read our{' '}
+          <a href="/privacy" className="font-semibold text-indigo-600 hover:underline dark:text-indigo-400">
+            Privacy Policy
+          </a>
+          .
+        </p>
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+          <button
+            type="button"
+            onClick={() => choose('accepted')}
+            className="flex-1 rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-600 to-purple-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition-all hover:brightness-105"
+          >
+            Accept all
+          </button>
+          <button
+            type="button"
+            onClick={() => choose('essential')}
+            className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+          >
+            Essential only
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

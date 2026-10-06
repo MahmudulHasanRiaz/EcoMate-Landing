@@ -1,5 +1,10 @@
 name: CI - Code Integrity & Build Check
 
+# Least privilege: the default GITHUB_TOKEN scope is write-all. Nothing in
+# this workflow creates releases, comments or pushes, so read is enough.
+permissions:
+  contents: read
+
 on:
   push:
     branches:
@@ -19,14 +24,28 @@ jobs:
     name: Lint & Build Validation
     runs-on: ubuntu-latest
     steps:
+      # Pinned by SHA, not by moving tag: a compromised tag cannot redirect the
+      # build. The trailing `# v4` comment is what Dependabot's github-actions
+      # updater reads — it still proposes updates. SHAs below are the v4 tips
+      # verified 2026-10-06; see docs/RUNBOOK.md §14.
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          # Gitleaks scans the full history, not just the tip. A shallow clone
+          # would let a leaked-then-deleted secret pass the gate.
+          fetch-depth: 0
 
       - name: Setup Node.js (v24)
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
           cache: 'npm'
+
+      # Verifies setup-node actually delivered Node 24. This MUST run after
+      # setup-node: checking before it would test the runner-image default Node
+      # (v20), not our toolchain — that ordering bug failed CI on PR #1.
+      - name: Assert Node floor (24)
+        run: node -e "if (parseInt(process.versions.node.split('.')[0], 10) < 24) { console.error('Node 24+ required'); process.exit(1); }"
 
       - name: Install dependencies with frozen package-lock
         run: npm ci
@@ -34,13 +53,166 @@ jobs:
       - name: Validate TypeScript code
         run: npm run lint
 
+      # Every secret in this repo goes through `wrangler secret put` — nothing
+      # secret may sit in files or history. Scans the full history (hence
+      # fetch-depth: 0 above) against .gitleaks.toml. The only allowlists in
+      # that file are two public test fixtures, each commented with why it is
+      # safe; a real leak fails this step and must be rotated, not allowlisted.
+      - name: Gitleaks secret scan (full history)
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Registry advisories, BLOCKING, production dependencies only. `--omit=dev`
+      # scopes the audit to exactly what ships inside the Worker bundle — that
+      # is the attack surface that matters. Verified 2026-10-06: zero high or
+      # critical in production deps, so this gate is green and meaningful (it
+      # fails the build the day a prod dependency goes vulnerable).
+      - name: npm audit prod deps (high and above, blocking)
+        run: npm audit --omit=dev --audit-level=high
+
+      # Full-tree audit (including dev toolchains), INFORMATIONAL. The 13 high
+      # findings as of 2026-10-06 are all dev-only (adm-zip via rclone.js for
+      # opennext deploys; basic-ftp/extract-zip/tmp/cookie via @lhci/cli; esbuild
+      # via drizzle-kit) — none is imported by app code, none ships to the
+      # Worker, and `npm audit fix --force` would downgrade opennext (losing
+      # Next 16 support). So this reports without blocking; the upgrade task
+      # tracks remediation. `continue-on-error` is deliberate and documented,
+      # not a weakened gate.
+      - name: npm audit full tree (informational)
+        continue-on-error: true
+        run: npm audit --audit-level=high
+
+      # OSV advisories against the committed lockfile, INFORMATIONAL for the
+      # same reason as above (it reports the same dev-toolchain findings).
+      # Complements npm audit with the multi-ecosystem database (GHSA +
+      # friends) rather than the registry view alone.
+      - name: OSV scan (lockfile, informational)
+        continue-on-error: true
+        uses: google/osv-scanner-action/osv-scanner-action@a345acffa64b0eaede81a3d9aae6141214d9c8fc # v2.6.0
+        with:
+          scan-args: |-
+            --lockfile=package-lock.json
+
+      # `NEXT_PUBLIC_` values ship to the browser in plain JS. A secret behind
+      # that prefix is published, not configured. `*_SITE_KEY` (e.g. the
+      # Turnstile site key) is allowlisted: public site keys are publishable by
+      # design, unlike tokens/secrets/passwords/keys.
+      - name: Assert no secrets behind NEXT_PUBLIC_
+        run: |
+          secretish=$(grep -rEn 'NEXT_PUBLIC_[A-Z0-9_]*(TOKEN|SECRET|PASSWORD|PRIVATE_KEY|API_KEY)' wrangler.toml .env.example lib app 2>/dev/null || true)
+          keyish=$(grep -rEn 'NEXT_PUBLIC_[A-Z0-9_]*KEY' wrangler.toml .env.example lib app 2>/dev/null | grep -v 'SITE_KEY' || true)
+          if [ -n "$secretish$keyish" ]; then
+            echo "$secretish$keyish"
+            echo "::error::A NEXT_PUBLIC_ variable looks like a secret. Browser-bundled values must be public; move the real value to a Worker secret."
+            exit 1
+          fi
+          echo "no secrets behind NEXT_PUBLIC_"
+
+      # Regression guard for a build-killing recursion.
+      #
+      # `opennextjs-cloudflare build` resolves the Next build command as
+      # `config.buildCommand ?? "npm run build"` (@opennextjs/aws build/buildNextApp.js).
+      # If package.json's `build` script itself calls `opennextjs-cloudflare build`, the
+      # CLI re-invokes itself without bound — each nested npm/node process consumes
+      # hundreds of MB until the machine swaps to death. This asserts the script stays
+      # pointed at the Next.js build. See open-next.config.ts.
+      - name: Assert no opennext build recursion
+        run: |
+          node -e "
+            const pkg = require('./package.json');
+            const script = String((pkg.scripts && pkg.scripts.build) || '');
+            if (/opennextjs-cloudflare\s+build/.test(script)) {
+              console.error('::error::package.json \"build\" calls opennextjs-cloudflare build, which recurses without bound. It must run the Next.js build (\"next build\").');
+              process.exit(1);
+            }
+            console.log('package.json build script is recursion-safe:', script);
+          "
+
+      # The opennext CLI is what produces the deployable Worker bundle (`.open-next`).
+      # It internally runs `npm run build` (`next build`), which is why the package.json
+      # build script must NEVER point back at `opennextjs-cloudflare build` — that
+      # recurses without bound.
+      # Same guard as deploy.yml, at CI rather than deploy time: catching `db:push` in a pull
+      # request is cheaper than discovering it in a production deploy job. `db:push` reconciles
+      # the live database to `db/schema.ts` and may DROP columns it thinks are unused.
+      - name: Assert no db:push in any workflow
+        run: |
+          # Invocation patterns only. The previous broad pattern matched this
+          # file's own comments and step names, so the guard failed every run
+          # (verified against HEAD 2026-10-06). `pu[s]h` keeps the pattern from
+          # matching its own source line.
+          if grep -rnE 'npm run db:pu[s]h|drizzle-kit[[:space:]]+pu[s]h' .github/workflows/; then
+            echo "::error::db:push found in a workflow. It reconciles the live schema by dropping columns and is not safe against production data. Use db:migrate."
+            exit 1
+          fi
+          echo "no db:push in any workflow"
+
+      # The opennext CLI is what produces the deployable Worker bundle (`.open-next`).
+      # It internally runs `npm run build` (`next build`), which is why the package.json
+      # build script must NEVER point back at `opennextjs-cloudflare build` — that
+      # recurses without bound.
       - name: Execute production build
-        run: npm run build
+        run: npx opennextjs-cloudflare build
+        env:
+          # `cacheComponents: true` (next.config.ts) executes every `'use cache'` data
+          # function during the build, where there is no request context and therefore no
+          # Hyperdrive binding. `db/client.ts` falls back to this env var; without it the
+          # first prerender dies with DB_UNAVAILABLE.
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
 
       - name: Verify build artifacts
         run: |
-          if [ ! -f dist/index.html ]; then
-            echo "::error::Build verification failed: dist/index.html does not exist!"
+          if [ ! -d .open-next ]; then
+            echo "::error::Build verification failed: .open-next directory does not exist!"
             exit 1
           fi
           echo "Production build verified successfully. Ready for manual deployment."
+
+  # Own job (own check name) so branch protection can require it independently
+  # of the build: "Migration drift guard". An uncommitted migration is how
+  # "works on my machine" becomes a production incident — code merged without
+  # its `drizzle/` output deploys against a schema the migration step never
+  # applies.
+  migration_drift:
+    name: Migration drift guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup Node.js (v24)
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: 'npm'
+
+      # Verifies setup-node actually delivered Node 24. This MUST run after
+      # setup-node: checking before it would test the runner-image default Node
+      # (v20), not our toolchain — that ordering bug failed CI on PR #1.
+      - name: Assert Node floor (24)
+        run: node -e "if (parseInt(process.versions.node.split('.')[0], 10) < 24) { console.error('Node 24+ required'); process.exit(1); }"
+
+      - name: Install dependencies with frozen package-lock
+        run: npm ci
+
+      # Regenerate into the working tree and diff against the committed output.
+      # `db:generate` reads `db/schema.ts` only — no database connection, so no
+      # DIRECT_URL is needed. Verified locally 2026-10-06: no-op on a clean
+      # tree (`No schema changes, nothing to migrate` + empty diff).
+      #
+      # False-positive note: a drizzle-kit version bump can re-render snapshots
+      # even with no schema change. If this step fails right after a
+      # drizzle-kit upgrade with no schema edit, re-run `db:generate` locally,
+      # inspect the diff, and commit the re-rendered output — do not delete
+      # this step.
+      - name: Assert drizzle/ matches db/schema.ts
+        run: |
+          cp -r drizzle /tmp/drizzle-baseline
+          npm run db:generate
+          if ! diff -rq /tmp/drizzle-baseline drizzle > /tmp/drift.diff; then
+            cat /tmp/drift.diff
+            echo "::error::db:generate produced output that is not committed under drizzle/. Run npm run db:generate locally and commit the result."
+            exit 1
+          fi
+          echo "schema and drizzle/ in sync"

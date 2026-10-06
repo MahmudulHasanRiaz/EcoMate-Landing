@@ -275,6 +275,8 @@ export interface LandingContent {
     successHeading: string;
     successMessage: string;
     privacyNote: string;
+    /** Consent checkbox copy (Task 13): legally required, unticked by default. */
+    consentLabel: string;
   };
   footer: {
     tagline: string;

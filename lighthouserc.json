@@ -1,0 +1,33 @@
+{
+  "ci": {
+    "collect": {
+      "url": ["http://localhost:8787/", "http://localhost:8787/bn"],
+      "numberOfRuns": 1,
+      "settings": {
+        "formFactor": "mobile",
+        "screenEmulation": {
+          "mobile": true,
+          "width": 360,
+          "height": 740,
+          "deviceScaleFactor": 2,
+          "disabled": false
+        },
+        "throttlingMethod": "devtools"
+      }
+    },
+    "assert": {
+      "preset": "lighthouse:no-pies",
+      "assertions": {
+        "largest-contentful-paint": ["warn", { "maxNumericValue": 2000 }],
+        "cumulative-layout-shift": ["warn", { "maxNumericValue": 0.05 }],
+        "total-blocking-time": ["warn", { "maxNumericValue": 300 }],
+        "uses-responsive-images": ["warn", {}],
+        "unused-javascript": ["warn", {}]
+      }
+    },
+    "upload": {
+      "target": "filesystem",
+      "outputDir": "./.lhci"
+    }
+  }
+}

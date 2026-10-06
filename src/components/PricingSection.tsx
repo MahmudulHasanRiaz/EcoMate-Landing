@@ -1,20 +1,11 @@
 import React, { useState } from 'react';
-import { LandingContent, Locale, PricingPlan } from '../types/landing';
+import type { PricingPlan } from '../types/landing';
+import { useLanding } from '@/components/shell/useLanding';
 import { Check, ArrowRight, ShieldCheck, Sparkles, Building2, HelpCircle } from 'lucide-react';
+import { formatMoney } from '@/lib/format';
 
-interface PricingSectionProps {
-  content: LandingContent;
-  locale: Locale;
-  isPricingVisible?: boolean;
-  onTogglePricingMode?: () => void;
-}
-
-export const PricingSection: React.FC<PricingSectionProps> = ({
-  content,
-  locale,
-  isPricingVisible = true,
-  onTogglePricingMode,
-}) => {
+export const PricingSection: React.FC = () => {
+  const { content, locale, isPricingVisible } = useLanding();
   const [annualBilling, setAnnualBilling] = useState<boolean>(true);
 
   return (
@@ -23,7 +14,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
         {/* Section Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6 mb-8 sm:mb-12">
           <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-2 sm:mb-3">
+            <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-700 dark:text-indigo-300 mb-2 sm:mb-3">
               <Sparkles className="h-3.5 w-3.5" />
               <span>{content.pricing.eyebrow}</span>
             </div>
@@ -34,19 +25,6 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
               {content.pricing.subheading}
             </p>
           </div>
-
-          {/* Prototype Mode Switcher (Visible vs Contact Sales Architecture) */}
-          {onTogglePricingMode && (
-            <div className="flex items-center gap-2 self-start md:self-auto p-1.5 rounded-xl bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-xs text-slate-600 dark:text-slate-400 shadow-2xs">
-              <span className="text-[11px] font-mono px-2 font-medium">Mode:</span>
-              <button
-                onClick={onTogglePricingMode}
-                className="px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-600/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/40 hover:bg-indigo-100 dark:hover:bg-indigo-600/40 transition-colors font-semibold cursor-pointer"
-              >
-                {isPricingVisible ? 'Toggle to Hidden Mode' : 'Toggle to Visible Tiered Mode'}
-              </button>
-            </div>
-          )}
         </div>
 
         {/* MODE 1: PRICING VISIBLE */}
@@ -105,20 +83,19 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
                     <div>
                       <div className="mb-4">
                         <h3 className="text-xl font-bold text-slate-900 dark:text-white">{plan.name}</h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                        <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
                           {plan.tierSubtitle}
                         </p>
                       </div>
 
-                      {/* Price Display with Tabular Numerals */}
+                      {/* Price Display with Tabular Numerals. `formatMoney` already carries the currency
+                          marker (৳ for Bangla, BDT for English) and the grouped digits, so
+                          neither the glyph nor `toLocaleString()` is repeated here. */}
                       <div className="flex items-baseline gap-1 my-6 pb-6 border-b border-slate-200 dark:border-white/[0.08]">
-                        <span className="text-2xl font-bold text-slate-500 dark:text-slate-400 font-mono">
-                          {plan.currency}
-                        </span>
                         <span className="text-4xl sm:text-5xl font-extrabold text-slate-900 dark:text-white font-mono-numbers">
-                          {price.toLocaleString()}
+                          {formatMoney(price, locale)}
                         </span>
-                        <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">/ month</span>
+                        <span className="text-xs text-slate-600 dark:text-slate-300 font-mono">/ month</span>
                       </div>
 
                       {/* Volume & Scale Limits */}
@@ -139,12 +116,12 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
 
                       {/* Included Feature List */}
                       <div className="space-y-3 text-xs mb-8">
-                        <span className="text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px] tracking-wider block">
+                        <span className="text-slate-600 dark:text-slate-300 font-bold uppercase text-[10px] tracking-wider block">
                           Included Capabilities
                         </span>
                         {plan.features.map((feat, idx) => (
                           <div key={idx} className="flex items-start gap-2.5">
-                            <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                            <Check className="h-4 w-4 text-emerald-700 dark:text-emerald-400 shrink-0 mt-0.5" />
                             <span className="text-slate-700 dark:text-slate-200 font-medium">{feat}</span>
                           </div>
                         ))}
@@ -155,7 +132,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
                     <div>
                       <a
                         href="#lead-form"
-                        className={`w-full py-3.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 whitespace-nowrap text-center transition-all cursor-pointer ${
+                        className={`w-full py-3.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 text-center leading-snug transition-all cursor-pointer ${
                           isPopular
                             ? 'bg-gradient-to-r from-indigo-600 via-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-300/50 hover:brightness-105'
                             : 'bg-white border border-slate-300 text-slate-900 hover:bg-slate-50 dark:bg-white/[0.05] dark:border-white/10 dark:text-white dark:hover:bg-white/10'
@@ -174,7 +151,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
           /* MODE 2: PRICING HIDDEN / CONTACT SALES */
           <div className="rounded-3xl border border-indigo-200 dark:border-indigo-500/30 bg-gradient-to-b from-indigo-50/70 to-white dark:from-[#111327] dark:to-[#0C0E1B] p-8 sm:p-12 shadow-xl shadow-indigo-100/50 max-w-4xl mx-auto">
             <div className="max-w-2xl">
-              <span className="text-xs font-mono uppercase tracking-wider text-indigo-700 dark:text-indigo-400 font-bold">
+              <span className="text-xs font-mono uppercase tracking-wider text-indigo-700 dark:text-indigo-300 font-bold">
                 Custom Architecture Consultation
               </span>
               <h3 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mt-2 leading-tight">

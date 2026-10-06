@@ -1,13 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { LandingContent, Locale } from '../types/landing';
+import { useLanding } from '@/components/shell/useLanding';
 import { ArrowUpRight, MessageCircle, PhoneCall, X } from 'lucide-react';
 
-interface MobileStickyBarProps {
-  content: LandingContent;
-  locale: Locale;
-}
-
-export const MobileStickyBar: React.FC<MobileStickyBarProps> = ({ content, locale }) => {
+export const MobileStickyBar: React.FC = () => {
+  const { content } = useLanding();
   const [isDismissed, setIsDismissed] = useState(false);
   const [hasScrolledPastHero, setHasScrolledPastHero] = useState(false);
 
@@ -35,7 +31,11 @@ export const MobileStickyBar: React.FC<MobileStickyBarProps> = ({ content, local
     e.preventDefault();
     const element = document.querySelector('#lead-form');
     if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
+      // The bar is fixed to the viewport bottom, so a plain scrollIntoView leaves the
+      // form's submit button behind it. Scroll short of the section by the bar's height.
+      const offset = window.innerHeight * 0.12 + 16;
+      const top = element.getBoundingClientRect().top + window.scrollY - offset;
+      window.scrollTo({ top, behavior: 'smooth' });
     }
   };
 
@@ -51,7 +51,7 @@ export const MobileStickyBar: React.FC<MobileStickyBarProps> = ({ content, local
           href="https://wa.me/8801894828290?text=Hello%20EcoMate%20Team%2C%20I%20would%20like%20to%20know%20more."
           target="_blank"
           rel="noreferrer"
-          className="h-10 w-10 shrink-0 rounded-xl bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center hover:bg-emerald-100 dark:hover:bg-emerald-500/30 transition-colors shadow-2xs"
+          className="h-10 w-10 shrink-0 rounded-xl bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center hover:bg-emerald-100 dark:hover:bg-emerald-500/30 transition-colors shadow-2xs"
           aria-label="WhatsApp"
         >
           <MessageCircle className="h-5 w-5" />

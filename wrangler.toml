@@ -38,3 +38,12 @@ NEXT_PUBLIC_SITE_URL = "https://ecomate.app"
 NEXT_PUBLIC_DEFAULT_LOCALE = "en"
 NEXT_PUBLIC_META_PIXEL_ID = ""
 NEXT_PUBLIC_TURNSTILE_SITE_KEY = ""
+
+# Auth.js refuses to derive its origin from an untrusted Host header (UntrustedHost).
+# `auth.ts` reads this var explicitly (`trustHost: envString('AUTH_TRUST_HOST') === 'true'`)
+# rather than using a bare `trustHost: true`, so the value must be present on the Worker:
+# because an explicit boolean is passed, Auth.js' own fallbacks — `NODE_ENV !== "production"`
+# and `CF_PAGES` (Workers sets neither) — never apply. Without this line every
+# `/api/auth/*` request fails in production. Not a secret: it is a deployment property,
+# and it only enables host-derived origins on hostnames this zone already serves.
+AUTH_TRUST_HOST = "true"

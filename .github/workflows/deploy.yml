@@ -34,15 +34,17 @@ jobs:
         # Pinned by SHA (see ci.yml for why); `# v4` keeps Dependabot updates working.
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      # Node 24 is the project floor; assert it before the install steps.
-      - name: Assert Node floor (24)
-        run: node -e "if (parseInt(process.versions.node.split('.')[0], 10) < 24) { console.error('Node 24+ required'); process.exit(1); }"
-
       - name: Setup Node.js (v24)
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
           cache: 'npm'
+
+      # Verifies setup-node actually delivered Node 24. This MUST run after
+      # setup-node: checking before it would test the runner-image default Node
+      # (v20), not our toolchain — that ordering bug failed CI on PR #1.
+      - name: Assert Node floor (24)
+        run: node -e "if (parseInt(process.versions.node.split('.')[0], 10) < 24) { console.error('Node 24+ required'); process.exit(1); }"
 
       - name: Install dependencies (Strict frozen lockfile)
         run: npm ci
@@ -116,14 +118,17 @@ jobs:
       - name: Checkout repository for configuration
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - name: Assert Node floor (24)
-        run: node -e "if (parseInt(process.versions.node.split('.')[0], 10) < 24) { console.error('Node 24+ required'); process.exit(1); }"
-
       - name: Setup Node.js (v24)
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
           cache: 'npm'
+
+      # Verifies setup-node actually delivered Node 24. This MUST run after
+      # setup-node: checking before it would test the runner-image default Node
+      # (v20), not our toolchain — that ordering bug failed CI on PR #1.
+      - name: Assert Node floor (24)
+        run: node -e "if (parseInt(process.versions.node.split('.')[0], 10) < 24) { console.error('Node 24+ required'); process.exit(1); }"
 
       # The opennext CLI that drives the deploy is a project dependency, so the deploy job
       # needs its own install.

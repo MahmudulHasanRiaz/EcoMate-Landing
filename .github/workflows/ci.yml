@@ -35,17 +35,17 @@ jobs:
           # would let a leaked-then-deleted secret pass the gate.
           fetch-depth: 0
 
-      # Fails fast when the runner image's Node drops below the project floor, before any
-      # install step can mask it. The project requires Node 24 everywhere (`engines`,
-      # `.node-version`, `.nvmrc`).
-      - name: Assert Node floor (24)
-        run: node -e "if (parseInt(process.versions.node.split('.')[0], 10) < 24) { console.error('Node 24+ required'); process.exit(1); }"
-
       - name: Setup Node.js (v24)
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
           cache: 'npm'
+
+      # Verifies setup-node actually delivered Node 24. This MUST run after
+      # setup-node: checking before it would test the runner-image default Node
+      # (v20), not our toolchain — that ordering bug failed CI on PR #1.
+      - name: Assert Node floor (24)
+        run: node -e "if (parseInt(process.versions.node.split('.')[0], 10) < 24) { console.error('Node 24+ required'); process.exit(1); }"
 
       - name: Install dependencies with frozen package-lock
         run: npm ci
@@ -73,7 +73,7 @@ jobs:
       # npm audit with the multi-ecosystem database (GHSA + friends) rather
       # than the registry view alone.
       - name: OSV scan (lockfile)
-        uses: google/osv-scanner-action@a345acffa64b0eaede81a3d9aae6141214d9c8fc # v2.6.0
+        uses: google/osv-scanner-action/osv-scanner-action@a345acffa64b0eaede81a3d9aae6141214d9c8fc # v2.6.0
         with:
           scan-args: |-
             --lockfile=package-lock.json
@@ -165,14 +165,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - name: Assert Node floor (24)
-        run: node -e "if (parseInt(process.versions.node.split('.')[0], 10) < 24) { console.error('Node 24+ required'); process.exit(1); }"
-
       - name: Setup Node.js (v24)
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
           cache: 'npm'
+
+      # Verifies setup-node actually delivered Node 24. This MUST run after
+      # setup-node: checking before it would test the runner-image default Node
+      # (v20), not our toolchain — that ordering bug failed CI on PR #1.
+      - name: Assert Node floor (24)
+        run: node -e "if (parseInt(process.versions.node.split('.')[0], 10) < 24) { console.error('Node 24+ required'); process.exit(1); }"
 
       - name: Install dependencies with frozen package-lock
         run: npm ci

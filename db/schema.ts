@@ -218,6 +218,21 @@ export const landingContentTable = pgTable('landing_content', {
   check('landing_content_version_positive', sql`${t.version} >= 1`),
 ]);
 
+// 11. Social Links (footer + contact surfaces). Ordered, individually hideable, and
+// deliberately not soft-deleted: a removed network is a one-row delete, and leaving a
+// hidden row behind is what `isVisible` is for.
+export const socialLinksTable = pgTable('social_links', {
+  id: serial('id').primaryKey(),
+  platform: text('platform').notNull(), // facebook, youtube, linkedin, tiktok, instagram, x, whatsapp
+  url: text('url').notNull().default(''),
+  sortOrder: integer('sort_order').notNull().default(0),
+  isVisible: boolean('is_visible').notNull().default(true),
+}, (t) => [
+  uniqueIndex('social_links_platform_idx').on(t.platform),
+  check('social_links_platform_valid',
+    sql`${t.platform} IN ('facebook', 'youtube', 'linkedin', 'tiktok', 'instagram', 'x', 'whatsapp')`),
+]);
+
 // 12. Admin Users (operator identity + RBAC). Deliberately separate from Auth.js' `users`
 // table: this one owns email + password hash + role and is keyed by a serial id, while
 // Auth.js' `users` owns the session linkage and is keyed by text id. `auth.ts` joins the

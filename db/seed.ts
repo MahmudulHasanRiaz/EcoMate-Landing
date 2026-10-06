@@ -19,6 +19,7 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import { sql } from 'drizzle-orm';
 import postgres from 'postgres';
 import * as schema from './schema';
+import { landingContent } from '../src/data/landingContent';
 
 const url = process.env.DIRECT_URL ?? process.env.DATABASE_URL ?? '';
 
@@ -594,6 +595,39 @@ This eliminates end-of-day phone calls between warehouse managers and showroom c
         attempts: 1,
       });
     }
+
+    // ---------------------------------------------------------------------------------
+    // 10. Landing content — one row per top-level section key per locale (18 × 2 here),
+    //     seeded from the same static object the page falls back to. Idempotent on the
+    //     (section_key, locale) unique index, so re-running the seed never duplicates or
+    //     overwrites an admin edit.
+    // ---------------------------------------------------------------------------------
+    for (const locale of ['en', 'bn'] as const) {
+      // `LandingContent`'s sections are interface types, which do not carry an implicit
+      // index signature; widening once is what makes the key/value iteration typecheck.
+      const sections = landingContent[locale] as unknown as Record<string, unknown>;
+      for (const [sectionKey, content] of Object.entries(sections)) {
+        await tx
+          .insert(schema.landingContentTable)
+          .values({ sectionKey, locale, content, status: 'published' })
+          .onConflictDoNothing();
+      }
+    }
+
+    // ---------------------------------------------------------------------------------
+    // 11. Social links — the four platforms the prototype footer advertised. Empty URLs
+    //     are legitimate (`url` defaults to ''): the row exists so an admin fills it in,
+    //     and `is_visible` decides whether it renders.
+    // ---------------------------------------------------------------------------------
+    await tx
+      .insert(schema.socialLinksTable)
+      .values([
+        { platform: 'facebook', url: '', sortOrder: 1, isVisible: true },
+        { platform: 'youtube', url: '', sortOrder: 2, isVisible: true },
+        { platform: 'linkedin', url: '', sortOrder: 3, isVisible: true },
+        { platform: 'tiktok', url: '', sortOrder: 4, isVisible: false },
+      ])
+      .onConflictDoNothing();
   });
 
   console.log('[seed] EcoMate seed complete.');

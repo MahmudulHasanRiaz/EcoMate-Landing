@@ -27,7 +27,14 @@ const nextConfig: NextConfig = {
     exposeTestingApiInProductionBuild: exposeTestingApi,
   },
   images: {
-    remotePatterns: [{ protocol: 'https', hostname: 'media.ecomate.app' }],
+    remotePatterns: [
+      // Current site host (same-origin absolute media URLs from the `/media` proxy).
+      { protocol: 'https', hostname: 'dev.ecomate.bd' },
+      // Reserved for a future dedicated R2 custom domain (`R2_PUBLIC_ORIGIN`).
+      // `media.ecomate.app` does not resolve today; kept so already-stored absolute
+      // URLs do not throw at render time if they ever do.
+      { protocol: 'https', hostname: 'media.ecomate.app' },
+    ],
   },
   /**
    * Admin HTML must never be stored by a browser or an intermediary: a cached `/admin`

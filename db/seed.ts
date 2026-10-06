@@ -513,7 +513,7 @@ When 10 orders per day suffer preventable issues, that is **৳1,20,000 in direc
           seoDescription:
             'Complete breakdown of courier return costs in Bangladesh e-commerce, and how barcode verification stops operational cash leaks.',
           canonicalUrl:
-            'https://ecomate.app/blog/why-ecommerce-businesses-lose-money-on-courier-returns',
+            'https://dev.ecomate.bd/blog/why-ecommerce-businesses-lose-money-on-courier-returns',
           publishedAt: new Date(Date.now() - HOUR * 72),
         },
         {
@@ -541,7 +541,7 @@ This eliminates end-of-day phone calls between warehouse managers and showroom c
           seoDescription:
             'Step-by-step architecture for synchronizing retail showroom POS registers with online WooCommerce stores in real-time.',
           canonicalUrl:
-            'https://ecomate.app/blog/multi-store-and-showroom-inventory-synchronization',
+            'https://dev.ecomate.bd/blog/multi-store-and-showroom-inventory-synchronization',
           publishedAt: new Date(Date.now() - HOUR * 120),
         },
       ])

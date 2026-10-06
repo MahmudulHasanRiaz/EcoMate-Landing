@@ -33,7 +33,7 @@ type LeadRow = typeof leadsTable.$inferSelect;
 /** The page the form lives on; Meta wants the URL the conversion happened at. */
 function eventSourceUrl(): string {
   const base = envString('NEXT_PUBLIC_SITE_URL').replace(/\/+$/, '');
-  return `${base || 'https://ecomate.app'}/#lead-form`;
+  return `${base || 'https://dev.ecomate.bd'}/#lead-form`;
 }
 
 export async function dispatchLeadIntegrations(

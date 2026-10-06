@@ -30,7 +30,15 @@ declare global {
       value: ArrayBuffer | ArrayBufferView | string | Blob | ReadableStream,
       options?: { httpMetadata?: { contentType?: string; cacheControl?: string } },
     ): Promise<unknown>;
-    get(key: string): Promise<{ arrayBuffer(): Promise<ArrayBuffer> } | null>;
+    get(
+      key: string,
+    ): Promise<{
+      arrayBuffer(): Promise<ArrayBuffer>;
+      /** Present on the real Workers runtime; the media proxy streams it. */
+      body?: ReadableStream<Uint8Array> | null;
+      /** Sniffed at upload; absent only for objects written before it was stored. */
+      httpMetadata?: { contentType?: string; cacheControl?: string };
+    } | null>;
     /**
      * Metadata-only fetch. Resolves with `null` for a missing key rather than rejecting, which
      * is why `/api/ready` uses it against a deliberately-absent probe key: a null result is

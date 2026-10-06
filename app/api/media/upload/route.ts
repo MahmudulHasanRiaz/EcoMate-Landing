@@ -24,13 +24,29 @@ import { hitLimit } from '@/lib/rateLimit';
 import { mediaUploadMeta } from '@/lib/validation';
 
 /**
- * Public origin for uploaded media. The R2 bucket is fronted by the custom domain
- * `media.ecomate.app` (`npx wrangler r2 bucket domain ecomate-media --custom-domain
- * media.ecomate.app`), which is also the hostname allowlisted in `next.config.ts`
- * `images.remotePatterns`. A `/assets/<key>` URL would only have worked on Pages static
- * hosting and 404s the moment this runs as a Worker.
+ * Public origin for uploaded media, resolved per request (never a frozen constant, so a
+ * domain move is config, not a code change):
+ *
+ * 1. `R2_PUBLIC_ORIGIN` Worker var when set — a dedicated CDN/custom domain in front of
+ *    the bucket (e.g. `https://media.dev.ecomate.bd` after `wrangler r2 bucket domain`
+ *    + DNS). Zero code change to switch CDN on later.
+ * 2. Same-origin `/media/<key>` proxy (this Worker serves R2 bytes itself, edge-cached
+ *    for a year since keys are content-addressed). This is the default because it needs
+ *    no DNS: `media.ecomate.app` does not resolve, so the old hardcoded CDN origin 404d
+ *    every upload. `NEXT_PUBLIC_SITE_URL` is build-time public config, safe to embed.
  */
-const MEDIA_CDN_ORIGIN = 'https://media.ecomate.app';
+function resolvePublicOrigin(): string {
+  try {
+    const origin = (getCloudflareContext().env as Record<string, string | undefined>)
+      .R2_PUBLIC_ORIGIN;
+    if (origin) return origin.replace(/\/+$/, '');
+  } catch {
+    // No request context (tests, build): fall through to public site URL.
+  }
+  const site = process.env.NEXT_PUBLIC_SITE_URL;
+  if (site) return site.replace(/\/+$/, '');
+  return 'https://media.ecomate.app';
+}
 
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 /** Room for the multipart envelope (boundaries + the other form fields). */
@@ -183,7 +199,9 @@ export async function POST(req: Request) {
     });
 
     return ok(
-      { key, url: `${MEDIA_CDN_ORIGIN}/${key}`, mimeType: imageType.mime, size: file.size },
+      // `key` already starts with `media/YYYY/MM/`, so the public path IS the key —
+      // no prefix added. The same-origin proxy (`app/media/[...key]/route.ts`) serves it.
+      { key, url: `${resolvePublicOrigin()}/${key}`, mimeType: imageType.mime, size: file.size },
       201,
     );
   } catch (e) {

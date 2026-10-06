@@ -34,10 +34,14 @@ binding = "RATE_LIMIT_KV"
 id = "PASTE_KV_ID" # from: npx wrangler kv namespace create RATE_LIMIT_KV
 
 [vars]
-NEXT_PUBLIC_SITE_URL = "https://ecomate.app"
+NEXT_PUBLIC_SITE_URL = "https://dev.ecomate.bd"
 NEXT_PUBLIC_DEFAULT_LOCALE = "en"
 NEXT_PUBLIC_META_PIXEL_ID = ""
 NEXT_PUBLIC_TURNSTILE_SITE_KEY = ""
+# R2_PUBLIC_ORIGIN: optional dedicated media CDN origin (e.g.
+# "https://media.dev.ecomate.bd" after `wrangler r2 bucket domain` + DNS).
+# Unset (default) = same-origin `/media/<key>` proxy, which needs no DNS.
+# R2_PUBLIC_ORIGIN = ""
 
 # Auth.js refuses to derive its origin from an untrusted Host header (UntrustedHost).
 # `auth.ts` reads this var explicitly (`trustHost: envString('AUTH_TRUST_HOST') === 'true'`)
@@ -111,10 +115,14 @@ binding = "RATE_LIMIT_KV"
 id = "PASTE_PROD_KV_ID"
 
 [env.production.vars]
-NEXT_PUBLIC_SITE_URL = "https://ecomate.app"
+NEXT_PUBLIC_SITE_URL = "https://dev.ecomate.bd"
 NEXT_PUBLIC_DEFAULT_LOCALE = "en"
 NEXT_PUBLIC_META_PIXEL_ID = ""
 NEXT_PUBLIC_TURNSTILE_SITE_KEY = ""
+# R2_PUBLIC_ORIGIN: optional dedicated media CDN origin (e.g.
+# "https://media.dev.ecomate.bd" after `wrangler r2 bucket domain` + DNS).
+# Unset (default) = same-origin `/media/<key>` proxy, which needs no DNS.
+# R2_PUBLIC_ORIGIN = ""
 AUTH_TRUST_HOST = "true"
 RETENTION_DAYS = "180"
 
@@ -154,6 +162,10 @@ NEXT_PUBLIC_SITE_URL = "https://preview.ecomate.app"
 NEXT_PUBLIC_DEFAULT_LOCALE = "en"
 NEXT_PUBLIC_META_PIXEL_ID = ""
 NEXT_PUBLIC_TURNSTILE_SITE_KEY = ""
+# R2_PUBLIC_ORIGIN: optional dedicated media CDN origin (e.g.
+# "https://media.dev.ecomate.bd" after `wrangler r2 bucket domain` + DNS).
+# Unset (default) = same-origin `/media/<key>` proxy, which needs no DNS.
+# R2_PUBLIC_ORIGIN = ""
 AUTH_TRUST_HOST = "true"
 RETENTION_DAYS = "180"
 

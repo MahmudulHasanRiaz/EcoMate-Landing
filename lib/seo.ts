@@ -14,7 +14,7 @@ import { DEFAULT_LOCALE, LOCALES } from '@/lib/locales';
 import type { Locale } from '@/src/types/landing';
 
 /** Canonical origin. `wrangler.toml` `[vars]` sets the production value. */
-export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ecomate.app';
+export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://dev.ecomate.bd';
 
 /** Site name used by `openGraph.siteName`, the sitemap entries and the Organization node. */
 export const SITE_NAME = 'EcoMate';

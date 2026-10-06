@@ -1,35 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { EcoMateLogo } from './EcoMateLogo';
-import { LandingContent, Locale, NavItem, Theme } from '../types/landing';
+import type { NavItem } from '../types/landing';
+import { useLanding } from '@/components/shell/useLanding';
 import { Globe, Menu, X, ArrowUpRight, PhoneCall, Sun, Moon, MessageCircle } from 'lucide-react';
 
-interface HeaderProps {
-  content: LandingContent;
-  locale: Locale;
-  theme: Theme;
-  /**
-   * DB-managed `main` menu for this locale, or `null` when `menu_items` has no visible rows.
-   *
-   * `null` falls back to `content.header.nav` — which is itself DB-backed through
-   * `landing_content` and has a static copy behind it. So the header always renders the same
-   * links whether navigation is managed in the table, in `landing_content`, or in neither.
-   * A menu is never *merged* with the fallback: a half-managed bar is uneditable, and a
-   * removed link has to stay removed.
-   */
-  navItems: readonly NavItem[] | null;
-  onToggleLocale: () => void;
-  onToggleTheme: () => void;
-  onOpenLeadModal?: () => void;
-}
-
-export const Header: React.FC<HeaderProps> = ({
-  content,
-  locale,
-  theme,
-  navItems,
-  onToggleLocale,
-  onToggleTheme,
-}) => {
+export const Header: React.FC = () => {
+  const {
+    content,
+    locale,
+    theme,
+    menu: navItems,
+    toggleLocale: onToggleLocale,
+    toggleTheme: onToggleTheme,
+  } = useLanding();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 

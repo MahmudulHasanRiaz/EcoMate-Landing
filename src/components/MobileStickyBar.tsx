@@ -1,13 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { LandingContent, Locale } from '../types/landing';
+import { useLanding } from '@/components/shell/useLanding';
 import { ArrowUpRight, MessageCircle, PhoneCall, X } from 'lucide-react';
 
-interface MobileStickyBarProps {
-  content: LandingContent;
-  locale: Locale;
-}
-
-export const MobileStickyBar: React.FC<MobileStickyBarProps> = ({ content, locale }) => {
+export const MobileStickyBar: React.FC = () => {
+  const { content } = useLanding();
   const [isDismissed, setIsDismissed] = useState(false);
   const [hasScrolledPastHero, setHasScrolledPastHero] = useState(false);
 

@@ -1,13 +1,9 @@
 import React from 'react';
-import { LandingContent, Locale } from '../types/landing';
+import { useLanding } from '@/components/shell/useLanding';
 import { TrendingUp, CheckCircle2, ShieldCheck, Database, Layers } from 'lucide-react';
 
-interface MarketingSectionProps {
-  content: LandingContent;
-  locale: Locale;
-}
-
-export const MarketingSection: React.FC<MarketingSectionProps> = ({ content, locale }) => {
+export const MarketingSection: React.FC = () => {
+  const { content, locale } = useLanding();
   return (
     <section id="marketing" className="relative py-14 md:py-24 border-t border-slate-200 dark:border-white/[0.06] bg-white dark:bg-[#07080E] transition-colors">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

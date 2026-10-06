@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LandingContent, Locale } from '../types/landing';
+import { useLanding } from '@/components/shell/useLanding';
 import { EcoMateLogo } from './EcoMateLogo';
 import {
   Store,
@@ -14,12 +14,8 @@ import {
   Sparkles,
 } from 'lucide-react';
 
-interface EcosystemSectionProps {
-  content: LandingContent;
-  locale: Locale;
-}
-
-export const EcosystemSection: React.FC<EcosystemSectionProps> = ({ content, locale }) => {
+export const EcosystemSection: React.FC = () => {
+  const { content, locale } = useLanding();
   const [activeNodeId, setActiveNodeId] = useState<string>(content.ecosystem.nodes[0].id);
 
   const getIcon = (iconName: string) => {

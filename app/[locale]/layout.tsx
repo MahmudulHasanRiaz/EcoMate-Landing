@@ -1,9 +1,16 @@
 /**
- * Locale-scoped shell for `/en/*` and `/bn/*` (Task 15 §2).
+ * Locale-scoped shell for `/en/*` and `/bn/*` (Task 15 §2, Task 23 Option A).
  *
  * This layout owns the locale *contract* — which locales exist, and what a given locale's
- * URL set looks like — and nothing else. It renders `children` untouched, so the marketing
- * composition stays in `LandingPage` and the blog page stays in its own file.
+ * URL set looks like — plus the locale *data*: it awaits `params`, reads
+ * `getLandingContent(locale)` + both menus for that locale through the single `'use cache'`
+ * boundary (`lib/content.ts`), assembles via `lib/merge.ts`, and seeds the client
+ * `LocaleThemeProvider`. The marketing page (`app/[locale]/page.tsx` → `LandingShell`)
+ * renders Header / sections / Footer / MobileStickyBar from that context.
+ *
+ * The provider renders NO DOM of its own, so non-marketing routes under `[locale]` (blog
+ * articles, case studies, privacy/terms) render exactly what they render today — no
+ * marketing chrome is added to them. `/admin` is outside this layout entirely.
  *
  * `generateStaticParams` lives here rather than in the page because it has to cover every
  * route under `[locale]`: without `en` in the list, `/bn` would be the only prerendered
@@ -15,6 +22,9 @@
  */
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { LocaleThemeProvider } from '@/components/shell/LocaleThemeProvider';
+import { getLandingContent, getMenu, getPricingPlans } from '@/lib/content';
+import { assembleLandingContent } from '@/lib/merge';
 import { LOCALES, isLocale } from '@/lib/locales';
 import { localeAlternates } from '@/lib/seo';
 
@@ -50,5 +60,24 @@ export default async function LocaleLayout({
   // (non-prerendered) path, so an unknown locale still costs nothing at build time.
   if (!isLocale(locale)) notFound();
 
-  return children;
+  // Sequential, not `Promise.all` — same reasoning as `LandingPage`: Next 16's Cache
+  // Components tracks a dynamic API access through the `await` that reaches it, and joined
+  // branches can read as uncached data and refuse the prerender. Cache reads follow the
+  // first as microtasks, not queries, so this costs nothing.
+  const sections = await getLandingContent(locale);
+  const mainMenu = await getMenu('main', locale);
+  const footerMenu = await getMenu('footer', locale);
+  const pricing = await getPricingPlans();
+
+  return (
+    <LocaleThemeProvider
+      initialLocale={locale}
+      initialContent={assembleLandingContent(locale, sections)}
+      initialMenu={mainMenu}
+      initialFooterMenu={footerMenu}
+      initialIsPricingVisible={pricing?.isPricingVisible ?? true}
+    >
+      {children}
+    </LocaleThemeProvider>
+  );
 }

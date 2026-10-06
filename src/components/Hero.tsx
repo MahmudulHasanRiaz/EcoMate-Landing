@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LandingContent, Locale } from '../types/landing';
+import { useLanding } from '@/components/shell/useLanding';
 import {
   ArrowRight,
   MessageCircle,
@@ -17,12 +17,8 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 
-interface HeroProps {
-  content: LandingContent;
-  locale: Locale;
-}
-
-export const Hero: React.FC<HeroProps> = ({ content, locale }) => {
+export const Hero: React.FC = () => {
+  const { content, locale } = useLanding();
   const [activeHeroTab, setActiveHeroTab] = useState<'overview' | 'packing' | 'courier' | 'pos'>('overview');
 
   const scrollToLead = (e: React.MouseEvent) => {

@@ -1,13 +1,10 @@
 import React, { useState } from 'react';
-import { LandingContent, Locale, ProblemItem } from '../types/landing';
+import { useLanding } from '@/components/shell/useLanding';
+import type { ProblemItem } from '../types/landing';
 import { AlertCircle, ArrowRight, CheckCircle2, ShieldAlert, Sparkles, TrendingDown } from 'lucide-react';
 
-interface ComplexitySectionProps {
-  content: LandingContent;
-  locale: Locale;
-}
-
-export const ComplexitySection: React.FC<ComplexitySectionProps> = ({ content, locale }) => {
+export const ComplexitySection: React.FC = () => {
+  const { content, locale } = useLanding();
   const [selectedProblem, setSelectedProblem] = useState<ProblemItem>(content.complexity.problems[0]);
 
   return (

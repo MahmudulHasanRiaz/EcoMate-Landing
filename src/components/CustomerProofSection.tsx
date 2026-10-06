@@ -1,14 +1,11 @@
 import React, { useState } from 'react';
-import { LandingContent, Locale, CaseStudy } from '../types/landing';
+import type { CaseStudy } from '../types/landing';
+import { useLanding } from '@/components/shell/useLanding';
 import { CaseStudyVideoModal } from './CaseStudyVideoModal';
 import { ShieldCheck, Play, Globe, Building2, CheckCircle2, ArrowRight } from 'lucide-react';
 
-interface CustomerProofProps {
-  content: LandingContent;
-  locale: Locale;
-}
-
-export const CustomerProofSection: React.FC<CustomerProofProps> = ({ content, locale }) => {
+export const CustomerProofSection: React.FC = () => {
+  const { content } = useLanding();
   const [selectedVideoCase, setSelectedVideoCase] = useState<CaseStudy | null>(null);
 
   const featuredStudy = content.proof.caseStudies[0];

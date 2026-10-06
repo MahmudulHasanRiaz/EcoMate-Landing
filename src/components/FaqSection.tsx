@@ -1,13 +1,9 @@
 import React, { useState } from 'react';
-import { LandingContent, Locale } from '../types/landing';
+import { useLanding } from '@/components/shell/useLanding';
 import { HelpCircle, ChevronDown, MessageCircle, PhoneCall, ArrowRight } from 'lucide-react';
 
-interface FaqSectionProps {
-  content: LandingContent;
-  locale: Locale;
-}
-
-export const FaqSection: React.FC<FaqSectionProps> = ({ content, locale }) => {
+export const FaqSection: React.FC = () => {
+  const { content, locale } = useLanding();
   const [openIndex, setOpenIndex] = useState<number | null>(0); // First item open by default
 
   const toggleAccordion = (index: number) => {

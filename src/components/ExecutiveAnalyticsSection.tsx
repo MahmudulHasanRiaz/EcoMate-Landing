@@ -1,16 +1,9 @@
 import React from 'react';
-import { LandingContent, Locale } from '../types/landing';
+import { useLanding } from '@/components/shell/useLanding';
 import { BarChart3, TrendingUp, DollarSign, CheckCircle2, ArrowUpRight } from 'lucide-react';
 
-interface ExecutiveAnalyticsProps {
-  content: LandingContent;
-  locale: Locale;
-}
-
-export const ExecutiveAnalyticsSection: React.FC<ExecutiveAnalyticsProps> = ({
-  content,
-  locale,
-}) => {
+export const ExecutiveAnalyticsSection: React.FC = () => {
+  const { content } = useLanding();
   return (
     <section id="analytics" className="relative py-14 md:py-24 border-t border-slate-200 dark:border-white/[0.06] bg-white dark:bg-[#07080E] transition-colors">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

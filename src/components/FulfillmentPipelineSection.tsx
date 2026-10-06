@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LandingContent, Locale, PipelineStep } from '../types/landing';
+import { useLanding } from '@/components/shell/useLanding';
 import {
   PackageCheck,
   CheckCircle2,
@@ -12,15 +12,8 @@ import {
   ArrowRight,
 } from 'lucide-react';
 
-interface FulfillmentPipelineProps {
-  content: LandingContent;
-  locale: Locale;
-}
-
-export const FulfillmentPipelineSection: React.FC<FulfillmentPipelineProps> = ({
-  content,
-  locale,
-}) => {
+export const FulfillmentPipelineSection: React.FC = () => {
+  const { content, locale } = useLanding();
   const [activeStepIndex, setActiveStepIndex] = useState<number>(2); // Default to Smart Packing
 
   const currentStep = content.fulfillment.pipeline[activeStepIndex];

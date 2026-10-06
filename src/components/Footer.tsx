@@ -1,21 +1,11 @@
 import React from 'react';
 import { EcoMateLogo } from './EcoMateLogo';
-import { LandingContent, Locale, NavItem } from '../types/landing';
+import type { NavItem } from '../types/landing';
+import { useLanding } from '@/components/shell/useLanding';
 import { Globe, PhoneCall, Mail, MapPin, ArrowUpRight } from 'lucide-react';
 
-interface FooterProps {
-  content: LandingContent;
-  locale: Locale;
-  /**
-   * DB-managed `footer` menu for this locale, or `null` when `menu_items` has no visible
-   * rows. `null` renders the hardcoded link list below, so an empty table costs the footer
-   * its managed links and nothing else. The two are never merged — see `Header.tsx`.
-   */
-  menu: readonly NavItem[] | null;
-  onToggleLocale: () => void;
-}
-
-export const Footer: React.FC<FooterProps> = ({ content, locale, menu, onToggleLocale }) => {
+export const Footer: React.FC = () => {
+  const { content, locale, footerMenu: menu, toggleLocale: onToggleLocale } = useLanding();
   // The hardcoded defaults. Declared as data rather than inline JSX so the same array can be
   // the fallback *and* the comparison baseline for what a menu would replace.
   const DEFAULT_PLATFORM_LINKS: readonly NavItem[] = [

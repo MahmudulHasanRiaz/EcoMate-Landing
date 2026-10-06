@@ -1,14 +1,10 @@
 import React, { useState } from 'react';
-import { LandingContent, Locale } from '../types/landing';
+import { useLanding } from '@/components/shell/useLanding';
 import { ShieldCheck, AlertTriangle, Calculator, CheckCircle2, TrendingUp, DollarSign, ArrowRight } from 'lucide-react';
 import { formatMoney, formatNumber } from '@/lib/format';
 
-interface LossPreventionProps {
-  content: LandingContent;
-  locale: Locale;
-}
-
-export const LossPreventionSection: React.FC<LossPreventionProps> = ({ content, locale }) => {
+export const LossPreventionSection: React.FC = () => {
+  const { content, locale } = useLanding();
   const [dailyOrders, setDailyOrders] = useState<number>(350);
 
   // Economic calculations grounded in Bangladesh e-commerce unit economics:

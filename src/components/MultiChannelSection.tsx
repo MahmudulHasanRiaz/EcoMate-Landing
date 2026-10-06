@@ -1,13 +1,9 @@
 import React from 'react';
-import { LandingContent, Locale } from '../types/landing';
+import { useLanding } from '@/components/shell/useLanding';
 import { Globe, Store, Clock, CheckCircle2, Shuffle, Layers } from 'lucide-react';
 
-interface MultiChannelSectionProps {
-  content: LandingContent;
-  locale: Locale;
-}
-
-export const MultiChannelSection: React.FC<MultiChannelSectionProps> = ({ content, locale }) => {
+export const MultiChannelSection: React.FC = () => {
+  const { content } = useLanding();
   return (
     <section id="multi-channel" className="relative py-14 md:py-24 border-t border-slate-200 dark:border-white/[0.06] bg-slate-50 dark:bg-[#080910] transition-colors">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

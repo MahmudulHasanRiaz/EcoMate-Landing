@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { LandingContent, Locale } from '../types/landing';
+import { useLanding } from '@/components/shell/useLanding';
 import { trackBrowserLead } from '../../components/MetaPixel';
 import { Turnstile, type TurnstileHandle } from '../../components/Turnstile';
 import {
@@ -13,11 +13,6 @@ import {
   Clock,
   Sparkles,
 } from 'lucide-react';
-
-interface FinalConversionProps {
-  content: LandingContent;
-  locale: Locale;
-}
 
 /** Must match the version the server stores in `leads.consent_text` (Task 13 §5). */
 const CONSENT_TEXT_VERSION = 'privacy-v1';
@@ -41,7 +36,8 @@ function newEventId(): string {
   }
 }
 
-export const FinalConversionSection: React.FC<FinalConversionProps> = ({ content, locale }) => {
+export const FinalConversionSection: React.FC = () => {
+  const { content, locale } = useLanding();
   const [formData, setFormData] = useState({
     name: '',
     phone: '',

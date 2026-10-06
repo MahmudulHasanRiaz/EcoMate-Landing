@@ -1,21 +1,11 @@
 import React, { useState } from 'react';
-import { LandingContent, Locale, PricingPlan } from '../types/landing';
+import type { PricingPlan } from '../types/landing';
+import { useLanding } from '@/components/shell/useLanding';
 import { Check, ArrowRight, ShieldCheck, Sparkles, Building2, HelpCircle } from 'lucide-react';
 import { formatMoney } from '@/lib/format';
 
-interface PricingSectionProps {
-  content: LandingContent;
-  locale: Locale;
-  isPricingVisible?: boolean;
-  onTogglePricingMode?: () => void;
-}
-
-export const PricingSection: React.FC<PricingSectionProps> = ({
-  content,
-  locale,
-  isPricingVisible = true,
-  onTogglePricingMode,
-}) => {
+export const PricingSection: React.FC = () => {
+  const { content, locale, isPricingVisible } = useLanding();
   const [annualBilling, setAnnualBilling] = useState<boolean>(true);
 
   return (
@@ -35,19 +25,6 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
               {content.pricing.subheading}
             </p>
           </div>
-
-          {/* Prototype Mode Switcher (Visible vs Contact Sales Architecture) */}
-          {onTogglePricingMode && (
-            <div className="flex items-center gap-2 self-start md:self-auto p-1.5 rounded-xl bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-xs text-slate-600 dark:text-slate-400 shadow-2xs">
-              <span className="text-[11px] font-mono px-2 font-medium">Mode:</span>
-              <button
-                onClick={onTogglePricingMode}
-                className="px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-600/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/40 hover:bg-indigo-100 dark:hover:bg-indigo-600/40 transition-colors font-semibold cursor-pointer"
-              >
-                {isPricingVisible ? 'Toggle to Hidden Mode' : 'Toggle to Visible Tiered Mode'}
-              </button>
-            </div>
-          )}
         </div>
 
         {/* MODE 1: PRICING VISIBLE */}

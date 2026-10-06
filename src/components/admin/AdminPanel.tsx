@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
+import type {
   SiteSettings,
   LandingSection,
   PricingPlan,
@@ -9,7 +9,7 @@ import {
   BlogPost,
   MediaAsset,
   IntegrationLog,
-} from '../../db';
+} from '../../types/api';
 import * as api from '../../services/api';
 import {
   LayoutDashboard,
@@ -169,6 +169,28 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
       setIntegrationLogs(updatedLogs);
     } catch (err: any) {
       showNotification(`Sync failed: ${err.message}`);
+    }
+  };
+
+  /**
+   * Retries only the Meta CAPI dispatch. Safe against double-clicks: the server skips a
+   * lead whose `metaCapiStatus` is already `Sent`, so a second click cannot duplicate the
+   * conversion in Events Manager.
+   */
+  const handleRetryMetaSync = async (id: number) => {
+    try {
+      const result = await api.retryLeadMetaSync(id);
+      showNotification(
+        result.metaCapiStatus === 'Sent'
+          ? `Lead #${id} converted: Meta CAPI accepted the Lead event`
+          : `Meta CAPI status for lead #${id}: ${result.metaCapiStatus}`
+      );
+      const updatedLeads = await api.getLeads();
+      setLeads(updatedLeads);
+      const updatedLogs = await api.getIntegrationLogs();
+      setIntegrationLogs(updatedLogs);
+    } catch (err: any) {
+      showNotification(`Meta CAPI sync failed: ${err.message}`);
     }
   };
 
@@ -489,6 +511,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                         <th className="px-4 py-3">Order Volume</th>
                         <th className="px-4 py-3">Stage Status</th>
                         <th className="px-4 py-3">License Sync</th>
+                        <th className="px-4 py-3">Meta CAPI</th>
                         <th className="px-4 py-3 text-right">Actions</th>
                       </tr>
                     </thead>
@@ -537,14 +560,39 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                               {lead.licensePortalStatus}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-right">
-                            <button
-                              onClick={() => handleRetryLicenseSync(lead.id)}
-                              className="px-2.5 py-1 rounded bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-500/20 dark:text-indigo-300 dark:hover:bg-indigo-500/30 text-[11px] font-semibold transition-colors cursor-pointer"
-                              title="Dispatch to external License Portal queue"
+                          <td className="px-4 py-3">
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                                lead.metaCapiStatus === 'Sent'
+                                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
+                                  : lead.metaCapiStatus === 'Failed'
+                                  ? 'bg-rose-50 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300'
+                                  : lead.metaCapiStatus === 'Skipped'
+                                  ? 'bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-300'
+                                  : 'bg-amber-50 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300'
+                              }`}
+                              title={lead.metaCapiError || 'Server-side Meta Conversions API (Lead event)'}
                             >
-                              Sync Portal
-                            </button>
+                              {lead.metaCapiStatus}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => handleRetryMetaSync(lead.id)}
+                                className="px-2.5 py-1 rounded bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/20 text-[11px] font-semibold transition-colors cursor-pointer"
+                                title="Re-send the server-side Meta Lead event (skips leads already Sent)"
+                              >
+                                Retry CAPI
+                              </button>
+                              <button
+                                onClick={() => handleRetryLicenseSync(lead.id)}
+                                className="px-2.5 py-1 rounded bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-500/20 dark:text-indigo-300 dark:hover:bg-indigo-500/30 text-[11px] font-semibold transition-colors cursor-pointer"
+                                title="Dispatch to external License Portal queue"
+                              >
+                                Sync Portal
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}

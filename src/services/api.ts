@@ -1,4 +1,4 @@
-import { SiteSettings, LandingSection, PricingPlan, Lead, Testimonial, CaseStudy, BlogPost, MediaAsset, IntegrationLog } from '../db';
+import type { SiteSettings, LandingSection, PricingPlan, Lead, Testimonial, CaseStudy, BlogPost, MediaAsset, IntegrationLog } from '../types/api';
 
 const API_BASE = '/api';
 
@@ -82,6 +82,14 @@ export async function submitLead(leadData: {
   source?: string;
   utmSource?: string;
   utmCampaign?: string;
+  /** Required by `POST /api/leads`: consent is a legal prerequisite, not an option. */
+  consentGiven: boolean;
+  /** Privacy-policy version the visitor accepted (stored on the lead row). */
+  consentText?: string;
+  /** Shared with the server-side CAPI event so Meta deduplicates the pair. */
+  eventId?: string;
+  fbp?: string;
+  fbc?: string;
 }): Promise<{ success: boolean; leadId: number; message: string }> {
   const res = await fetch(`${API_BASE}/leads`, {
     method: 'POST',
@@ -114,6 +122,16 @@ export async function updateLeadStatus(id: number, status: Lead['status'], inter
 export async function retryLeadLicenseSync(id: number): Promise<any> {
   const res = await fetch(`${API_BASE}/leads/${id}/sync-license`, { method: 'POST' });
   if (!res.ok) throw new Error('Failed to retry license sync');
+  return res.json();
+}
+
+/** Retries the Meta CAPI dispatch for a lead whose `metaCapiStatus` is Failed/Skipped. */
+export async function retryLeadMetaSync(id: number): Promise<{
+  metaCapiStatus: string;
+  licensePortalStatus: string;
+}> {
+  const res = await fetch(`${API_BASE}/leads/${id}/sync-meta`, { method: 'POST' });
+  if (!res.ok) throw new Error('Failed to retry Meta CAPI dispatch');
   return res.json();
 }
 

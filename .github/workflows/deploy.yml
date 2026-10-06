@@ -80,16 +80,45 @@ jobs:
             console.log('package.json build script is recursion-safe:', script);
           "
 
+      # Supabase publishes AAAA records and GitHub-hosted runners have
+      # no IPv6 route: resolving the DIRECT_URL hostname can dial
+      # IPv6, which fails with ENETUNREACH. DNS-order hints do not
+      # reliably control which family postgres-js dials (observed in
+      # CI, 2026-10-06), so DIRECT_URL is rewritten to its IPv4
+      # address here. Under `cacheComponents: true` cached data
+      # functions run during the build with no Hyperdrive binding
+      # and fall back to DIRECT_URL — without this they cannot reach
+      # the database and prerender an empty shell instead of real
+      # content. The rewritten value lands in DIRECT_URL for every
+      # later step via GITHUB_ENV; the secret value is never printed.
+      # An URL that is already an IPv4 literal passes through unchanged.
+      - name: Pin DIRECT_URL to IPv4 (runners have no IPv6 route)
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+        run: |
+          node -e '
+            const dns = require("node:dns");
+            const raw = process.env.DIRECT_URL || "";
+            if (!raw) { console.log("DIRECT_URL not set — leaving unset."); process.exit(0); }
+            const url = new URL(raw);
+            dns.lookup(url.hostname, { family: 4 }, (err, address) => {
+              if (err) {
+                console.error("::error::Could not resolve an IPv4 address for " + url.hostname + ": " + err.message);
+                process.exit(1);
+              }
+              url.hostname = address;
+              require("node:fs").appendFileSync(process.env.GITHUB_ENV, "DIRECT_URL=" + url.toString() + "\n");
+              console.log("DIRECT_URL pinned to " + address + " (IPv4).");
+            });
+          '
+
       # The opennext CLI produces the deployable Worker bundle (`.open-next`); it runs
       # `npm run build` (`next build`) internally. The package.json build script must
       # never point back at `opennextjs-cloudflare build` — that recurses without bound.
+      # DIRECT_URL (IPv4-pinned above) arrives via GITHUB_ENV and is required here
+      # under `cacheComponents: true` so cached data functions prerender real content.
       - name: Build production bundle
         run: npx opennextjs-cloudflare build
-        env:
-          # Required at build time under `cacheComponents: true`: cached data functions
-          # run during the build with no Hyperdrive binding, and `db/client.ts` falls back
-          # to DIRECT_URL. The migration step below reuses the same secret.
-          DIRECT_URL: ${{ secrets.DIRECT_URL }}
 
       - name: Verify build artifact integrity
         run: |

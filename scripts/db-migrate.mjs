@@ -22,14 +22,52 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import dns from 'node:dns';
 
-// Supabase publishes AAAA records for db.*.supabase.co. Networks without an IPv6
-// route (GitHub runners included) then fail with ENETUNREACH on the IPv6 attempt
-// instead of falling back to IPv4 — Node resolves in DNS order by default.
-// Prefer IPv4 so a missing v6 route can never blackhole the migration.
+// Supabase publishes AAAA records for db.*.supabase.co and
+// GitHub-hosted runners have no IPv6 route. Dialling the IPv6
+// address fails with ENETUNREACH and postgres-js never falls back
+// to IPv4. dns.setDefaultResultOrder('ipv4first') is only a hint
+// (it was still observed dialling IPv6 in CI, 2026-10-06), so it
+// is kept for the fallback path below and the hostname is resolved
+// to its IPv4 address explicitly instead — the connection is then
+// made to the address itself, with no DNS choice left to make.
+// TLS keeps working: postgres-js derives the servername from the
+// host, which is now an IP, so when the URL asks for SSL the
+// servername is pinned back to the real hostname (certificate
+// verification stays on).
 dns.setDefaultResultOrder('ipv4first');
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const JOURNAL_PATH = join(ROOT, 'drizzle', 'meta', '_journal.json');
+
+async function ipv4Connection(url) {
+  const parsed = new URL(url);
+  const hostname = parsed.hostname;
+  if (!hostname) {
+    return { url, servername: undefined };
+  }
+  let resolved;
+  try {
+    // family:4 asks the resolver for an IPv4 address. A hostname
+    // that is already an IPv4 literal passes through unchanged; an
+    // IPv6 literal or IPv6-only host comes back with family 6 and
+    // is left as-is — there is no IPv4 to force in that case.
+    resolved = await dns.promises.lookup(hostname, { family: 4 });
+  } catch (e) {
+    // Resolution unavailable: dial the URL unchanged so the failure
+    // is the real connection error, not this one.
+    console.warn(`[db:migrate] WARNING: could not resolve an IPv4 address for ${hostname} (${e.code || e.message}); connecting to the URL as given.`);
+    return { url, servername: undefined };
+  }
+  if (resolved.family !== 4 || !resolved.address) {
+    return { url, servername: undefined };
+  }
+  parsed.hostname = resolved.address;
+  console.log(`[db:migrate] ${hostname} -> ${resolved.address} (IPv4 forced: GitHub runners have no IPv6 route).`);
+  return {
+    url: parsed.toString(),
+    servername: /[?&]sslmode=/i.test(url) ? hostname : undefined,
+  };
+}
 
 function fail(msg) {
   console.error(`[db:migrate] FATAL: ${msg}`);
@@ -51,18 +89,25 @@ if (!Array.isArray(journal.entries) || journal.entries.length === 0) {
   fail('journal has no entries — nothing to check. Run `npm run db:generate` first.');
 }
 
+// Rewrite the URL to its IPv4 address before connecting (see ipv4Connection).
+const { url: connectUrl, servername } = await ipv4Connection(url);
+
 let sql;
 try {
-  sql = postgres(url, {
+  sql = postgres(connectUrl, {
     prepare: false, // transaction-pooler safe; also required for multi-statement files
     connect_timeout: 15, // fail loudly instead of hanging the deploy
     idle_timeout: 10,
     max: 1,
+    // Pin TLS SNI to the real hostname when its IPv4 address was
+    // dialled, so certificate verification and SNI keep targeting
+    // the database rather than an IP literal.
+    ...(servername ? { ssl: { servername } } : {}),
   });
   // Force the connection now so network/auth failures surface HERE with a message,
   // not three steps later as a silent exit.
   await sql`select 1 as probe`;
-  console.log('[db:migrate] connected (host not shown).');
+  console.log('[db:migrate] connected.');
 } catch (e) {
   fail(`cannot connect: [${e.code || 'NO_CODE'}] ${String(e.message || e).slice(0, 300)}`);
 }

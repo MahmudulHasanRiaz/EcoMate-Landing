@@ -1,22 +1,20 @@
 import { drizzle, type PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
-import dns from 'node:dns';
 import postgres from 'postgres';
 import * as schema from './schema';
 
-// Supabase publishes AAAA records; networks without an IPv6 route (CI runners)
-// fail ENETUNREACH on the v6 attempt instead of falling back to IPv4, because
-// Node resolves in DNS order by default. Prefer IPv4 so a missing v6 route can
-// never blackhole a connection. Harmless where v6 works (only ordering).
-// NOTE: module scope also runs on Workers, but there every connection goes
-// through Hyperdrive (which resolves itself) — this only affects direct
-// `postgres()` connections (build prerender, seed, local dev). Guarded because
-// `node:dns` is partial under Workers nodejs_compat and must never break import.
-try {
-  dns.setDefaultResultOrder('ipv4first');
-} catch {
-  // Workers runtime without full node:dns — Hyperdrive path unaffected.
-}
+// IPv6 note: Supabase publishes AAAA records and GitHub-hosted
+// runners have no IPv6 route, so a direct connection (build-time
+// prerender, seed, local dev) can fail with ENETUNREACH on the
+// IPv6 attempt. DNS-order hints do not reliably control which
+// family postgres-js dials (observed in CI, 2026-10-06), so the
+// workflows rewrite DIRECT_URL to its IPv4 address before the
+// build instead — see the "Pin DIRECT_URL to IPv4" step in
+// deploy.yml / preview.yml. Production connections go through
+// Hyperdrive, which resolves server-side and is unaffected.
+// node:dns is deliberately NOT imported here: it is only partially
+// available under Workers nodejs_compat, and a static import
+// could break module evaluation on the Worker runtime.
 
 type Database = PostgresJsDatabase<typeof schema>;
 

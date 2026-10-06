@@ -53,7 +53,7 @@ export const CaseStudyVideoModal: React.FC<CaseStudyVideoModalProps> = ({
                 <Building2 className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
                 <span>{caseStudy.businessName}</span>
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+              <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">
                 {caseStudy.founderName} · {caseStudy.role} · {caseStudy.location}
               </p>
             </div>
@@ -61,7 +61,7 @@ export const CaseStudyVideoModal: React.FC<CaseStudyVideoModalProps> = ({
               href={`https://${caseStudy.website}`}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-semibold"
+              className="inline-flex items-center gap-1 text-xs text-indigo-700 dark:text-indigo-400 hover:underline font-semibold"
             >
               <Globe className="h-3.5 w-3.5" />
               <span>{caseStudy.website}</span>
@@ -76,7 +76,7 @@ export const CaseStudyVideoModal: React.FC<CaseStudyVideoModalProps> = ({
             {caseStudy.metrics.map((m, idx) => (
               <div key={idx} className="p-3 rounded-lg bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/[0.04] text-center">
                 <p className="text-base font-bold text-emerald-700 dark:text-emerald-400 font-mono-numbers">{m.stat}</p>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">{m.label}</p>
+                <p className="text-[10px] text-slate-600 dark:text-slate-400 mt-0.5 font-medium">{m.label}</p>
               </div>
             ))}
           </div>

@@ -73,7 +73,7 @@ type AdminTab =
 const FieldError: React.FC<{ id: string; message?: string }> = ({ id, message }) => {
   if (!message) return null;
   return (
-    <p id={id} role="alert" className="mt-1 text-[11px] font-medium text-rose-600 dark:text-rose-400">
+    <p id={id} role="alert" className="mt-1 text-[11px] font-medium text-rose-700 dark:text-rose-400">
       {message}
     </p>
   );
@@ -496,12 +496,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
         <div className="flex h-full w-full max-w-xl flex-col overflow-y-auto border-l border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-[#0B0D18]">
           <header className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-slate-200 bg-white px-5 py-4 dark:border-white/10 dark:bg-[#0B0D18]">
             <div className="min-w-0">
-              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">
+              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-400">
                 <History className="h-3.5 w-3.5" />
                 Lead #{lead.id}
               </p>
               <h3 className="mt-1 truncate text-lg font-bold text-slate-900 dark:text-white">{lead.name}</h3>
-              <p className="truncate font-mono text-xs text-slate-500 dark:text-slate-400">
+              <p className="truncate font-mono text-xs text-slate-600 dark:text-slate-400">
                 {lead.phone}
                 {lead.email ? ` · ${lead.email}` : ''}
               </p>
@@ -529,7 +529,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
           <div className="space-y-6 px-5 py-5">
             {/* Assignment */}
             <section>
-              <h4 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              <h4 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
                 <UserPlus className="h-3.5 w-3.5" />
                 Assignment
               </h4>
@@ -562,7 +562,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
 
             {/* Follow-up */}
             <section>
-              <h4 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              <h4 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
                 <Clock className="h-3.5 w-3.5" />
                 Follow-up
               </h4>
@@ -583,7 +583,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                 </button>
               </div>
               {isOverdue && (
-                <p className="mt-1.5 text-[11px] font-semibold text-rose-600 dark:text-rose-400">
+                <p className="mt-1.5 text-[11px] font-semibold text-rose-700 dark:text-rose-400">
                   Overdue — the promised follow-up date has passed.
                 </p>
               )}
@@ -591,15 +591,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
 
             {/* Timeline, newest first */}
             <section>
-              <h4 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              <h4 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
                 <History className="h-3.5 w-3.5" />
                 Timeline
               </h4>
 
               {isLoadingTimeline ? (
-                <p className="mt-2 text-xs text-slate-500">Loading history…</p>
+                <p className="mt-2 text-xs text-slate-600 dark:text-slate-300">Loading history…</p>
               ) : leadActivities.length === 0 ? (
-                <p className="mt-2 text-xs text-slate-500">
+                <p className="mt-2 text-xs text-slate-600 dark:text-slate-300">
                   No recorded activity yet. Every status change and assignment from here on is
                   logged with the operator who made it.
                 </p>
@@ -654,7 +654,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                 Self-Contained CMS & DB
               </span>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Authoritative PostgreSQL & Content Engine</p>
+            <p className="text-xs text-slate-600 dark:text-slate-400">Authoritative PostgreSQL & Content Engine</p>
           </div>
         </div>
 
@@ -743,7 +743,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
             <div className="flex items-center justify-between">
               <span className="text-slate-500 dark:text-slate-400 font-medium">SQL Repository:</span>
               <span className="text-emerald-700 dark:text-emerald-400 font-mono font-semibold flex items-center gap-1">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" />
                 Active (Authoritative)
               </span>
             </div>
@@ -763,7 +763,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
             <div className="space-y-6 max-w-6xl mx-auto">
               <div>
                 <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Operations & Marketing Hub</h2>
-                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">
                   Real-time visibility into inbound enterprise leads, CMS content status, and external integration dispatches.
                 </p>
               </div>
@@ -771,11 +771,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
               {/* 4 Stats Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1B] shadow-xs">
-                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Total Inbound Leads</span>
+                  <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Total Inbound Leads</span>
                   <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white font-mono-numbers mt-2">
                     {leads.length}
                   </p>
-                  <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-1 font-medium">
+                  <p className="text-xs text-indigo-700 dark:text-indigo-400 mt-1 font-medium">
                     {leads.filter((l) => l.status === 'New').length} pending follow-up
                   </p>
                   {/* Overdue worklist (Task 16 §2). A clickable count rather than a separate
@@ -794,36 +794,36 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                 </div>
 
                 <div className="p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1B] shadow-xs">
-                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Pricing Mode Active</span>
+                  <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Pricing Mode Active</span>
                   <p className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mt-2">
                     {pricing.isPricingVisible ? 'Tiered Visible' : 'Custom / Hidden'}
                   </p>
                   <button
                     onClick={handleTogglePricingMode}
-                    className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline mt-1 font-semibold cursor-pointer"
+                    className="text-xs text-indigo-700 dark:text-indigo-400 hover:underline mt-1 font-semibold cursor-pointer"
                   >
                     Switch mode →
                   </button>
                 </div>
 
                 <div className="p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1B] shadow-xs">
-                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">CMS Landing Sections</span>
+                  <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">CMS Landing Sections</span>
                   <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white font-mono-numbers mt-2">
                     {sections.length}
                   </p>
-                  <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1 font-medium">
+                  <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-1 font-medium">
                     Fully database-configured
                   </p>
                 </div>
 
                 <div className="p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1B] shadow-xs">
-                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Untranslated Sections (BN)</span>
+                  <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Untranslated Sections (BN)</span>
                   <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white font-mono-numbers mt-2">
                     {i18nReport ? i18nReport.gapCount : '—'}
                   </p>
                   <button
                     onClick={() => setActiveTab('content')}
-                    className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline mt-1 font-semibold cursor-pointer"
+                    className="text-xs text-indigo-700 dark:text-indigo-400 hover:underline mt-1 font-semibold cursor-pointer"
                   >
                     {i18nReport && i18nReport.gapCount === 0
                       ? 'Every section has Bangla copy'
@@ -832,11 +832,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                 </div>
 
                 <div className="p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1B] shadow-xs">
-                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Blog / SEO Content</span>
+                  <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Blog / SEO Content</span>
                   <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white font-mono-numbers mt-2">
                     {blogPosts.length}
                   </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 font-medium">
                     Indexable problem-first articles
                   </p>
                 </div>
@@ -848,7 +848,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                   <h3 className="font-bold text-base text-slate-900 dark:text-white">Recent Inbound Consultation Leads</h3>
                   <button
                     onClick={() => setActiveTab('leads')}
-                    className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer"
+                    className="text-xs font-semibold text-indigo-700 dark:text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer"
                   >
                     <span>View all leads</span>
                     <ArrowRight className="h-3.5 w-3.5" />
@@ -867,12 +867,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-slate-900 dark:text-white">{lead.name}</span>
-                          <span className="font-mono text-slate-500">{lead.phone}</span>
+                          <span className="font-mono text-slate-500 dark:text-slate-400">{lead.phone}</span>
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">
                             {lead.dailyVolume}
                           </span>
                         </div>
-                        <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5 line-clamp-1">
+                        <p className="text-slate-600 dark:text-slate-400 text-[11px] mt-0.5 line-clamp-1">
                           {lead.note || 'No specific note provided.'}
                         </p>
                       </div>
@@ -905,7 +905,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Inbound Lead Pipeline</h2>
-                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-0.5">
                     Authoritative PostgreSQL records from public demo booking forms. Syncable to License Portal.
                   </p>
                 </div>
@@ -958,7 +958,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                     <Clock className="h-4 w-4" />
                     Overdue follow-ups ({overdueLeads.length})
                   </h3>
-                  <p className="mt-0.5 text-[11px] text-rose-700/80 dark:text-rose-300/80">
+                  <p className="mt-0.5 text-[11px] text-rose-700 dark:text-rose-300/80">
                     Promised callback dates that have passed on leads that are still open.
                   </p>
                   <ul className="mt-3 divide-y divide-rose-200/60 text-xs dark:divide-rose-500/20">
@@ -977,7 +977,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                           className="min-w-0 text-left font-semibold text-slate-900 hover:underline dark:text-white"
                         >
                           <span className="block truncate">{overdue.name}</span>
-                          <span className="font-mono text-[11px] text-slate-500">{overdue.phone}</span>
+                          <span className="font-mono text-[11px] text-slate-600 dark:text-slate-300">{overdue.phone}</span>
                         </button>
                         <span className="shrink-0 font-mono text-[11px] text-rose-700 dark:text-rose-300">
                           due {overdue.followUpAt ? new Date(overdue.followUpAt).toLocaleDateString() : '—'}
@@ -1008,13 +1008,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                         <tr key={lead.id} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors">
                           <td className="px-4 py-3">
                             <span className="font-bold text-slate-900 dark:text-white block">{lead.name}</span>
-                            <span className="text-[11px] text-slate-500 font-mono">
+                            <span className="text-[11px] text-slate-600 font-mono dark:text-slate-300">
                               {new Date(lead.createdAt).toLocaleDateString()} · {lead.source}
                             </span>
                           </td>
                           <td className="px-4 py-3">
                             <span className="font-mono font-medium text-slate-800 dark:text-slate-200 block">{lead.phone}</span>
-                            <span className="text-[11px] text-slate-500">{lead.email || 'N/A'}</span>
+                            <span className="text-[11px] text-slate-600 dark:text-slate-300">{lead.email || 'N/A'}</span>
                           </td>
                           <td className="px-4 py-3">
                             <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">
@@ -1105,7 +1105,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
             <div className="space-y-6 max-w-6xl mx-auto">
               <div>
                 <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Landing Page Sections CMS</h2>
-                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-0.5">
                   Control section headlines, subtitles, language translations, ordering and live visibility without code changes.
                 </p>
               </div>
@@ -1115,7 +1115,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                   <div key={sec.id} className="p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1B] shadow-xs">
                     <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/5 pb-3 mb-4">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs font-bold text-indigo-600 dark:text-indigo-400">
+                        <span className="font-mono text-xs font-bold text-indigo-700 dark:text-indigo-400">
                           #{sec.sortOrder} · {sec.sectionKey}
                         </span>
                         <span className="text-xs text-slate-400">({sec.eyebrowEn})</span>
@@ -1140,7 +1140,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                       <div>
-                        <label className="block text-slate-500 mb-1 font-medium">English Headline</label>
+                        <label className="block text-slate-500 mb-1 font-medium dark:text-slate-400">English Headline</label>
                         <input
                           type="text"
                           value={sec.titleEn}
@@ -1157,7 +1157,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                       </div>
 
                       <div>
-                        <label className="block text-slate-500 mb-1 font-medium">Bangla Headline (বাংলা)</label>
+                        <label className="block text-slate-500 mb-1 font-medium dark:text-slate-400">Bangla Headline (বাংলা)</label>
                         <input
                           type="text"
                           value={sec.titleBn}
@@ -1187,7 +1187,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                   <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
                     Bilingual Landing Content
                   </h2>
-                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-0.5">
                     One payload per locale, edited side by side. <strong>Fallback chain: a section with
                     no Bangla payload renders the English one</strong> — the page is never blank.
                   </p>
@@ -1208,7 +1208,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                   <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                     Missing Bangla translations
                   </h3>
-                  <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
+                  <span className="text-[11px] font-mono text-slate-600 dark:text-slate-400">
                     {i18nReport
                       ? `${i18nReport.translatedSectionCount}/${i18nReport.englishSectionCount} sections translated`
                       : 'Report unavailable for this role'}
@@ -1216,11 +1216,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                 </div>
 
                 {!i18nReport ? (
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
                     Loading translation report…
                   </p>
                 ) : i18nReport.gaps.length === 0 ? (
-                  <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                  <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">
                     Every English section has a published, non-empty Bangla payload.
                   </p>
                 ) : (
@@ -1240,7 +1240,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                 )}
 
                 {i18nReport && i18nReport.orphans.length > 0 && (
-                  <p className="mt-3 text-[11px] text-rose-600 dark:text-rose-400">
+                  <p className="mt-3 text-[11px] text-rose-700 dark:text-rose-400">
                     Bangla rows with no English source (check the section key):{' '}
                     <span className="font-mono">{i18nReport.orphans.join(', ')}</span>
                   </p>
@@ -1290,12 +1290,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                           />
 
                           {error && (
-                            <p className="mt-2 text-[11px] font-medium text-rose-600 dark:text-rose-400">
+                            <p className="mt-2 text-[11px] font-medium text-rose-700 dark:text-rose-400">
                               {error}
                             </p>
                           )}
                           {!row && !error && (
-                            <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
+                            <p className="mt-2 text-[11px] text-slate-600 dark:text-slate-400">
                               No {locale.toUpperCase()} row yet. Saving creates it.
                             </p>
                           )}
@@ -1304,13 +1304,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                     })}
                   </div>
 
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400">
                     Payload shape must match the static copy in <span className="font-mono">src/data/landingContent.ts</span> —
                     keys the payload omits keep their English value on merge.
                   </p>
                 </div>
               ) : (
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-xs text-slate-600 dark:text-slate-400">
                   Pick a section above to edit both locales, or open one from the gap list.
                 </p>
               )}
@@ -1323,7 +1323,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Dynamic Pricing Manager</h2>
-                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-0.5">
                     Toggle between Visible Tiered Pricing and Contact Sales / Custom Architecture mode.
                   </p>
                 </div>
@@ -1359,21 +1359,21 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
 
                       <div className="text-2xl font-mono font-extrabold text-slate-900 dark:text-white mb-2">
                         {plan.currency} {plan.monthlyPrice.toLocaleString()}{' '}
-                        <span className="text-xs font-normal text-slate-500">/ mo</span>
+                        <span className="text-xs font-normal text-slate-600 dark:text-slate-300">/ mo</span>
                       </div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">{plan.tierSubtitleEn}</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-4">{plan.tierSubtitleEn}</p>
 
                       <div className="space-y-1.5 text-xs text-slate-700 dark:text-slate-300 border-t border-slate-100 dark:border-white/5 pt-3">
                         {plan.featuresEn.map((feat, idx) => (
                           <div key={idx} className="flex items-center gap-2">
-                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700 shrink-0 dark:text-emerald-400" />
                             <span>{feat}</span>
                           </div>
                         ))}
                       </div>
                     </div>
 
-                    <div className="mt-6 pt-3 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-xs text-slate-500">
+                    <div className="mt-6 pt-3 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-xs text-slate-600 dark:text-slate-300">
                       <span>Order Limit: {plan.orderVolume}</span>
                     </div>
                   </div>
@@ -1387,7 +1387,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
             <div className="space-y-6 max-w-6xl mx-auto">
               <div>
                 <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Proof & Case Studies CMS</h2>
-                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-0.5">
                   Manage verifiable client testimonials, video interviews, and quantified ROI case studies.
                 </p>
               </div>
@@ -1398,15 +1398,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                     <div>
                       <div className="flex items-center justify-between mb-2">
                         <span className="font-bold text-slate-900 dark:text-white text-sm">{t.companyName}</span>
-                        <span className="text-[11px] font-mono text-indigo-600 dark:text-indigo-400">{t.videoDuration}</span>
+                        <span className="text-[11px] font-mono text-indigo-700 dark:text-indigo-400">{t.videoDuration}</span>
                       </div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">{t.clientName} · {t.clientRole}</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400">{t.clientName} · {t.clientRole}</p>
                       <blockquote className="mt-3 text-xs text-slate-700 dark:text-slate-300 italic">
                         "{t.quoteEn}"
                       </blockquote>
                     </div>
 
-                    <div className="mt-4 pt-3 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-xs text-slate-500">
+                    <div className="mt-4 pt-3 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-xs text-slate-600 dark:text-slate-300">
                       <span className="text-emerald-700 dark:text-emerald-400 font-semibold">{t.metrics[0]?.stat} {t.metrics[0]?.label}</span>
                       <span className="font-mono text-[11px]">{t.websiteUrl}</span>
                     </div>
@@ -1422,7 +1422,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Authoritative Blog & SEO Platform</h2>
-                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-0.5">
                     Publish high-intent problem-solving guides for search engines and AI research bots.
                   </p>
                 </div>
@@ -1461,7 +1461,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                     <button
                       type="button"
                       onClick={() => setIsEditingBlog(false)}
-                      className="text-xs text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                      className="text-xs text-slate-600 hover:text-slate-900 dark:hover:text-white dark:text-slate-300"
                     >
                       Cancel
                     </button>
@@ -1545,7 +1545,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                           <span className="text-xs text-slate-400 font-mono">/blog/{post.slug}</span>
                         </div>
                         <h3 className="font-bold text-base text-slate-900 dark:text-white">{post.title}</h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-1">{post.excerpt}</p>
+                        <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 line-clamp-1">{post.excerpt}</p>
                       </div>
 
                       <div className="flex items-center gap-3 shrink-0">
@@ -1572,7 +1572,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
             <div className="space-y-6 max-w-6xl mx-auto">
               <div>
                 <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Media Asset Slots</h2>
-                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-0.5">
                   Clean media architecture abstraction. Replaceable placeholders ready for final graphic production.
                 </p>
               </div>
@@ -1580,12 +1580,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                 {mediaAssets.map((asset) => (
                   <div key={asset.id} className="p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1B] shadow-xs">
-                    <span className="text-[10px] font-mono text-indigo-600 dark:text-indigo-400 uppercase font-bold">{asset.category}</span>
+                    <span className="text-[10px] font-mono text-indigo-700 dark:text-indigo-400 uppercase font-bold">{asset.category}</span>
                     <h3 className="font-bold text-sm text-slate-900 dark:text-white mt-1">{asset.title}</h3>
                     <p className="text-xs font-mono text-slate-400 mt-2 truncate bg-slate-50 dark:bg-black/30 p-2 rounded-lg border border-slate-200/60 dark:border-white/5">
                       {asset.url}
                     </p>
-                    <p className="text-[11px] text-slate-500 mt-2">Key: {asset.key}</p>
+                    <p className="text-[11px] text-slate-600 mt-2 dark:text-slate-300">Key: {asset.key}</p>
                   </div>
                 ))}
               </div>
@@ -1597,7 +1597,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
             <div className="space-y-6 max-w-6xl mx-auto">
               <div>
                 <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">External License Portal Integration Layer</h2>
-                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-0.5">
                   Asynchronous adapter queue. Dispatches validated leads to external License Portal API while keeping local records authoritative.
                 </p>
               </div>
@@ -1631,11 +1631,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                           {log.status}
                         </span>
                       </div>
-                      <p className="text-slate-500 dark:text-slate-400 text-[11px] font-mono">
+                      <p className="text-slate-600 dark:text-slate-400 text-[11px] font-mono">
                         {new Date(log.createdAt).toLocaleString()} · Attempts: {log.attempts}
                       </p>
                       {log.errorMessage && (
-                        <p className="text-rose-600 dark:text-rose-400 text-[11px]">{log.errorMessage}</p>
+                        <p className="text-rose-700 dark:text-rose-400 text-[11px]">{log.errorMessage}</p>
                       )}
                     </div>
                   ))}
@@ -1649,7 +1649,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
             <div className="space-y-6 max-w-4xl mx-auto">
               <div>
                 <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">System Settings & Brand Identity</h2>
-                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-0.5">
                   Global contact numbers, WhatsApp target, default locale, and meta parameters.
                 </p>
               </div>

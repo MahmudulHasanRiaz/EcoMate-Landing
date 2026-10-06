@@ -55,7 +55,7 @@ export const MobileStickyBar: React.FC<MobileStickyBarProps> = ({ content, local
           href="https://wa.me/8801894828290?text=Hello%20EcoMate%20Team%2C%20I%20would%20like%20to%20know%20more."
           target="_blank"
           rel="noreferrer"
-          className="h-10 w-10 shrink-0 rounded-xl bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center hover:bg-emerald-100 dark:hover:bg-emerald-500/30 transition-colors shadow-2xs"
+          className="h-10 w-10 shrink-0 rounded-xl bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center hover:bg-emerald-100 dark:hover:bg-emerald-500/30 transition-colors shadow-2xs"
           aria-label="WhatsApp"
         >
           <MessageCircle className="h-5 w-5" />

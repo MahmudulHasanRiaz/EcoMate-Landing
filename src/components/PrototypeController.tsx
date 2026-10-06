@@ -79,9 +79,9 @@ export const PrototypeController: React.FC<PrototypeControllerProps> = ({
             <div className="flex items-center justify-between">
               <span className="text-slate-600 dark:text-slate-400 flex items-center gap-1.5 font-medium">
                 {isPricingVisible ? (
-                  <Eye className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <Eye className="h-3.5 w-3.5 text-emerald-700 dark:text-emerald-400" />
                 ) : (
-                  <EyeOff className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                  <EyeOff className="h-3.5 w-3.5 text-amber-700 dark:text-amber-400" />
                 )}
                 Pricing Mode:
               </span>
@@ -107,7 +107,7 @@ export const PrototypeController: React.FC<PrototypeControllerProps> = ({
               </a>
             </div>
 
-            <div className="pt-1 text-[10px] text-slate-500 dark:text-slate-400 leading-normal">
+            <div className="pt-1 text-[10px] text-slate-600 dark:text-slate-400 leading-normal">
               Full-Stack PostgreSQL Drizzle ORM ready with persistent schema, lead pipeline & live CMS.
             </div>
           </div>

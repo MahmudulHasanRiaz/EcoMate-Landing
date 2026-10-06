@@ -52,7 +52,7 @@ export const ProductInActionSection: React.FC<ProductInActionProps> = ({
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="max-w-3xl">
-          <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-2 sm:mb-3">
+          <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-700 dark:text-indigo-400 mb-2 sm:mb-3">
             <Sparkles className="h-3.5 w-3.5" />
             <span>{content.productShowcase.eyebrow}</span>
           </div>
@@ -65,7 +65,7 @@ export const ProductInActionSection: React.FC<ProductInActionProps> = ({
         </div>
 
         {/* Module Selector Pill Bar */}
-        <div className="mt-8 sm:mt-10 flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+        <div className="mt-8 sm:mt-10 flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none" role="region" aria-label="Product showcase modules" tabIndex={0}>
           {content.productShowcase.modules.map((m) => {
             const isActive = activeModule.id === m.id;
             return (
@@ -112,7 +112,7 @@ export const ProductInActionSection: React.FC<ProductInActionProps> = ({
               </div>
 
               <div className="space-y-2 text-xs text-slate-600 dark:text-slate-300">
-                <span className="text-slate-500 dark:text-slate-400 uppercase font-semibold text-[10px] tracking-wider block">
+                <span className="text-slate-600 dark:text-slate-400 uppercase font-semibold text-[10px] tracking-wider block">
                   Core Implementation Mechanism
                 </span>
                 <p className="leading-relaxed">
@@ -123,7 +123,7 @@ export const ProductInActionSection: React.FC<ProductInActionProps> = ({
               <div className="pt-2">
                 <a
                   href="#lead-form"
-                  className="inline-flex items-center gap-2 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-2 text-xs font-semibold text-indigo-700 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors cursor-pointer"
                 >
                   <span>Request a full module walkthrough</span>
                   <ArrowRight className="h-3.5 w-3.5" />
@@ -143,7 +143,7 @@ export const ProductInActionSection: React.FC<ProductInActionProps> = ({
                   <span className="shrink-0 whitespace-nowrap rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
                     Demo data
                   </span>
-                  <span className="hidden font-mono text-[11px] text-slate-500 font-medium sm:inline">
+                  <span className="hidden font-mono text-[11px] text-slate-600 font-medium sm:inline dark:text-slate-300">
                     Simulated Workspace
                   </span>
                 </div>
@@ -155,7 +155,7 @@ export const ProductInActionSection: React.FC<ProductInActionProps> = ({
                   <div className="p-3.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-between">
                     <div>
                       <p className="text-slate-900 dark:text-white font-semibold">SKU: DRK-DENIM-34 (Verified)</p>
-                      <p className="text-slate-500 dark:text-slate-400 text-[11px]">Barcode: 89014299104 · Audio Chime OK</p>
+                      <p className="text-slate-600 dark:text-slate-400 text-[11px]">Barcode: 89014299104 · Audio Chime OK</p>
                     </div>
                     <span className="font-mono text-emerald-700 dark:text-emerald-400 font-bold">[MATCH]</span>
                   </div>
@@ -163,7 +163,7 @@ export const ProductInActionSection: React.FC<ProductInActionProps> = ({
                   <div className="p-3.5 rounded-lg bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.06] flex items-center justify-between shadow-2xs">
                     <div>
                       <p className="text-slate-900 dark:text-slate-200 font-medium">Auto-Consignment #ST-991204</p>
-                      <p className="text-slate-500 dark:text-slate-400 text-[11px]">Steadfast Logistics Hub · Weight: 0.8 kg</p>
+                      <p className="text-slate-600 dark:text-slate-400 text-[11px]">Steadfast Logistics Hub · Weight: 0.8 kg</p>
                     </div>
                     <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-500/20 dark:text-indigo-300">
                       PRINT READY
@@ -181,14 +181,14 @@ export const ProductInActionSection: React.FC<ProductInActionProps> = ({
                 <div className="space-y-3 text-xs">
                   <div className="grid grid-cols-2 gap-3">
                     <div className="p-3 rounded-lg bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.06] shadow-2xs">
-                      <span className="text-slate-500 dark:text-slate-400 text-[10px] font-medium">Steadfast COD Today</span>
+                      <span className="text-slate-600 dark:text-slate-400 text-[10px] font-medium">Steadfast COD Today</span>
                       <p className="text-lg font-bold text-slate-900 dark:text-white font-mono-numbers mt-1">৳ 8,42,000</p>
-                      <p className="text-emerald-600 dark:text-emerald-400 text-[10px] mt-0.5 font-semibold">380 parcels reconciled</p>
+                      <p className="text-emerald-700 dark:text-emerald-400 text-[10px] mt-0.5 font-semibold">380 parcels reconciled</p>
                     </div>
                     <div className="p-3 rounded-lg bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.06] shadow-2xs">
-                      <span className="text-slate-500 dark:text-slate-400 text-[10px] font-medium">Pathao Courier Today</span>
+                      <span className="text-slate-600 dark:text-slate-400 text-[10px] font-medium">Pathao Courier Today</span>
                       <p className="text-lg font-bold text-slate-900 dark:text-white font-mono-numbers mt-1">৳ 4,12,500</p>
-                      <p className="text-emerald-600 dark:text-emerald-400 text-[10px] mt-0.5 font-semibold">190 parcels reconciled</p>
+                      <p className="text-emerald-700 dark:text-emerald-400 text-[10px] mt-0.5 font-semibold">190 parcels reconciled</p>
                     </div>
                   </div>
                   <div className="p-3 rounded-lg bg-sky-50 dark:bg-sky-950/20 border border-sky-200 dark:border-sky-500/20 text-[11px] text-sky-800 dark:text-sky-300 font-medium">
@@ -202,7 +202,7 @@ export const ProductInActionSection: React.FC<ProductInActionProps> = ({
                   <div className="p-3.5 rounded-lg bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.06] space-y-2 shadow-2xs">
                     <div className="flex justify-between text-slate-600 dark:text-slate-300">
                       <span>Cashier: Gulshan Showroom Register 02</span>
-                      <span className="font-mono text-emerald-600 dark:text-emerald-400 font-semibold">Active Shift</span>
+                      <span className="font-mono text-emerald-700 dark:text-emerald-400 font-semibold">Active Shift</span>
                     </div>
                     <div className="flex justify-between font-bold text-slate-900 dark:text-white">
                       <span>Customer: Shariar Kabir (01819-***402)</span>
@@ -219,19 +219,19 @@ export const ProductInActionSection: React.FC<ProductInActionProps> = ({
                 <div className="space-y-3 text-xs">
                   <div className="grid grid-cols-3 gap-2 text-center">
                     <div className="p-2.5 rounded bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.06] shadow-2xs">
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Total SKUs</span>
+                      <span className="text-[10px] text-slate-600 dark:text-slate-400 font-medium">Total SKUs</span>
                       <p className="text-base font-bold text-slate-900 dark:text-white font-mono-numbers mt-0.5">1,480</p>
                     </div>
                     <div className="p-2.5 rounded bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.06] shadow-2xs">
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Bin Locations</span>
-                      <p className="text-base font-bold text-emerald-600 dark:text-emerald-400 font-mono-numbers mt-0.5">Mapped</p>
+                      <span className="text-[10px] text-slate-600 dark:text-slate-400 font-medium">Bin Locations</span>
+                      <p className="text-base font-bold text-emerald-700 dark:text-emerald-400 font-mono-numbers mt-0.5">Mapped</p>
                     </div>
                     <div className="p-2.5 rounded bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.06] shadow-2xs">
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Low Stock SKUs</span>
-                      <p className="text-base font-bold text-amber-600 dark:text-amber-400 font-mono-numbers mt-0.5">12</p>
+                      <span className="text-[10px] text-slate-600 dark:text-slate-400 font-medium">Low Stock SKUs</span>
+                      <p className="text-base font-bold text-amber-700 dark:text-amber-400 font-mono-numbers mt-0.5">12</p>
                     </div>
                   </div>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400">
                     Aisle and bin routing ensures packers pick multiple orders in a single consolidated pass.
                   </p>
                 </div>

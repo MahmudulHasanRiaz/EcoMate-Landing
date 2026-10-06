@@ -90,7 +90,7 @@ export const LossPreventionSection: React.FC<LossPreventionProps> = ({ content, 
             <div>
               <div className="flex items-center justify-between mb-3.5">
                 <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-rose-700 dark:text-rose-400 flex items-center gap-1.5">
-                  <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-rose-600 dark:text-rose-400" />
+                  <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-rose-700 dark:text-rose-400" />
                   <span>The Preventable Packing Leak</span>
                 </span>
                 <span className="font-mono text-[11px] sm:text-xs text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-500/10 px-2.5 py-0.5 sm:py-1 rounded-full border border-rose-200 dark:border-rose-500/20 font-semibold">
@@ -103,7 +103,7 @@ export const LossPreventionSection: React.FC<LossPreventionProps> = ({ content, 
               </h3>
 
               <div className="p-3 sm:p-3.5 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/[0.04] mb-3.5 text-xs text-slate-700 dark:text-slate-300 space-y-1">
-                <p className="text-slate-500 dark:text-slate-400 font-medium text-[11px]">The Chain Reaction of a Wrong Size Dispatch:</p>
+                <p className="text-slate-600 dark:text-slate-400 font-medium text-[11px]">The Chain Reaction of a Wrong Size Dispatch:</p>
                 <p className="text-rose-700 dark:text-rose-300">1. Wrong SKU packed (Size 41 instead of 42)</p>
                 <p className="text-rose-700 dark:text-rose-300">2. Customer rejects parcel at doorstep</p>
                 <p className="text-rose-700 dark:text-rose-300">3. Merchant pays forward + return delivery fees</p>
@@ -111,7 +111,7 @@ export const LossPreventionSection: React.FC<LossPreventionProps> = ({ content, 
               </div>
 
               <h4 className="text-xs sm:text-sm font-semibold text-emerald-700 dark:text-emerald-400 mt-3 flex items-center gap-1.5">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                <CheckCircle2 className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
                 <span>{content.lossPrevention.packingStory.solutionHeading}</span>
               </h4>
               <p className="mt-1 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
@@ -119,7 +119,7 @@ export const LossPreventionSection: React.FC<LossPreventionProps> = ({ content, 
               </p>
             </div>
 
-            <div className="mt-5 pt-3.5 border-t border-slate-100 dark:border-white/[0.06] text-xs text-slate-500 dark:text-slate-400 font-medium">
+            <div className="mt-5 pt-3.5 border-t border-slate-100 dark:border-white/[0.06] text-xs text-slate-600 dark:text-slate-400 font-medium">
               Outcome: Zero wrong shipments reach the courier truck.
             </div>
           </div>
@@ -129,7 +129,7 @@ export const LossPreventionSection: React.FC<LossPreventionProps> = ({ content, 
             <div>
               <div className="flex items-center justify-between mb-3.5">
                 <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-rose-700 dark:text-rose-400 flex items-center gap-1.5">
-                  <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-rose-600 dark:text-rose-400" />
+                  <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-rose-700 dark:text-rose-400" />
                   <span>The Serial Returner Drain</span>
                 </span>
                 <span className="font-mono text-[11px] sm:text-xs text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-500/10 px-2.5 py-0.5 sm:py-1 rounded-full border border-rose-200 dark:border-rose-500/20 font-semibold">
@@ -142,7 +142,7 @@ export const LossPreventionSection: React.FC<LossPreventionProps> = ({ content, 
               </h3>
 
               <div className="p-3 sm:p-3.5 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/[0.04] mb-3.5 text-xs text-slate-700 dark:text-slate-300 space-y-1">
-                <p className="text-slate-500 dark:text-slate-400 font-medium text-[11px]">The Cost of Blind Dispatch:</p>
+                <p className="text-slate-600 dark:text-slate-400 font-medium text-[11px]">The Cost of Blind Dispatch:</p>
                 <p className="text-rose-700 dark:text-rose-300">1. Impulsive buyer places COD order without intent</p>
                 <p className="text-rose-700 dark:text-rose-300">2. Dispatched blindly without delivery history check</p>
                 <p className="text-rose-700 dark:text-rose-300">3. Customer phone switched off upon delivery attempt</p>
@@ -150,7 +150,7 @@ export const LossPreventionSection: React.FC<LossPreventionProps> = ({ content, 
               </div>
 
               <h4 className="text-xs sm:text-sm font-semibold text-emerald-700 dark:text-emerald-400 mt-3 flex items-center gap-1.5">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                <CheckCircle2 className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
                 <span>{content.lossPrevention.fraudStory.solutionHeading}</span>
               </h4>
               <p className="mt-1 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
@@ -158,7 +158,7 @@ export const LossPreventionSection: React.FC<LossPreventionProps> = ({ content, 
               </p>
             </div>
 
-            <div className="mt-5 pt-3.5 border-t border-slate-100 dark:border-white/[0.06] text-xs text-slate-500 dark:text-slate-400 font-medium">
+            <div className="mt-5 pt-3.5 border-t border-slate-100 dark:border-white/[0.06] text-xs text-slate-600 dark:text-slate-400 font-medium">
               Outcome: Mandatory advance delivery charge on serial cancelers.
             </div>
           </div>
@@ -205,7 +205,7 @@ export const LossPreventionSection: React.FC<LossPreventionProps> = ({ content, 
                   className="w-full h-2.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-600"
                   aria-label="Daily order volume"
                 />
-                <div className="flex justify-between text-[11px] text-slate-500 font-mono mt-1.5 font-medium">
+                <div className="flex justify-between text-[11px] text-slate-600 font-mono mt-1.5 font-medium dark:text-slate-300">
                   <span>50 orders</span>
                   <span>500 orders</span>
                   <span>1,000 orders</span>
@@ -220,7 +220,7 @@ export const LossPreventionSection: React.FC<LossPreventionProps> = ({ content, 
                 </div>
                 <div className="flex justify-between">
                   <span>Avoidable Packing & Fake Returns without System:</span>
-                  <span className="font-mono text-rose-600 dark:text-rose-400 font-bold">{formatNumber(preventableMistakesWithoutSystem, locale)} parcels</span>
+                  <span className="font-mono text-rose-700 dark:text-rose-400 font-bold">{formatNumber(preventableMistakesWithoutSystem, locale)} parcels</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Average Loss per Preventable Mistake:</span>
@@ -235,23 +235,23 @@ export const LossPreventionSection: React.FC<LossPreventionProps> = ({ content, 
                 <span className="text-xs text-rose-800 dark:text-rose-300 uppercase tracking-wider font-bold">
                   {content.lossPrevention.calculator.estimatedLossLabel}
                 </span>
-                <p className="mt-2 text-2xl sm:text-3xl font-bold text-rose-600 dark:text-rose-400 font-mono-numbers">
+                <p className="mt-2 text-2xl sm:text-3xl font-bold text-rose-700 dark:text-rose-400 font-mono-numbers">
                   {formatMoney(estimatedMonthlyLoss, locale)}
                 </p>
-                <p className="mt-1 text-xs text-rose-700/80 dark:text-rose-300/80">
+                <p className="mt-1 text-xs text-rose-700 dark:text-rose-300/80">
                   Drained in wasted courier bills and return overhead every month.
                 </p>
               </div>
 
               <div className="rounded-xl border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-950/30 p-5 shadow-md shadow-emerald-100/50 dark:shadow-[0_0_30px_rgba(16,185,129,0.15)]">
                 <span className="text-xs text-emerald-800 dark:text-emerald-300 uppercase tracking-wider font-bold flex items-center gap-1.5">
-                  <TrendingUp className="h-4 w-4 text-emerald-600" />
+                  <TrendingUp className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
                   <span>{content.lossPrevention.calculator.savedWithEcoMateLabel}</span>
                 </span>
-                <p className="mt-2 text-2xl sm:text-3xl font-bold text-emerald-600 dark:text-emerald-400 font-mono-numbers">
+                <p className="mt-2 text-2xl sm:text-3xl font-bold text-emerald-700 dark:text-emerald-400 font-mono-numbers">
                   {formatMoney(estimatedSavings, locale)}
                 </p>
-                <p className="mt-1 text-xs text-emerald-700/80 dark:text-emerald-300/80">
+                <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-300/80">
                   Protected straight to your net operating profit every single month.
                 </p>
               </div>
@@ -264,7 +264,7 @@ export const LossPreventionSection: React.FC<LossPreventionProps> = ({ content, 
               <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
                 {locale === 'en' ? 'Stop bleeding delivery margins this week.' : 'এই সপ্তাহ থেকেই কুরিয়ার লস ও ভুল ডেলিভারির টাকা বাঁচান।'}
               </p>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+              <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
                 {locale === 'en' ? 'Walk through your exact numbers with an operations specialist.' : 'আপনার বর্তমান পার্সেল ভলিউম অনুযায়ী ফ্রি আরওআই (ROI) অডিট করান।'}
               </p>
             </div>

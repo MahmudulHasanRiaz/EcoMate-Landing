@@ -29,13 +29,13 @@ export const EcosystemSection: React.FC<EcosystemSectionProps> = ({ content, loc
       case 'PackageCheck':
         return <PackageCheck className="h-5 w-5 text-purple-600 dark:text-purple-400" />;
       case 'Warehouse':
-        return <Warehouse className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />;
+        return <Warehouse className="h-5 w-5 text-emerald-700 dark:text-emerald-400" />;
       case 'Receipt':
         return <Receipt className="h-5 w-5 text-sky-600 dark:text-sky-400" />;
       case 'TrendingUp':
-        return <TrendingUp className="h-5 w-5 text-rose-600 dark:text-rose-400" />;
+        return <TrendingUp className="h-5 w-5 text-rose-700 dark:text-rose-400" />;
       case 'Users':
-        return <Users className="h-5 w-5 text-amber-600 dark:text-amber-400" />;
+        return <Users className="h-5 w-5 text-amber-700 dark:text-amber-400" />;
       default:
         return <Layers className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />;
     }
@@ -56,7 +56,7 @@ export const EcosystemSection: React.FC<EcosystemSectionProps> = ({ content, loc
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Section Heading */}
         <div className="text-center max-w-3xl mx-auto">
-          <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-2 sm:mb-3">
+          <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-700 dark:text-indigo-400 mb-2 sm:mb-3">
             <Cpu className="h-3.5 w-3.5" />
             <span>{content.ecosystem.eyebrow}</span>
           </div>
@@ -78,7 +78,7 @@ export const EcosystemSection: React.FC<EcosystemSectionProps> = ({ content, loc
                 <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-wide">
                   {content.ecosystem.centerNodeTitle}
                 </span>
-                <p className="text-[11px] sm:text-xs text-indigo-600 dark:text-indigo-300 font-medium">Single Source of Operational Truth</p>
+                <p className="text-[11px] sm:text-xs text-indigo-700 dark:text-indigo-300 font-medium">Single Source of Operational Truth</p>
               </div>
             </div>
             <div className="w-0.5 h-4 sm:h-6 bg-gradient-to-b from-indigo-500 to-transparent" />
@@ -102,7 +102,7 @@ export const EcosystemSection: React.FC<EcosystemSectionProps> = ({ content, loc
                   <h4 className={`text-[13px] font-bold leading-snug ${isActive ? 'text-indigo-950 dark:text-white' : 'text-slate-800 dark:text-white'}`}>
                     {node.title}
                   </h4>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">{node.subtitle}</p>
+                  <p className="text-[10px] text-slate-600 dark:text-slate-400 mt-0.5 leading-snug">{node.subtitle}</p>
 
                   {isActive && (
                     <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-6 sm:w-8 h-1 bg-indigo-600 dark:bg-indigo-500 rounded-full" />
@@ -120,7 +120,7 @@ export const EcosystemSection: React.FC<EcosystemSectionProps> = ({ content, loc
                   {getIcon(activeNode.iconName)}
                 </div>
                 <div>
-                  <span className="text-[10px] sm:text-[11px] font-mono text-indigo-600 dark:text-indigo-400 uppercase tracking-wider font-semibold">
+                  <span className="text-[10px] sm:text-[11px] font-mono text-indigo-700 dark:text-indigo-400 uppercase tracking-wider font-semibold">
                     Operational Pillar: {activeNode.subtitle}
                   </span>
                   <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">{activeNode.title}</h3>
@@ -142,13 +142,13 @@ export const EcosystemSection: React.FC<EcosystemSectionProps> = ({ content, loc
                   </div>
                   <div>
                     <p className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-slate-100">{item}</p>
-                    <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5">Continuous automated ledger sync</p>
+                    <p className="text-[10px] sm:text-xs text-slate-600 dark:text-slate-400 mt-0.5">Continuous automated ledger sync</p>
                   </div>
                 </div>
               ))}
             </div>
 
-            <div className="mt-5 sm:mt-6 pt-4 sm:pt-5 border-t border-slate-200 dark:border-white/[0.06] flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
+            <div className="mt-5 sm:mt-6 pt-4 sm:pt-5 border-t border-slate-200 dark:border-white/[0.06] flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600 dark:text-slate-400">
               <p className="max-w-xl">
                 Connected directly to double-entry accounting, real-time inventory ledger, and courier APIs.
               </p>

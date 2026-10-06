@@ -13,7 +13,7 @@ export const MultiChannelSection: React.FC<MultiChannelSectionProps> = ({ conten
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="max-w-3xl">
-          <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-2 sm:mb-3">
+          <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-700 dark:text-indigo-400 mb-2 sm:mb-3">
             <Globe className="h-3.5 w-3.5" />
             <span>{content.multiChannel.eyebrow}</span>
           </div>
@@ -47,31 +47,31 @@ export const MultiChannelSection: React.FC<MultiChannelSectionProps> = ({ conten
             <div className="p-3 sm:p-3.5 rounded-xl bg-white dark:bg-black/40 border border-indigo-100 dark:border-white/[0.06] shadow-2xs">
               <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1">
                 <span>Online WooCommerce Store</span>
-                <span className="text-emerald-600 dark:text-emerald-400 font-mono font-bold">PUBLISHED [✓]</span>
+                <span className="text-emerald-700 dark:text-emerald-400 font-mono font-bold">PUBLISHED [✓]</span>
               </div>
               <p className="text-slate-900 dark:text-slate-200 font-semibold">Allocated: 180 Units</p>
-              <p className="text-[11px] text-slate-500 mt-0.5">Auto-decrement upon customer checkout</p>
-              <div className="mt-2 text-[10px] font-mono text-indigo-600 dark:text-indigo-400">Price: ৳ 1,450 (Standard)</div>
+              <p className="text-[11px] text-slate-600 mt-0.5 dark:text-slate-300">Auto-decrement upon customer checkout</p>
+              <div className="mt-2 text-[10px] font-mono text-indigo-700 dark:text-indigo-400">Price: ৳ 1,450 (Standard)</div>
             </div>
 
             <div className="p-3 sm:p-3.5 rounded-xl bg-white dark:bg-black/40 border border-indigo-100 dark:border-white/[0.06] shadow-2xs">
               <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1">
                 <span>Banani Flagship POS</span>
-                <span className="text-emerald-600 dark:text-emerald-400 font-mono font-bold">PUBLISHED [✓]</span>
+                <span className="text-emerald-700 dark:text-emerald-400 font-mono font-bold">PUBLISHED [✓]</span>
               </div>
               <p className="text-slate-900 dark:text-slate-200 font-semibold">Allocated: 120 Units</p>
-              <p className="text-[11px] text-slate-500 mt-0.5">Barcode cashier checkout decrement</p>
+              <p className="text-[11px] text-slate-600 mt-0.5 dark:text-slate-300">Barcode cashier checkout decrement</p>
               <div className="mt-2 text-[10px] font-mono text-purple-600 dark:text-purple-400">Showroom Exclusive Price: ৳ 1,390</div>
             </div>
 
             <div className="p-3 sm:p-3.5 rounded-xl bg-white dark:bg-black/40 border border-indigo-100 dark:border-white/[0.06] shadow-2xs">
               <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1">
                 <span>Dhanmondi Outlet Display</span>
-                <span className="text-amber-600 dark:text-amber-400 font-mono font-bold">RESERVED [50 Units]</span>
+                <span className="text-amber-700 dark:text-amber-400 font-mono font-bold">RESERVED [50 Units]</span>
               </div>
               <p className="text-slate-900 dark:text-slate-200 font-semibold">Floor Stock</p>
-              <p className="text-[11px] text-slate-500 mt-0.5">Low-stock transfer trigger enabled</p>
-              <div className="mt-2 text-[10px] font-mono text-amber-600 dark:text-amber-400">Trigger Alert at &lt; 10 units</div>
+              <p className="text-[11px] text-slate-600 mt-0.5 dark:text-slate-300">Low-stock transfer trigger enabled</p>
+              <div className="mt-2 text-[10px] font-mono text-amber-700 dark:text-amber-400">Trigger Alert at &lt; 10 units</div>
             </div>
           </div>
 
@@ -112,7 +112,7 @@ export const MultiChannelSection: React.FC<MultiChannelSectionProps> = ({ conten
                     {isRoadmap ? (
                       <Clock className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
                     ) : (
-                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700 dark:text-emerald-400" />
                     )}
                   </div>
 
@@ -122,7 +122,7 @@ export const MultiChannelSection: React.FC<MultiChannelSectionProps> = ({ conten
                   </p>
                 </div>
 
-                <div className="mt-5 pt-3.5 border-t border-slate-100 dark:border-white/[0.06] text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                <div className="mt-5 pt-3.5 border-t border-slate-100 dark:border-white/[0.06] text-[11px] sm:text-xs text-slate-600 dark:text-slate-400 flex items-center justify-between">
                   <span>
                     {isRoadmap ? 'Under Active Roadmap' : 'Connected to Core Engine'}
                   </span>

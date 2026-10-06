@@ -189,12 +189,13 @@ export function localeUrl(locale: Locale, path = ''): string {
 export function localeAlternates(locale: Locale, path = '') {
   const languages: Record<string, string> = {};
   for (const candidate of LOCALES) {
-    const absolute = localeUrl(candidate, path);
-    // Next resolves an hreflang path against `metadataBase`, so the entry has to be the
-    // path — sliced off the same absolute URL it was built from, so the two can never differ.
-    languages[candidate] = absolute.startsWith(SITE_URL)
-      ? absolute.slice(SITE_URL.length) || '/'
-      : absolute;
+    // hreflang entries MUST use the explicit route prefix (`/en`, `/bn`), never the
+    // canonical home path. For the default locale, `localeUrl('en', '')` returns `/`,
+    // which collides with `x-default` (`/`) — Google requires distinct URLs per language
+    // and flags duplicates. The canonical stays `/`; only the hreflang set uses `/en`.
+    const suffix = path === '/' ? '' : path.replace(/^\/+/, '').replace(/\/+$/, '');
+    const routePath = suffix === '' ? localeRoutePrefix(candidate) : `${localeRoutePrefix(candidate)}/${suffix}`;
+    languages[candidate] = routePath;
   }
   languages['x-default'] = localeHomePath(DEFAULT_LOCALE);
   return {

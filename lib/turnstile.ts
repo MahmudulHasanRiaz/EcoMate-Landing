@@ -34,6 +34,38 @@ export type TurnstileVerdict =
   | { readonly ok: true; readonly skipped: boolean }
   | { readonly ok: false; readonly reason: string };
 
+/**
+ * E2E test-mode bypass (Task 18 Step 3).
+ *
+ * Impossible to enable in production by construction: it requires BOTH
+ * `E2E_TEST_MODE=1` in the process environment (never set in `[vars]`,
+ * `wrangler secret` or any deployment config — only in the local shell that
+ * starts the throwaway preview server) AND a localhost-family request hostname
+ * (`localhost`, `127.0.0.1`, `::1`, `*.localhost`, `*.local`). Production
+ * serves `ecomate.app`, so even a leaked flag does nothing there, and even a
+ * spoofed `Host` header does nothing without the flag. Either condition alone
+ * leaves verification untouched.
+ *
+ * The bypass never excuses a missing token: an empty token is still a 400, so
+ * the "missing Turnstile token" spec holds in every environment.
+ */
+export function isLocalE2eBypass(requestUrl: string): boolean {
+  if (process.env.E2E_TEST_MODE !== '1') return false;
+  let hostname = '';
+  try {
+    hostname = new URL(requestUrl).hostname.toLowerCase();
+  } catch {
+    return false;
+  }
+  return (
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname === '::1' ||
+    hostname.endsWith('.localhost') ||
+    hostname.endsWith('.local')
+  );
+}
+
 function readErrorCodes(record: { 'error-codes'?: unknown }): string[] {
   return Array.isArray(record['error-codes'])
     ? record['error-codes'].filter((code): code is string => typeof code === 'string')

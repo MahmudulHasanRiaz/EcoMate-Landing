@@ -41,7 +41,7 @@ export const PosShowroomSection: React.FC<PosShowroomProps> = ({ content, locale
             <div className="p-3.5 sm:p-4 rounded-xl bg-white dark:bg-black/40 border border-purple-200/70 dark:border-white/[0.06] shadow-2xs">
               <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
                 <span className="font-mono text-[10px] text-purple-600 dark:text-purple-400 font-bold">POS STEP 01</span>
-                <span className="text-emerald-600 dark:text-emerald-400 font-medium font-mono">1.2s Scan Speed</span>
+                <span className="text-emerald-700 dark:text-emerald-400 font-medium font-mono">1.2s Scan Speed</span>
               </div>
               <h4 className="font-bold text-slate-900 dark:text-white text-sm mb-1">Instant Barcode Billing</h4>
               <p className="text-slate-600 dark:text-slate-300 text-xs">
@@ -70,8 +70,8 @@ export const PosShowroomSection: React.FC<PosShowroomProps> = ({ content, locale
             {/* Step 3: Central Stock Auto-Deduction */}
             <div className="p-3.5 sm:p-4 rounded-xl bg-white dark:bg-black/40 border border-emerald-300 dark:border-emerald-500/30 shadow-2xs">
               <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
-                <span className="font-mono text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">POS STEP 03</span>
-                <span className="text-emerald-600 dark:text-emerald-400 font-medium font-mono">Zero Lag Sync</span>
+                <span className="font-mono text-[10px] text-emerald-700 dark:text-emerald-400 font-bold">POS STEP 03</span>
+                <span className="text-emerald-700 dark:text-emerald-400 font-medium font-mono">Zero Lag Sync</span>
               </div>
               <h4 className="font-bold text-slate-900 dark:text-white text-sm mb-1">Instant Warehouse Deduction</h4>
               <p className="text-slate-600 dark:text-slate-300 text-xs">

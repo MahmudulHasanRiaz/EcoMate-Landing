@@ -125,7 +125,7 @@ export const Footer: React.FC<FooterProps> = ({ content, locale, menu, onToggleL
         </div>
 
         {/* Bottom Copyright & Disclaimer */}
-        <div className="mt-12 pt-8 border-t border-slate-200 dark:border-white/[0.06] flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-500">
+        <div className="mt-12 pt-8 border-t border-slate-200 dark:border-white/[0.06] flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-600 dark:text-slate-300">
           <p>{content.footer.copyright}</p>
           <div className="flex items-center gap-5">
             <a href="#" className="hover:text-slate-800 dark:hover:text-slate-400 transition-colors">Privacy Policy</a>

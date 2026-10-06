@@ -16,7 +16,7 @@ export const ExecutiveAnalyticsSection: React.FC<ExecutiveAnalyticsProps> = ({
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="max-w-3xl">
-          <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-2 sm:mb-3">
+          <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-700 dark:text-indigo-400 mb-2 sm:mb-3">
             <BarChart3 className="h-3.5 w-3.5" />
             <span>{content.analytics.eyebrow}</span>
           </div>
@@ -36,7 +36,7 @@ export const ExecutiveAnalyticsSection: React.FC<ExecutiveAnalyticsProps> = ({
               className="rounded-2xl border border-slate-200 dark:border-white/[0.08] bg-slate-50/80 dark:bg-[#0C0E1B] p-4 sm:p-6 hover:border-indigo-400 dark:hover:border-indigo-500/30 transition-all flex flex-col justify-between shadow-2xs"
             >
               <div>
-                <span className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-semibold">{metric.label}</span>
+                <span className="text-[11px] sm:text-xs text-slate-600 dark:text-slate-400 font-semibold">{metric.label}</span>
                 <p className="mt-1.5 sm:mt-2 text-xl sm:text-3xl font-bold text-slate-900 dark:text-white font-mono-numbers">
                   {metric.value}
                 </p>
@@ -50,7 +50,7 @@ export const ExecutiveAnalyticsSection: React.FC<ExecutiveAnalyticsProps> = ({
               {metric.trend && (
                 <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-slate-200/80 dark:border-white/[0.06] flex items-center justify-between text-[11px] sm:text-xs">
                   <span className="text-emerald-700 dark:text-emerald-400 font-bold">{metric.trend}</span>
-                  <span className="text-[10px] text-slate-500 uppercase font-mono font-medium hidden sm:inline">Verified Metric</span>
+                  <span className="text-[10px] text-slate-600 uppercase font-mono font-medium hidden sm:inline dark:text-slate-300">Verified Metric</span>
                 </div>
               )}
             </div>
@@ -61,7 +61,7 @@ export const ExecutiveAnalyticsSection: React.FC<ExecutiveAnalyticsProps> = ({
         <div className="mt-6 sm:mt-8 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50/80 dark:bg-[#0B0D19] p-5 sm:p-8 shadow-xs">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-center">
             <div className="lg:col-span-7 space-y-3 sm:space-y-4">
-              <span className="text-[10px] sm:text-xs font-mono text-indigo-600 dark:text-indigo-400 uppercase tracking-wider font-semibold">
+              <span className="text-[10px] sm:text-xs font-mono text-indigo-700 dark:text-indigo-400 uppercase tracking-wider font-semibold">
                 Decomposed Revenue Attribution
               </span>
               <h3 className="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white">
@@ -119,7 +119,7 @@ export const ExecutiveAnalyticsSection: React.FC<ExecutiveAnalyticsProps> = ({
                 </div>
               </div>
 
-              <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 pt-1.5 font-medium">
+              <p className="text-[10px] sm:text-[11px] text-slate-600 dark:text-slate-400 pt-1.5 font-medium">
                 Real-time delivery score auto-routes shipments to the fastest performing courier in each district.
               </p>
             </div>

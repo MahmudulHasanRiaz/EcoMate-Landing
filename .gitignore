@@ -21,3 +21,8 @@ next-env.d.ts
 test-results/
 playwright-report/
 blob-report/
+
+# Local Cloudflare dev state (may contain secret values via .dev.vars)
+.dev.vars
+.dev.vars.*
+.wrangler/

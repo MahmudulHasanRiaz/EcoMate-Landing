@@ -24,7 +24,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
         {/* Section Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6 mb-8 sm:mb-12">
           <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-2 sm:mb-3">
+            <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-700 dark:text-indigo-400 mb-2 sm:mb-3">
               <Sparkles className="h-3.5 w-3.5" />
               <span>{content.pricing.eyebrow}</span>
             </div>
@@ -106,7 +106,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
                     <div>
                       <div className="mb-4">
                         <h3 className="text-xl font-bold text-slate-900 dark:text-white">{plan.name}</h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                        <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
                           {plan.tierSubtitle}
                         </p>
                       </div>
@@ -118,7 +118,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
                         <span className="text-4xl sm:text-5xl font-extrabold text-slate-900 dark:text-white font-mono-numbers">
                           {formatMoney(price, locale)}
                         </span>
-                        <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">/ month</span>
+                        <span className="text-xs text-slate-600 dark:text-slate-400 font-mono">/ month</span>
                       </div>
 
                       {/* Volume & Scale Limits */}
@@ -139,12 +139,12 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
 
                       {/* Included Feature List */}
                       <div className="space-y-3 text-xs mb-8">
-                        <span className="text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px] tracking-wider block">
+                        <span className="text-slate-600 dark:text-slate-400 font-bold uppercase text-[10px] tracking-wider block">
                           Included Capabilities
                         </span>
                         {plan.features.map((feat, idx) => (
                           <div key={idx} className="flex items-start gap-2.5">
-                            <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                            <Check className="h-4 w-4 text-emerald-700 dark:text-emerald-400 shrink-0 mt-0.5" />
                             <span className="text-slate-700 dark:text-slate-200 font-medium">{feat}</span>
                           </div>
                         ))}

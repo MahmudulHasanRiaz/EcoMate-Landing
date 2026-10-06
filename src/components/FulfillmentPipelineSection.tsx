@@ -30,7 +30,7 @@ export const FulfillmentPipelineSection: React.FC<FulfillmentPipelineProps> = ({
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Section Heading */}
         <div className="max-w-3xl">
-          <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-2 sm:mb-3">
+          <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-700 dark:text-indigo-400 mb-2 sm:mb-3">
             <PackageCheck className="h-3.5 w-3.5" />
             <span>{content.fulfillment.eyebrow}</span>
           </div>
@@ -56,40 +56,40 @@ export const FulfillmentPipelineSection: React.FC<FulfillmentPipelineProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs items-center">
             {/* Step 1: Order Ticket */}
             <div className="p-3 rounded-xl bg-white dark:bg-black/40 border border-slate-200 dark:border-white/[0.06] shadow-2xs">
-              <span className="text-[10px] font-mono text-indigo-600 dark:text-indigo-400 font-bold block mb-1">STAGE 01</span>
+              <span className="text-[10px] font-mono text-indigo-700 dark:text-indigo-400 font-bold block mb-1">STAGE 01</span>
               <p className="font-bold text-slate-900 dark:text-white">Order Queued</p>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">WooCommerce #EM-84920</p>
-              <div className="mt-2 text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">✓ COD Confirmed</div>
+              <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">WooCommerce #EM-84920</p>
+              <div className="mt-2 text-[10px] text-emerald-700 dark:text-emerald-400 font-medium">✓ COD Confirmed</div>
             </div>
 
             {/* Step 2: Barcode Scan */}
             <div className="p-3 rounded-xl bg-white dark:bg-black/40 border border-indigo-300 dark:border-indigo-500/40 shadow-2xs">
-              <span className="text-[10px] font-mono text-indigo-600 dark:text-indigo-400 font-bold block mb-1">STAGE 02</span>
+              <span className="text-[10px] font-mono text-indigo-700 dark:text-indigo-400 font-bold block mb-1">STAGE 02</span>
               <p className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                 <Barcode className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
                 <span>Barcode Scan</span>
               </p>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Physical garment scanned</p>
-              <div className="mt-2 text-[10px] font-mono text-indigo-600 dark:text-indigo-400 font-semibold">SKU: POLO-NVY-XL</div>
+              <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">Physical garment scanned</p>
+              <div className="mt-2 text-[10px] font-mono text-indigo-700 dark:text-indigo-400 font-semibold">SKU: POLO-NVY-XL</div>
             </div>
 
             {/* Step 3: Match & Chime */}
             <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-300 dark:border-emerald-500/40 shadow-2xs">
               <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-400 font-bold block mb-1">STAGE 03</span>
               <p className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700 dark:text-emerald-400" />
                 <span>Audio Chime</span>
               </p>
               <p className="text-[11px] text-emerald-700 dark:text-emerald-300 mt-0.5">SKU match verified at scan</p>
-              <div className="mt-2 text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">WRONG SIZE BLOCKED</div>
+              <div className="mt-2 text-[10px] font-mono text-emerald-700 dark:text-emerald-400 font-bold">WRONG SIZE BLOCKED</div>
             </div>
 
             {/* Step 4: Shipping Label Unlock */}
             <div className="p-3 rounded-xl bg-white dark:bg-black/40 border border-slate-200 dark:border-white/[0.06] shadow-2xs">
-              <span className="text-[10px] font-mono text-indigo-600 dark:text-indigo-400 font-bold block mb-1">STAGE 04</span>
+              <span className="text-[10px] font-mono text-indigo-700 dark:text-indigo-400 font-bold block mb-1">STAGE 04</span>
               <p className="font-bold text-slate-900 dark:text-white">Label Unlocks</p>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Thermal print generated</p>
-              <div className="mt-2 text-[10px] font-mono text-indigo-600 dark:text-indigo-400 font-semibold">Steadfast #SF-948102</div>
+              <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">Thermal print generated</p>
+              <div className="mt-2 text-[10px] font-mono text-indigo-700 dark:text-indigo-400 font-semibold">Steadfast #SF-948102</div>
             </div>
 
             {/* Step 5: Dispatch & Handover */}
@@ -99,7 +99,7 @@ export const FulfillmentPipelineSection: React.FC<FulfillmentPipelineProps> = ({
                 <Truck className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
                 <span>Rider Handover</span>
               </p>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Manifest auto-signed</p>
+              <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">Manifest auto-signed</p>
               <div className="mt-2 text-[10px] text-purple-600 dark:text-purple-400 font-semibold">SMS Sent to Buyer</div>
             </div>
           </div>
@@ -108,7 +108,7 @@ export const FulfillmentPipelineSection: React.FC<FulfillmentPipelineProps> = ({
         {/* Connected Interactive Stepper Rail */}
         <div className="mt-8 sm:mt-12">
           {/* Horizontal scroll container on mobile, full width on desktop */}
-          <div className="overflow-x-auto pb-3 sm:pb-4 scrollbar-none">
+          <div className="overflow-x-auto pb-3 sm:pb-4 scrollbar-none" role="region" aria-label="Fulfillment pipeline steps" tabIndex={0}>
             <div className="flex items-center min-w-[620px] lg:min-w-0 border-b border-slate-200 dark:border-white/10 pb-3 sm:pb-4 relative">
               {content.fulfillment.pipeline.map((step, idx) => {
                 const isActive = activeStepIndex === idx;
@@ -126,7 +126,7 @@ export const FulfillmentPipelineSection: React.FC<FulfillmentPipelineProps> = ({
                           ? 'bg-indigo-600 text-white shadow-md shadow-indigo-300/60 dark:shadow-[0_0_20px_rgba(99,102,241,0.6)] scale-105 sm:scale-110'
                           : isPassed
                           ? 'bg-emerald-50 text-emerald-700 border border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/40'
-                          : 'bg-slate-100 text-slate-500 border border-slate-200 group-hover:border-slate-300 group-hover:text-slate-800 dark:bg-white/[0.04] dark:text-slate-400 dark:border-white/10'
+                          : 'bg-slate-100 text-slate-600 border border-slate-200 group-hover:border-slate-300 group-hover:text-slate-800 dark:bg-white/[0.04] dark:text-slate-400 dark:border-white/10'
                       }`}
                     >
                       {step.stepNumber}
@@ -170,16 +170,16 @@ export const FulfillmentPipelineSection: React.FC<FulfillmentPipelineProps> = ({
                 </p>
 
                 <div className="pt-1.5 flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-emerald-700 dark:text-emerald-400 font-semibold">
-                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-400" />
                   <span>Key Outcome: {currentStep.highlight}</span>
                 </div>
               </div>
 
               {/* Right Column: Visual Mechanism Preview */}
               <div className="lg:col-span-5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-black/40 p-4 sm:p-5 space-y-3 shadow-xs">
-                <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-white/[0.06] pb-2">
+                <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400 border-b border-slate-100 dark:border-white/[0.06] pb-2">
                   <span className="font-mono font-medium">Pipeline Telemetry</span>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Connected</span>
+                  <span className="text-emerald-700 dark:text-emerald-400 font-semibold">Connected</span>
                 </div>
 
                 {activeStepIndex === 2 ? (
@@ -190,7 +190,7 @@ export const FulfillmentPipelineSection: React.FC<FulfillmentPipelineProps> = ({
                         <span>[VERIFIED]</span>
                       </div>
                       <p className="text-slate-900 dark:text-white font-medium">Item SKU: POLO-NVY-XL matched</p>
-                      <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5">Audio feedback: Success Chime Played</p>
+                      <p className="text-slate-600 dark:text-slate-400 text-[11px] mt-0.5">Audio feedback: Success Chime Played</p>
                     </div>
                     <div className="p-2.5 rounded bg-slate-50 dark:bg-white/[0.03] text-slate-700 dark:text-slate-300 flex justify-between border border-slate-100 dark:border-transparent">
                       <span>Label Generation</span>
@@ -220,7 +220,7 @@ export const FulfillmentPipelineSection: React.FC<FulfillmentPipelineProps> = ({
                   </div>
                 )}
 
-                <div className="pt-2 flex justify-between items-center text-[11px] text-slate-500 dark:text-slate-400">
+                <div className="pt-2 flex justify-between items-center text-[11px] text-slate-600 dark:text-slate-400">
                   <span>Part of connected 7-step engine</span>
                   <button
                     onClick={() => setActiveStepIndex((activeStepIndex + 1) % content.fulfillment.pipeline.length)}

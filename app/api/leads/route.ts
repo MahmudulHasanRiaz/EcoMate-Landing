@@ -23,7 +23,7 @@ import { notifyNewLead } from '@/lib/notify';
 import { paginate, parsePage } from '@/lib/paginate';
 import { clientIp as clientIpOf, requestId } from '@/lib/request';
 import { hitLimit } from '@/lib/rateLimit';
-import { verifyTurnstile } from '@/lib/turnstile';
+import { isLocalE2eBypass, verifyTurnstile } from '@/lib/turnstile';
 import { leadCreate } from '@/lib/validation';
 
 // Registers the Resend adapter on import. No call site changes when it becomes active.
@@ -191,7 +191,17 @@ export async function POST(req: Request) {
     // Bot check (Task 14 §2). Skipped when Turnstile is not provisioned (local dev); an
     // explicit siteverify rejection is a 400 and the lead is never stored. Consent is
     // validated first so an invalid submission costs no external call.
-    const turnstile = await verifyTurnstile(parsed.data.turnstileToken ?? '', ip);
+    //
+    // Task 18 E2E bypass: a *present* token on a localhost request with
+    // `E2E_TEST_MODE=1` skips the siteverify round-trip (a headless browser
+    // cannot solve a challenge). A missing token is never bypassed — it is the
+    // 400 the E2E suite asserts. See `isLocalE2eBypass` for why this cannot
+    // enable in production.
+    const rawToken = parsed.data.turnstileToken ?? '';
+    const turnstile =
+      rawToken !== '' && isLocalE2eBypass(req.url)
+        ? { ok: true as const, skipped: true as const }
+        : await verifyTurnstile(rawToken, ip);
     if (!turnstile.ok) {
       console.warn(`[leads] turnstile rejected a submission: ${turnstile.reason}`);
       return fail('Human verification failed. Please refresh the page and try again.', 400);

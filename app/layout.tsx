@@ -47,12 +47,13 @@ export const metadata: Metadata = {
   // canonical plus the full hreflang set (`lib/seo.ts` → `localeAlternates`); this block is
   // what the unprefixed `/` and every non-localized route inherits.
   //
-  // `en` points at `/` rather than `/en` because `/` is the canonical English URL — the one
-  // with the history and the inbound links. `/en` exists so `/bn` has a sibling in the same
-  // dynamic segment and so hreflang has an explicit `en` to advertise.
+  // Canonical stays `/` (that is where the history and inbound links live), but the `en`
+  // hreflang MUST point at `/en`, not `/`. Google requires a distinct URL per hreflang
+  // entry — `en: '/'` collides with `x-default: '/'`, leaving only two unique targets
+  // and failing reciprocity. `/en` exists precisely so hreflang has an explicit `en`.
   alternates: {
     canonical: '/',
-    languages: { en: '/', bn: '/bn', 'x-default': '/' },
+    languages: { en: '/en', bn: '/bn', 'x-default': '/' },
   },
   // Ported from the Vite index.html head so the App Router shell carries the same
   // share-card meta the prototype shipped.

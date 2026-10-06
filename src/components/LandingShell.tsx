@@ -30,7 +30,6 @@ import { PricingSection } from '@/src/components/PricingSection';
 import { FinalConversionSection } from '@/src/components/FinalConversionSection';
 import { Footer } from '@/src/components/Footer';
 import { MobileStickyBar } from '@/src/components/MobileStickyBar';
-import { PrototypeController } from '@/src/components/PrototypeController';
 
 /**
  * How close to the top of the viewport an element counts as "the section the visitor is in".
@@ -137,7 +136,8 @@ export function LandingShell({
 }) {
   const [locale, setLocale] = useState<Locale>(initialLocale);
   const [theme, setTheme] = useState<Theme>('light');
-  const [isPricingVisible, setIsPricingVisible] = useState<boolean>(true);
+  // Pricing visibility is DB-driven (site_settings via /api/pricing). No local toggle in production.
+  const isPricingVisible = true;
   const [content, setContent] = useState<LandingContent>(initialContent);
 
   // Which locales already hold DB-merged content, so a toggle does not refetch on every
@@ -179,10 +179,6 @@ export function LandingShell({
 
   const handleToggleTheme = () => {
     setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
-  };
-
-  const handleTogglePricingMode = () => {
-    setIsPricingVisible((prev) => !prev);
   };
 
   // Sync document language attribute
@@ -254,7 +250,6 @@ export function LandingShell({
           content={content}
           locale={locale}
           isPricingVisible={isPricingVisible}
-          onTogglePricingMode={handleTogglePricingMode}
         />
 
         {/* Section 14: Merchant Objection Handling FAQ */}
@@ -275,17 +270,7 @@ export function LandingShell({
       {/* Mobile-Only Persistent Sticky Conversion Bar (< 15% Viewport Height) */}
       <MobileStickyBar content={content} locale={locale} />
 
-      {/* Floating Evaluation Controller for Prototype Reviewers. Its admin entry point now
-          navigates to the session-gated /admin route (Auth.js) instead of opening the old
-          client-side modal. */}
-      <PrototypeController
-        locale={locale}
-        onToggleLocale={handleToggleLocale}
-        isPricingVisible={isPricingVisible}
-        onTogglePricingMode={handleTogglePricingMode}
-        theme={theme}
-        onToggleTheme={handleToggleTheme}
-      />
+
     </div>
   );
 }

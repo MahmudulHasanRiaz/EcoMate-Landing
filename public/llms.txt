@@ -1,0 +1,55 @@
+# EcoMate
+
+> EcoMate is the complete operating platform for scaling e-commerce businesses in Bangladesh. It unifies online stores, physical showrooms, multi-warehouse inventory, smart barcode packing, courier reconciliation, double-entry finance and marketing in one control centre.
+
+EcoMate sells to high-volume Bangladeshi e-commerce brands and merchants who have outgrown
+spreadsheets and disconnected tools. It is deployed as a Next.js application on Cloudflare
+Workers and is available in English and Bangla.
+
+## What it does
+
+- **Order management** — every channel's order in one queue, with selective routing per SKU.
+- **Multi-warehouse inventory** — bin-level stock across warehouses, with a double-entry
+  ledger so every movement is balanced.
+- **Smart packing** — a five-stage physical pipeline with barcode verification, which is where
+  most preventable shipping errors are caught.
+- **Courier reconciliation** — cash-on-delivery and return-fraud detection, cohort analysis by
+  courier, and settlement reconciliation.
+- **Showroom POS** — a point-of-sale surface that shares the same stock ledger as the online
+  stores.
+- **Marketing attribution** — server-side, deduplicated conversion tracking.
+- **Team governance** — role-based access control across every surface.
+
+## Pricing
+
+Published tiered pricing is rendered on the marketing page and managed by the site operator.
+Prices are quoted in Bangladeshi Taka (BDT). Contact the team for a custom architecture quote.
+
+## Content
+
+- Blog (operations and fulfilment articles): `/en/blog/<slug>`, `/bn/blog/<slug>`
+- Case studies: `/en/case-studies/<slug>`, `/bn/case-studies/<slug>`
+
+Every public URL carries `hreflang` alternates for `en`, `bn` and `x-default`, plus a
+per-locale canonical. The unprefixed `/` is the canonical English URL.
+
+## Sitemap
+
+The machine-readable index of every indexable URL, in both locales, with `lastmod`:
+
+https://ecomate.app/sitemap.xml
+
+Robots policy and crawl directives: https://ecomate.app/robots.txt
+
+## Contact
+
+- Sales: hello@ecomate.app
+- Phone: +880 1894-828290
+- Office: Tejgaon I/A, Dhaka 1208, Bangladesh
+
+## Notes for automated readers
+
+- Content is rendered server-side. Text is present in the initial HTML; no client-side
+  rendering is required to read a page.
+- The admin area at `/admin` requires authentication and is not part of the public site.
+- Structured data (Organization, Article, BreadcrumbList) is emitted inline as JSON-LD.

@@ -174,3 +174,30 @@ export interface IntegrationLog {
   attempts: number;
   createdAt: string;
 }
+
+/** One `landing_content` row as the CMS editor sees it (Task 15 §6). */
+export interface LandingContentRow {
+  id: number;
+  sectionKey: string;
+  locale: 'en' | 'bn';
+  content: unknown;
+  status: 'draft' | 'published';
+  version: number;
+  updatedAt: string;
+}
+
+/**
+ * `GET /api/admin/i18n-report` response.
+ *
+ * `gapCount` is what the dashboard badge renders; `gaps` is the per-section worklist. `empty`
+ * (a `bn` row that exists but holds nothing) is separated from `missing` (no row at all)
+ * because a half-finished translation and an unstarted one are different jobs.
+ */
+export interface I18nReport {
+  gapCount: number;
+  gaps: { sectionKey: string; reason: 'missing' | 'empty' }[];
+  /** Bangla sections with no English source — usually a mistyped `section_key`. */
+  orphans: string[];
+  englishSectionCount: number;
+  translatedSectionCount: number;
+}

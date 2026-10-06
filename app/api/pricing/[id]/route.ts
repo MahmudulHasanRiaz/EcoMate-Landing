@@ -3,6 +3,7 @@ import { getDb } from '@/db/client';
 import { pricingPlansTable } from '@/db/schema';
 import { asObject, errorMessage, fail, logServerError, ok, parseId } from '@/lib/json';
 import { readPricingPlanPatch } from '@/lib/pricing';
+import { invalidateDomains } from '@/lib/revalidate';
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -26,6 +27,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       .where(eq(pricingPlansTable.id, id))
       .returning();
     if (!updated) return fail('Pricing plan not found', 404);
+    invalidateDomains('pricing');
     return ok(updated);
   } catch (e) {
     logServerError('PUT /api/pricing/[id]', e);
@@ -49,6 +51,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
       .where(eq(pricingPlansTable.id, id))
       .returning();
     if (!deleted) return fail('Pricing plan not found', 404);
+    invalidateDomains('pricing');
     return ok({ success: true });
   } catch (e) {
     logServerError('DELETE /api/pricing/[id]', e);

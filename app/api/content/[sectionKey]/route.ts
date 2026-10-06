@@ -20,15 +20,24 @@ interface RouteContext {
   params: Promise<{ sectionKey: string }>;
 }
 
-export async function GET(_req: Request, { params }: RouteContext) {
+export async function GET(req: Request, { params }: RouteContext) {
   try {
     const sectionKey = (await params).sectionKey;
+    // Optional `?locale=en|bn`. Without it the handler keeps its original contract — the
+    // first non-deleted row for the key — so an existing caller cannot change behaviour by
+    // gaining a query string. The side-by-side editor (Task 15 §6) needs the two rows
+    // separately, because the *merged* public payload this route used to be the only source
+    // of already has English folded into the Bangla one.
+    const requested = new URL(req.url).searchParams.get('locale');
+    const locale = requested === 'en' || requested === 'bn' ? requested : null;
+
     const [row] = await getDb()
       .select()
       .from(landingContentTable)
       .where(and(
         eq(landingContentTable.sectionKey, sectionKey),
         isNull(landingContentTable.deletedAt),
+        ...(locale ? [eq(landingContentTable.locale, locale)] : []),
       ))
       .limit(1);
     if (!row) return fail('Section content not found', 404);

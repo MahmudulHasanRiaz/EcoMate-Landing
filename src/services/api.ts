@@ -1,4 +1,16 @@
-import type { SiteSettings, LandingSection, PricingPlan, Lead, Testimonial, CaseStudy, BlogPost, MediaAsset, IntegrationLog } from '../types/api';
+import type {
+  SiteSettings,
+  LandingSection,
+  LandingContentRow,
+  PricingPlan,
+  Lead,
+  Testimonial,
+  CaseStudy,
+  BlogPost,
+  MediaAsset,
+  IntegrationLog,
+  I18nReport,
+} from '../types/api';
 
 const API_BASE = '/api';
 
@@ -204,5 +216,62 @@ export async function getIntegrationLogs(): Promise<IntegrationLog[]> {
 export async function getSystemHealth(): Promise<{ status: string; uptime: number; postgresConfigured: boolean; licensePortalConfigured: boolean }> {
   const res = await fetch(`${API_BASE}/health`);
   if (!res.ok) throw new Error('Failed to fetch system health');
+  return res.json();
+}
+
+/**
+ * Both locales of one `landing_content` section, for the side-by-side EN|BN editor.
+ *
+ * `GET /api/content?locale=bn` returns the *merged public* payload, which is the wrong shape
+ * for an editor: it has already had English merged into it, so the Bangla column would show
+ * English text the translator is about to "translate" from a copy of itself. The editor needs
+ * the raw rows, which is what `/api/content/[sectionKey]` reads.
+ */
+export async function getSectionPair(sectionKey: string): Promise<{
+  en: LandingContentRow | null;
+  bn: LandingContentRow | null;
+}> {
+  const read = async (locale: 'en' | 'bn'): Promise<LandingContentRow | null> => {
+    const res = await fetch(`${API_BASE}/content/${encodeURIComponent(sectionKey)}?locale=${locale}`);
+    // No row for this locale is a normal state (untranslated), not an error.
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error('Failed to fetch section content');
+    const row: unknown = await res.json();
+    if (typeof row !== 'object' || row === null) return null;
+    return { ...(row as LandingContentRow), locale };
+  };
+
+  const [en, bn] = await Promise.all([read('en'), read('bn')]);
+  return { en, bn };
+}
+
+/**
+ * Save one locale of one section.
+ *
+ * `PUT /api/content/[sectionKey]` upserts on `(sectionKey, locale)`, so this is the only
+ * write needed for a first translation as well as for an edit.
+ */
+export async function saveSectionContent(
+  sectionKey: string,
+  locale: 'en' | 'bn',
+  content: Record<string, unknown>,
+  status: 'draft' | 'published' = 'published',
+): Promise<LandingContentRow> {
+  const res = await fetch(`${API_BASE}/content/${encodeURIComponent(sectionKey)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ locale, content, status }),
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Failed to save section content');
+  }
+  return res.json();
+}
+
+/** Which sections still have no usable Bangla translation. */
+export async function getI18nReport(): Promise<I18nReport> {
+  const res = await fetch(`${API_BASE}/admin/i18n-report`);
+  if (!res.ok) throw new Error('Failed to fetch translation report');
   return res.json();
 }

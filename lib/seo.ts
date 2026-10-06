@@ -5,7 +5,13 @@
  * read at module scope from `NEXT_PUBLIC_SITE_URL`, which Next inlines at build time — the
  * same value `metadataBase` and the sitemap use, so a canonical URL and a sitemap entry can
  * never disagree.
+ *
+ * Locale-aware URL construction lives here too (Task 15): hreflang, per-locale canonicals and
+ * breadcrumbs all have to agree about where `/en` and `/bn` live, and this is the module that
+ * already owns the origin.
  */
+import { DEFAULT_LOCALE, LOCALES } from '@/lib/locales';
+import type { Locale } from '@/src/types/landing';
 
 /** Canonical origin. `wrangler.toml` `[vars]` sets the production value. */
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ecomate.app';
@@ -81,6 +87,8 @@ export interface ArticleJsonLdInput {
   imageUrl?: string;
   section?: string;
   tags?: readonly string[];
+  /** BCP-47 language of the article body. Omitted when unknown rather than guessed. */
+  locale?: Locale;
 }
 
 /** `Article` node for a blog post or case study. */
@@ -99,7 +107,7 @@ export function articleJsonLd(input: ArticleJsonLdInput): JsonLdObject {
     ...(input.imageUrl ? { image: [input.imageUrl] } : {}),
     ...(input.section ? { articleSection: input.section } : {}),
     ...(input.tags && input.tags.length > 0 ? { keywords: input.tags.join(', ') } : {}),
-    inLanguage: 'en',
+    ...(input.locale ? { inLanguage: input.locale } : {}),
   };
 }
 
@@ -112,4 +120,133 @@ export function articleJsonLd(input: ArticleJsonLdInput): JsonLdObject {
  */
 export function serializeJsonLd(data: JsonLdObject): string {
   return JSON.stringify(data).replace(/</g, '\\u003c');
+}
+
+// --- Locale URLs, hreflang and canonicals (Task 15 §2, §4) ----------------------------
+
+/**
+ * The canonical path for a locale's home page.
+ *
+ * English canonicalises to the **unprefixed** `/`, not to `/en`. `/` is the URL that has
+ * existed since the prototype and carries its inbound links; `/en` exists only because
+ * `generateStaticParams` must return `en` for `/bn` to have a sibling in the same dynamic
+ * segment, and hreflang needs an `en` entry. Pointing `/en`'s canonical at `/` keeps one
+ * English URL in the index instead of two competing ones, and keeps `/` the address the
+ * sales team has been handing out.
+ *
+ * The return type is a literal union, not `string`, because `typedRoutes: true` makes every
+ * `<Link href>` a checked route: a bare `string` would not type-check at the call site.
+ */
+export function localeHomePath(locale: Locale): '/' | `/${Locale}` {
+  return locale === DEFAULT_LOCALE ? '/' : `/${locale}`;
+}
+
+/**
+ * The URL *prefix* a sub-page of this locale lives under — always `/${locale}`, including for
+ * the default locale.
+ *
+ * This is deliberately different from `localeHomePath`. Only the locale home is served
+ * unprefixed; `/blog/<slug>` has no route at all (it 404s), while `/en/blog/<slug>` does. The
+ * sitemap got this wrong once — emitting the canonical home path for sub-pages and publishing
+ * a list of 404s — so the two concepts are now separate functions with separate names.
+ */
+export function localeRoutePrefix(locale: Locale): `/${Locale}` {
+  return `/${locale}`;
+}
+
+/**
+ * The canonical absolute URL for a page in `locale`. `path` is relative to the locale home.
+ *
+ * The locale home uses the *canonical* prefix (`/` for the default locale, `/bn` otherwise),
+ * but every sub-page uses the *route* prefix (`/en/...`, `/bn/...`) — unconditionally.
+ *
+ * That asymmetry is deliberate and load-bearing: `/blog/<slug>` is not a route in this app,
+ * so a canonical of `/blog/<slug>` would point search engines at a URL that 404s, which is
+ * worse than having no canonical at all. Only the home page is reachable unprefixed.
+ *
+ * The join is written out rather than concatenated because `'/' + '/blog/x'` is `'//blog/x'`,
+ * a *protocol-relative* URL that `new URL` resolves against the host as `http://blog/x` —
+ * which silently turned every English sub-page canonical, OG URL and hreflang into a URL on
+ * a host named after the first path segment.
+ */
+export function localeUrl(locale: Locale, path = ''): string {
+  const suffix = path === '/' ? '' : path.replace(/^\/+/, '').replace(/\/+$/, '');
+  if (suffix === '') return absoluteUrl(localeHomePath(locale));
+  return absoluteUrl(`${localeRoutePrefix(locale)}/${suffix}`);
+}
+
+/**
+ * `alternates` block for a page: a per-locale canonical plus the full hreflang set.
+ *
+ * `hreflang` alternates are *locale-relative paths*, not absolute URLs — Next resolves them
+ * against `metadataBase`, so declaring them twice here would guarantee they drift. The
+ * convention `alternates.languages` expects is `{ 'en': '/en', 'x-default': '/' }`.
+ *
+ * Every locale in the set must list every other locale in the set, including itself.
+ * `x-default` points at the unprefixed root because that is where an unmatched-language
+ * visitor (a crawler with no `Accept-Language` match, a shared link) should land.
+ */
+export function localeAlternates(locale: Locale, path = '') {
+  const languages: Record<string, string> = {};
+  for (const candidate of LOCALES) {
+    const absolute = localeUrl(candidate, path);
+    // Next resolves an hreflang path against `metadataBase`, so the entry has to be the
+    // path — sliced off the same absolute URL it was built from, so the two can never differ.
+    languages[candidate] = absolute.startsWith(SITE_URL)
+      ? absolute.slice(SITE_URL.length) || '/'
+      : absolute;
+  }
+  languages['x-default'] = localeHomePath(DEFAULT_LOCALE);
+  return {
+    canonical: localeUrl(locale, path),
+    languages,
+  };
+}
+
+/**
+ * Absolute URL for a social share image.
+ *
+ * `featuredImageUrl` is whatever the admin typed, so it can be a bare `/media/x.png` or an
+ * absolute `https://media.ecomate.app/x.png`. Resolving through `absoluteUrl` means a
+ * relative value still produces a valid absolute OG URL, and an absolute one is passed
+ * through unchanged. Empty input returns `undefined` so callers can omit the field entirely:
+ * an OG `images` entry pointing at a 404 renders a broken card, which is worse than no card.
+ */
+export function ogImageUrl(imageUrl: string | null | undefined): string | undefined {
+  const raw = (imageUrl ?? '').trim();
+  if (!raw) return undefined;
+  try {
+    return absoluteUrl(raw);
+  } catch {
+    return undefined;
+  }
+}
+
+export interface BreadcrumbEntry {
+  name: string;
+  /** Locale-relative path of the crumb (`/`, `/blog`). */
+  path: string;
+}
+
+/**
+ * `BreadcrumbList` node for a page nested under the site root.
+ *
+ * `BreadcrumbList` is what puts the real path in a SERP instead of a bare URL, and it is the
+ * one structured-data type that genuinely differs between a blog post and a case study — both
+ * sit one level deeper than home, at different parents.
+ */
+export function breadcrumbJsonLd(
+  locale: Locale,
+  crumbs: readonly BreadcrumbEntry[],
+): JsonLdObject {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: crumbs.map((crumb, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: crumb.name,
+      item: localeUrl(locale, crumb.path),
+    })),
+  };
 }

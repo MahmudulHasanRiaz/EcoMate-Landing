@@ -13,6 +13,7 @@ import {
   parseId,
   readNumber,
 } from '@/lib/json';
+import { invalidateDomains } from '@/lib/revalidate';
 
 // Next 16: `params` is a Promise in route handlers. Never destructure it synchronously.
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -43,6 +44,10 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       .where(eq(landingSectionsTable.id, id))
       .returning();
     if (!updated) return fail('Section not found', 404);
+    // A section edit changes both language variants, so both content tags go. Invalidating
+    // only the edited locale would leave the other language serving the stale title.
+    invalidateDomains('content', 'en');
+    invalidateDomains('content', 'bn');
     return ok(updated);
   } catch (e) {
     logServerError('PUT /api/sections/[id]', e);

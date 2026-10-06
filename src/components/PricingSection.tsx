@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { LandingContent, Locale, PricingPlan } from '../types/landing';
 import { Check, ArrowRight, ShieldCheck, Sparkles, Building2, HelpCircle } from 'lucide-react';
+import { formatMoney } from '@/lib/format';
 
 interface PricingSectionProps {
   content: LandingContent;
@@ -110,13 +111,12 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
                         </p>
                       </div>
 
-                      {/* Price Display with Tabular Numerals */}
+                      {/* Price Display with Tabular Numerals. `formatMoney` already carries the currency
+                          marker (৳ for Bangla, BDT for English) and the grouped digits, so
+                          neither the glyph nor `toLocaleString()` is repeated here. */}
                       <div className="flex items-baseline gap-1 my-6 pb-6 border-b border-slate-200 dark:border-white/[0.08]">
-                        <span className="text-2xl font-bold text-slate-500 dark:text-slate-400 font-mono">
-                          {plan.currency}
-                        </span>
                         <span className="text-4xl sm:text-5xl font-extrabold text-slate-900 dark:text-white font-mono-numbers">
-                          {price.toLocaleString()}
+                          {formatMoney(price, locale)}
                         </span>
                         <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">/ month</span>
                       </div>

@@ -43,13 +43,16 @@ export const metadata: Metadata = {
   title: `${SITE_NAME} — ${SITE_TAGLINE}`,
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
+  // The site-wide default. `/en` and `/bn` override `alternates` with their own per-locale
+  // canonical plus the full hreflang set (`lib/seo.ts` → `localeAlternates`); this block is
+  // what the unprefixed `/` and every non-localized route inherits.
+  //
+  // `en` points at `/` rather than `/en` because `/` is the canonical English URL — the one
+  // with the history and the inbound links. `/en` exists so `/bn` has a sibling in the same
+  // dynamic segment and so hreflang has an explicit `en` to advertise.
   alternates: {
     canonical: '/',
-    // hreflang: only `en` is a real route today. The `bn` alternate is added by the
-    // locale-routing task in the same change that ships `/bn` — advertising a language
-    // alternate that 404s is worse than declaring a single language. `x-default` marks
-    // this route as the fallback for unmatched languages.
-    languages: { en: '/', 'x-default': '/' },
+    languages: { en: '/', bn: '/bn', 'x-default': '/' },
   },
   // Ported from the Vite index.html head so the App Router shell carries the same
   // share-card meta the prototype shipped.
@@ -58,11 +61,15 @@ export const metadata: Metadata = {
     url: SITE_URL,
     siteName: SITE_NAME,
     locale: 'en_US',
+    alternateLocale: ['bn_BD'],
     title: `${SITE_NAME} — ${SITE_TAGLINE}`,
     description:
       'Manage orders, multi-warehouse inventory, smart barcode packing, couriers, POS showrooms, double-entry finance and marketing from one central control center.',
-    // No `images` entry yet: there is no OG asset to point at, and a URL that 404s is worse
-    // than an omitted image. Task 15 resolves OG images from R2 `featuredImageUrl`.
+    // No site-wide `images` entry: there is no default OG asset in `public/`, and a URL that
+    // 404s renders a broken share card, which is worse than no card. The per-post and
+    // per-case-study pages resolve `images` from the row's own `featuredImageUrl` through
+    // `ogImageUrl()`, which resolves relative values against `SITE_URL` and omits the field
+    // entirely when the column is empty.
   },
   twitter: {
     card: 'summary_large_image',

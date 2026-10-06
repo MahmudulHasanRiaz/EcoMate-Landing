@@ -1,12 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { EcoMateLogo } from './EcoMateLogo';
-import { LandingContent, Locale, Theme } from '../types/landing';
+import { LandingContent, Locale, NavItem, Theme } from '../types/landing';
 import { Globe, Menu, X, ArrowUpRight, PhoneCall, Sun, Moon, MessageCircle } from 'lucide-react';
 
 interface HeaderProps {
   content: LandingContent;
   locale: Locale;
   theme: Theme;
+  /**
+   * DB-managed `main` menu for this locale, or `null` when `menu_items` has no visible rows.
+   *
+   * `null` falls back to `content.header.nav` — which is itself DB-backed through
+   * `landing_content` and has a static copy behind it. So the header always renders the same
+   * links whether navigation is managed in the table, in `landing_content`, or in neither.
+   * A menu is never *merged* with the fallback: a half-managed bar is uneditable, and a
+   * removed link has to stay removed.
+   */
+  navItems: readonly NavItem[] | null;
   onToggleLocale: () => void;
   onToggleTheme: () => void;
   onOpenLeadModal?: () => void;
@@ -16,11 +26,14 @@ export const Header: React.FC<HeaderProps> = ({
   content,
   locale,
   theme,
+  navItems,
   onToggleLocale,
   onToggleTheme,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+
+  const nav: readonly NavItem[] = navItems ?? content.header.nav;
 
   const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     e.preventDefault();
@@ -87,7 +100,7 @@ export const Header: React.FC<HeaderProps> = ({
             aria-label="Primary"
             className="hidden min-w-0 flex-1 items-center justify-center gap-5 text-[13px] font-medium whitespace-nowrap text-slate-600 xl:flex 2xl:gap-7 2xl:text-sm dark:text-slate-300"
           >
-            {content.header.nav.map((item) => (
+            {nav.map((item) => (
               <a
                 key={item.href}
                 href={item.href}
@@ -167,7 +180,7 @@ export const Header: React.FC<HeaderProps> = ({
             className="absolute inset-x-0 top-[calc(100%+8px)] overflow-hidden rounded-2xl border border-[#E0E4F2] bg-white/90 p-2 shadow-xl shadow-indigo-200/40 backdrop-blur-xl xl:hidden dark:border-white/10 dark:bg-[#0B0D18]/95 dark:shadow-black/60"
           >
             <nav aria-label="Mobile" className="flex flex-col">
-              {content.header.nav.map((item) => (
+              {nav.map((item) => (
                 <a
                   key={item.href}
                   href={item.href}

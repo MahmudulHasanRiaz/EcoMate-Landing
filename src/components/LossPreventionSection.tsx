@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { LandingContent, Locale } from '../types/landing';
 import { ShieldCheck, AlertTriangle, Calculator, CheckCircle2, TrendingUp, DollarSign, ArrowRight } from 'lucide-react';
+import { formatMoney, formatNumber } from '@/lib/format';
 
 interface LossPreventionProps {
   content: LandingContent;
@@ -191,7 +192,7 @@ export const LossPreventionSection: React.FC<LossPreventionProps> = ({ content, 
                 <div className="flex justify-between items-center text-sm font-semibold text-slate-900 dark:text-white mb-2">
                   <span>{content.lossPrevention.calculator.ordersPerDayLabel}</span>
                   <span className="font-mono text-indigo-700 dark:text-indigo-400 font-bold text-lg">
-                    {dailyOrders.toLocaleString()} orders / day
+                    {formatNumber(dailyOrders, locale)} orders / day
                   </span>
                 </div>
                 <input
@@ -215,15 +216,15 @@ export const LossPreventionSection: React.FC<LossPreventionProps> = ({ content, 
               <div className="p-4 rounded-xl bg-white dark:bg-black/40 border border-slate-200 dark:border-white/[0.06] text-xs text-slate-700 dark:text-slate-300 space-y-2 shadow-xs">
                 <div className="flex justify-between">
                   <span>Monthly Dispatched Volume:</span>
-                  <span className="font-mono text-slate-900 dark:text-white font-bold">{monthlyOrders.toLocaleString()} orders / mo</span>
+                  <span className="font-mono text-slate-900 dark:text-white font-bold">{formatNumber(monthlyOrders, locale)} orders / mo</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Avoidable Packing & Fake Returns without System:</span>
-                  <span className="font-mono text-rose-600 dark:text-rose-400 font-bold">{preventableMistakesWithoutSystem} parcels</span>
+                  <span className="font-mono text-rose-600 dark:text-rose-400 font-bold">{formatNumber(preventableMistakesWithoutSystem, locale)} parcels</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Average Loss per Preventable Mistake:</span>
-                  <span className="font-mono text-slate-600 dark:text-slate-300 font-medium">৳ 420 (Courier + transit + overhead)</span>
+                  <span className="font-mono text-slate-600 dark:text-slate-300 font-medium">{formatMoney(420, locale)} (Courier + transit + overhead)</span>
                 </div>
               </div>
             </div>
@@ -235,7 +236,7 @@ export const LossPreventionSection: React.FC<LossPreventionProps> = ({ content, 
                   {content.lossPrevention.calculator.estimatedLossLabel}
                 </span>
                 <p className="mt-2 text-2xl sm:text-3xl font-bold text-rose-600 dark:text-rose-400 font-mono-numbers">
-                  ৳ {estimatedMonthlyLoss.toLocaleString()}
+                  {formatMoney(estimatedMonthlyLoss, locale)}
                 </p>
                 <p className="mt-1 text-xs text-rose-700/80 dark:text-rose-300/80">
                   Drained in wasted courier bills and return overhead every month.
@@ -248,7 +249,7 @@ export const LossPreventionSection: React.FC<LossPreventionProps> = ({ content, 
                   <span>{content.lossPrevention.calculator.savedWithEcoMateLabel}</span>
                 </span>
                 <p className="mt-2 text-2xl sm:text-3xl font-bold text-emerald-600 dark:text-emerald-400 font-mono-numbers">
-                  ৳ {estimatedSavings.toLocaleString()}
+                  {formatMoney(estimatedSavings, locale)}
                 </p>
                 <p className="mt-1 text-xs text-emerald-700/80 dark:text-emerald-300/80">
                   Protected straight to your net operating profit every single month.

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type {
   SiteSettings,
   LandingSection,
+  LandingContentRow,
   PricingPlan,
   Lead,
   Testimonial,
@@ -9,6 +10,7 @@ import type {
   BlogPost,
   MediaAsset,
   IntegrationLog,
+  I18nReport,
 } from '../../types/api';
 import * as api from '../../services/api';
 import {
@@ -39,6 +41,7 @@ import {
   Phone,
   Mail,
   Calendar,
+  Languages,
 } from 'lucide-react';
 
 interface AdminPanelProps {
@@ -51,6 +54,7 @@ type AdminTab =
   | 'dashboard'
   | 'leads'
   | 'sections'
+  | 'content'
   | 'pricing'
   | 'testimonials'
   | 'blog'
@@ -74,6 +78,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
   const [mediaAssets, setMediaAssets] = useState<MediaAsset[]>([]);
   const [integrationLogs, setIntegrationLogs] = useState<IntegrationLog[]>([]);
   const [systemHealth, setSystemHealth] = useState<{ status: string; uptime: number; postgresConfigured: boolean; licensePortalConfigured: boolean } | null>(null);
+
+  // --- Side-by-side EN|BN landing-content editor + translation report (Task 15 §6) -------
+  const [i18nReport, setI18nReport] = useState<I18nReport | null>(null);
+  /** The section currently open in the editor; `null` shows the translation-gap worklist. */
+  const [editingSectionKey, setEditingSectionKey] = useState<string | null>(null);
+  const [editorRows, setEditorRows] = useState<{ en: LandingContentRow | null; bn: LandingContentRow | null }>({
+    en: null,
+    bn: null,
+  });
+  /** Raw textarea text per locale. Kept as text so a half-typed `{` is not a parse error. */
+  const [editorDraft, setEditorDraft] = useState<{ en: string; bn: string }>({ en: '', bn: '' });
+  const [editorErrors, setEditorErrors] = useState<{ en: string; bn: string }>({ en: '', bn: '' });
+  const [isSavingEditor, setIsSavingEditor] = useState(false);
 
   // Filters & Selected States
   const [leadStatusFilter, setLeadStatusFilter] = useState<string>('All');
@@ -132,6 +149,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
       setMediaAssets(mData);
       setIntegrationLogs(iData);
       setSystemHealth(hData);
+      // Translation gaps are a dashboard-level signal, and the endpoint is superadmin/admin
+      // only — so it is fetched on its own and a 403 leaves the badge at zero rather than
+      // taking down the whole `Promise.all` (which would blank every panel for an editor).
+      api
+        .getI18nReport()
+        .then(setI18nReport)
+        .catch(() => setI18nReport(null));
     } catch (err: any) {
       console.error('Failed to load admin data:', err);
     } finally {
@@ -146,6 +170,67 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
   const showNotification = (msg: string) => {
     setSaveMessage(msg);
     setTimeout(() => setSaveMessage(null), 3500);
+  };
+
+  /**
+   * Open one section in the EN|BN editor.
+   *
+   * Both locales are loaded at once and shown in adjacent columns: a translator working from
+   * the English source needs them side by side, and switching between them to check a
+   * paragraph means holding two screens in memory that they cannot see at the same time.
+   */
+  const handleOpenSection = async (sectionKey: string) => {
+    setEditingSectionKey(sectionKey);
+    setEditorErrors({ en: '', bn: '' });
+    try {
+      const pair = await api.getSectionPair(sectionKey);
+      setEditorRows(pair);
+      setEditorDraft({
+        en: pair.en ? JSON.stringify(pair.en.content, null, 2) : '',
+        bn: pair.bn ? JSON.stringify(pair.bn.content, null, 2) : '',
+      });
+    } catch (err: any) {
+      showNotification(`Failed to load ${sectionKey}: ${err.message}`);
+      setEditorRows({ en: null, bn: null });
+      setEditorDraft({ en: '', bn: '' });
+    }
+  };
+
+  /** Save one locale. Parsed, validated and rejected loudly rather than silently dropped. */
+  const handleSaveLocale = async (locale: 'en' | 'bn') => {
+    if (!editingSectionKey) return;
+    const raw = editorDraft[locale].trim();
+    if (raw === '') {
+      setEditorErrors((prev) => ({ ...prev, [locale]: 'Empty payload — nothing to save.' }));
+      return;
+    }
+    let parsed: Record<string, unknown>;
+    try {
+      const candidate: unknown = JSON.parse(raw);
+      if (typeof candidate !== 'object' || candidate === null || Array.isArray(candidate)) {
+        throw new Error('payload must be a JSON object');
+      }
+      parsed = candidate as Record<string, unknown>;
+    } catch (err: any) {
+      setEditorErrors((prev) => ({ ...prev, [locale]: `Invalid JSON — ${err.message}` }));
+      return;
+    }
+
+    setEditorErrors((prev) => ({ ...prev, [locale]: '' }));
+    setIsSavingEditor(true);
+    try {
+      const saved = await api.saveSectionContent(editingSectionKey, locale, parsed);
+      setEditorRows((prev) => ({ ...prev, [locale]: saved }));
+      setEditorDraft((prev) => ({ ...prev, [locale]: JSON.stringify(saved.content, null, 2) }));
+      showNotification(`${editingSectionKey} · ${locale.toUpperCase()} saved`);
+      // The gap count just changed; re-read it rather than guessing.
+      api.getI18nReport().then(setI18nReport).catch(() => undefined);
+    } catch (err: any) {
+      setEditorErrors((prev) => ({ ...prev, [locale]: err.message }));
+      showNotification(`Save failed: ${err.message}`);
+    } finally {
+      setIsSavingEditor(false);
+    }
   };
 
   // Handlers
@@ -299,6 +384,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
               { id: 'dashboard', label: 'Dashboard Overview', icon: LayoutDashboard },
               { id: 'leads', label: 'Lead Management', icon: Users, count: leads.filter((l) => l.status === 'New').length },
               { id: 'sections', label: 'Landing Sections CMS', icon: FileText },
+              {
+                id: 'content',
+                label: 'Bilingual Content',
+                icon: Languages,
+                // The translation-gap badge. `count > 0` is what makes the pill render, so a
+                // fully-translated site shows none and an editor's 403 shows none.
+                count: i18nReport?.gapCount ?? 0,
+              },
               { id: 'pricing', label: 'Dynamic Pricing', icon: DollarSign },
               { id: 'testimonials', label: 'Testimonials & Proof', icon: MessageSquareQuote },
               { id: 'blog', label: 'Blog & SEO Articles', icon: BookOpen },
@@ -398,6 +491,21 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                   <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1 font-medium">
                     Fully database-configured
                   </p>
+                </div>
+
+                <div className="p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1B] shadow-xs">
+                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Untranslated Sections (BN)</span>
+                  <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white font-mono-numbers mt-2">
+                    {i18nReport ? i18nReport.gapCount : '—'}
+                  </p>
+                  <button
+                    onClick={() => setActiveTab('content')}
+                    className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline mt-1 font-semibold cursor-pointer"
+                  >
+                    {i18nReport && i18nReport.gapCount === 0
+                      ? 'Every section has Bangla copy'
+                      : 'Bangla falls back to English until translated'}
+                  </button>
                 </div>
 
                 <div className="p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1B] shadow-xs">
@@ -679,6 +787,144 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* TAB 4: BILINGUAL CONTENT EDITOR (EN | BN side by side) */}
+          {activeTab === 'content' && (
+            <div className="space-y-6 max-w-6xl mx-auto">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+                    Bilingual Landing Content
+                  </h2>
+                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                    One payload per locale, edited side by side. <strong>Fallback chain: a section with
+                    no Bangla payload renders the English one</strong> — the page is never blank.
+                  </p>
+                </div>
+                {editingSectionKey && (
+                  <button
+                    onClick={() => setEditingSectionKey(null)}
+                    className="self-start inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer dark:border-white/10 dark:text-slate-200 dark:hover:bg-white/5"
+                  >
+                    Close editor
+                  </button>
+                )}
+              </div>
+
+              {/* Translation-gap worklist */}
+              <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1B] p-4 sm:p-5 shadow-xs">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                    Missing Bangla translations
+                  </h3>
+                  <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
+                    {i18nReport
+                      ? `${i18nReport.translatedSectionCount}/${i18nReport.englishSectionCount} sections translated`
+                      : 'Report unavailable for this role'}
+                  </span>
+                </div>
+
+                {!i18nReport ? (
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Loading translation report…
+                  </p>
+                ) : i18nReport.gaps.length === 0 ? (
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                    Every English section has a published, non-empty Bangla payload.
+                  </p>
+                ) : (
+                  <ul className="flex flex-wrap gap-2">
+                    {i18nReport.gaps.map((gap) => (
+                      <li key={gap.sectionKey}>
+                        <button
+                          onClick={() => void handleOpenSection(gap.sectionKey)}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1 font-mono text-[11px] font-semibold text-amber-800 hover:bg-amber-100 cursor-pointer dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200"
+                        >
+                          {gap.sectionKey}
+                          <span className="opacity-70">{gap.reason}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                {i18nReport && i18nReport.orphans.length > 0 && (
+                  <p className="mt-3 text-[11px] text-rose-600 dark:text-rose-400">
+                    Bangla rows with no English source (check the section key):{' '}
+                    <span className="font-mono">{i18nReport.orphans.join(', ')}</span>
+                  </p>
+                )}
+              </div>
+
+              {/* EN | BN editor */}
+              {editingSectionKey ? (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {(['en', 'bn'] as const).map((locale) => {
+                      const row = editorRows[locale];
+                      const error = editorErrors[locale];
+                      return (
+                        <div
+                          key={locale}
+                          className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1B] p-4 shadow-xs"
+                        >
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <h4 className="text-xs font-bold uppercase tracking-wide text-slate-700 dark:text-slate-200">
+                              {locale === 'en' ? 'English (en)' : 'বাংলা (bn)'}
+                              <span className="ml-2 font-mono font-normal text-[11px] text-slate-400">
+                                {row ? (row.status === 'published' ? 'published' : row.status) : 'no row'}
+                              </span>
+                            </h4>
+                            <button
+                              onClick={() => void handleSaveLocale(locale)}
+                              disabled={isSavingEditor}
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-[11px] font-bold text-white transition-colors hover:bg-indigo-700 disabled:opacity-50 cursor-pointer"
+                            >
+                              <Save className="h-3.5 w-3.5" />
+                              Save {locale.toUpperCase()}
+                            </button>
+                          </div>
+
+                          <textarea
+                            value={editorDraft[locale]}
+                            onChange={(e) =>
+                              setEditorDraft((prev) => ({ ...prev, [locale]: e.target.value }))
+                            }
+                            spellCheck={false}
+                            rows={18}
+                            placeholder={locale === 'bn' ? 'অনুবাদ করলে এখানে JSON বসান…' : '{"headline": "..."}'}
+                            className={`w-full rounded-xl bg-slate-50 dark:bg-black/40 border p-3 font-mono text-[11px] leading-relaxed text-slate-900 dark:text-white ${
+                              error ? 'border-rose-400' : 'border-slate-200 dark:border-white/10'
+                            } ${locale === 'bn' ? 'font-bangla' : ''}`}
+                          />
+
+                          {error && (
+                            <p className="mt-2 text-[11px] font-medium text-rose-600 dark:text-rose-400">
+                              {error}
+                            </p>
+                          )}
+                          {!row && !error && (
+                            <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
+                              No {locale.toUpperCase()} row yet. Saving creates it.
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Payload shape must match the static copy in <span className="font-mono">src/data/landingContent.ts</span> —
+                    keys the payload omits keep their English value on merge.
+                  </p>
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Pick a section above to edit both locales, or open one from the gap list.
+                </p>
+              )}
             </div>
           )}
 

@@ -1,15 +1,32 @@
 import React from 'react';
 import { EcoMateLogo } from './EcoMateLogo';
-import { LandingContent, Locale } from '../types/landing';
+import { LandingContent, Locale, NavItem } from '../types/landing';
 import { Globe, PhoneCall, Mail, MapPin, ArrowUpRight } from 'lucide-react';
 
 interface FooterProps {
   content: LandingContent;
   locale: Locale;
+  /**
+   * DB-managed `footer` menu for this locale, or `null` when `menu_items` has no visible
+   * rows. `null` renders the hardcoded link list below, so an empty table costs the footer
+   * its managed links and nothing else. The two are never merged — see `Header.tsx`.
+   */
+  menu: readonly NavItem[] | null;
   onToggleLocale: () => void;
 }
 
-export const Footer: React.FC<FooterProps> = ({ content, locale, onToggleLocale }) => {
+export const Footer: React.FC<FooterProps> = ({ content, locale, menu, onToggleLocale }) => {
+  // The hardcoded defaults. Declared as data rather than inline JSX so the same array can be
+  // the fallback *and* the comparison baseline for what a menu would replace.
+  const DEFAULT_PLATFORM_LINKS: readonly NavItem[] = [
+    { label: 'Central Architecture', href: '#ecosystem' },
+    { label: 'Multi-Store & Showrooms', href: '#multi-channel' },
+    { label: 'Fulfillment Pipeline', href: '#fulfillment' },
+    { label: 'Loss Prevention', href: '#loss-prevention' },
+    { label: 'Commercial Plans', href: '#pricing' },
+  ];
+
+  const platformLinks: readonly NavItem[] = menu ?? DEFAULT_PLATFORM_LINKS;
   return (
     <footer className="border-t border-slate-200 dark:border-white/[0.08] bg-slate-100 dark:bg-[#05060A] text-slate-600 dark:text-slate-400 text-xs pt-14 pb-28 md:pb-14 transition-colors">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -37,31 +54,13 @@ export const Footer: React.FC<FooterProps> = ({ content, locale, onToggleLocale 
               {content.footer.linksTitle}
             </h4>
             <ul className="space-y-2 text-xs">
-              <li>
-                <a href="#ecosystem" className="hover:text-slate-900 dark:hover:text-white transition-colors">
-                  Central Architecture
-                </a>
-              </li>
-              <li>
-                <a href="#multi-channel" className="hover:text-slate-900 dark:hover:text-white transition-colors">
-                  Multi-Store & Showrooms
-                </a>
-              </li>
-              <li>
-                <a href="#fulfillment" className="hover:text-slate-900 dark:hover:text-white transition-colors">
-                  Fulfillment Pipeline
-                </a>
-              </li>
-              <li>
-                <a href="#loss-prevention" className="hover:text-slate-900 dark:hover:text-white transition-colors">
-                  Loss Prevention
-                </a>
-              </li>
-              <li>
-                <a href="#pricing" className="hover:text-slate-900 dark:hover:text-white transition-colors">
-                  Commercial Plans
-                </a>
-              </li>
+              {platformLinks.map((item) => (
+                <li key={item.href}>
+                  <a href={item.href} className="hover:text-slate-900 dark:hover:text-white transition-colors">
+                    {item.label}
+                  </a>
+                </li>
+              ))}
             </ul>
           </div>
 

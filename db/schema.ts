@@ -346,3 +346,59 @@ export const verificationTokensTable = pgTable('verification_tokens', {
 }, (t) => [
   primaryKey({ columns: [t.identifier, t.token] }),
 ]);
+
+// 15. Menus (DB-managed navigation). The site ships hardcoded nav inside
+// `landing_content.header.nav`; these tables make it editable without a deploy, and they are
+// strictly additive — a menu with no rows falls back to that hardcoded nav, so an empty
+// table can never remove a working navigation link.
+//
+// `key` is a fixed vocabulary, not free text, because exactly two consumers exist: the
+// header reads `main`, the footer reads `footer`. Unique on (key, locale) so one locale
+// cannot end up with two competing nav bars.
+export const menusTable = pgTable('menus', {
+  id: serial('id').primaryKey(),
+  key: text('key').notNull(), // main | footer
+  locale: text('locale').notNull().default('en'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('menus_key_locale_idx').on(t.key, t.locale),
+  check('menus_key_valid', sql`${t.key} IN ('main', 'footer')`),
+]);
+
+// 16. Menu Items. `menu_id` cascades: deleting a menu must not leave orphan links behind.
+// The read order is `(menu_id, sort_order, id)` so a rename never reshuffles the bar.
+//
+// `parent_id` is a plain nullable integer rather than a self-referencing FK on purpose: it
+// is a UI grouping hint for dropdowns, not a data-integrity edge. A self-FK would also make
+// drizzle-kit emit a second unique constraint and would require the `AnyPgColumn` cast, for
+// a relationship only ever written through `app/api/menus`. Referential integrity for it
+// lives in that handler (a `parentId` must name a visible item of the *same* menu).
+export const menuItemsTable = pgTable('menu_items', {
+  id: serial('id').primaryKey(),
+  menuId: integer('menu_id').notNull().references(() => menusTable.id, { onDelete: 'cascade' }),
+  label: text('label').notNull(),
+  href: text('href').notNull(),
+  sortOrder: integer('sort_order').notNull().default(0),
+  isVisible: boolean('is_visible').notNull().default(true),
+  parentId: integer('parent_id'),
+}, (t) => [
+  index('menu_items_menu_sort_idx').on(t.menuId, t.sortOrder),
+]);
+
+// 17. Managed Redirects (Task 15). `from_path` is unique because two rules for one path is
+// ambiguous, and an ambiguous redirect is how a URL silently 500s in production.
+// `to_path` is stored relative (`/new-path`) rather than absolute so a redirect created in
+// staging still points at the same path in production.
+export const redirectsTable = pgTable('redirects', {
+  id: serial('id').primaryKey(),
+  fromPath: text('from_path').unique().notNull(),
+  toPath: text('to_path').notNull(),
+  // 308 preserves the method and body; the default because a moved page must not lose a
+  // POST. 301/302/307 stay legal for the cases that genuinely need them.
+  statusCode: integer('status_code').notNull().default(308),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  check('redirects_status_code_valid', sql`${t.statusCode} IN (301, 302, 307, 308)`),
+]);

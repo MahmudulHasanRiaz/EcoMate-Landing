@@ -38,6 +38,12 @@ export async function POST(req: Request) {
     };
     if (!row.key || !row.title) return fail('key and title are required', 400);
     if (!row.url) return fail('url is required', 400);
+    // An asset created through the admin *is* the publish — there is no separate draft flag on
+    // `media_assets`. Accepting a row without alt text would put an unlabelled image into the
+    // library, where nothing later forces it to be labelled: a screen reader announces a file
+    // name, and an unnamed decorative image is indistinguishable from a broken one. Refusing
+    // the write is the only point where the asset is still editable.
+    if (!row.altText) return fail('altText is required before an asset can be published', 400);
     const [created] = await getDb().insert(mediaAssetsTable).values(row).returning();
     return ok(created, 201);
   } catch (e) {

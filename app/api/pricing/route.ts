@@ -10,6 +10,7 @@ import {
   ok,
 } from '@/lib/json';
 import { readPricingPlanCreate } from '@/lib/pricing';
+import { invalidateDomains } from '@/lib/revalidate';
 
 export async function GET() {
   try {
@@ -37,6 +38,7 @@ export async function POST(req: Request) {
       return fail('Prices must be non-negative', 400);
     }
     const [created] = await getDb().insert(pricingPlansTable).values(row).returning();
+    invalidateDomains('pricing');
     return ok(created, 201);
   } catch (e) {
     logServerError('POST /api/pricing', e);

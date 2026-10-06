@@ -1,20 +1,19 @@
 /**
- * Landing page — Server Component.
+ * `/` — the default-locale sales page.
  *
- * The data read happens here, through the single cached helper (`lib/content.ts`), and the
- * assembled payload is handed to the interactive shell. If the read fails (no Hyperdrive
- * binding at build time, or Postgres unreachable at runtime) `getLandingContent` returns
- * `null` and the static `landingContent.en` object renders unchanged — the sales page must
- * still sell while the database is down (Task 20 §3).
+ * This route keeps serving the marketing page at the root URL; the locale-routing task adds
+ * `/en` and `/bn` *alongside* it rather than moving it, because `/` is the address that has
+ * been published, linked and bookmarked. The default locale is read from
+ * `NEXT_PUBLIC_DEFAULT_LOCALE` (never hardcoded) so flipping it to `bn` re-points the root
+ * URL without a code change.
  *
- * The locale toggle fetches `/api/content?locale=bn` client-side, so switching language
- * does not require a round trip through the page.
+ * `/` and `/en` render the same content on purpose. `/en` is the explicit-locale alias that
+ * hreflang needs; `/` stays the canonical English URL (see `lib/seo.ts` → `localeHomePath`),
+ * so only one of the two ends up in the index.
  */
-import { getLandingContent } from '@/lib/content';
-import { assembleLandingContent } from '@/lib/merge';
-import { LandingShell } from '@/src/components/LandingShell';
+import { DEFAULT_LOCALE } from '@/lib/locales';
+import { LandingPage } from '@/src/components/LandingPage';
 
-export default async function Page() {
-  const sections = await getLandingContent('en');
-  return <LandingShell initialContent={assembleLandingContent('en', sections)} />;
+export default function Page() {
+  return <LandingPage locale={DEFAULT_LOCALE} />;
 }

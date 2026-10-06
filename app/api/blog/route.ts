@@ -3,6 +3,7 @@ import { getDb } from '@/db/client';
 import { blogPostsTable } from '@/db/schema';
 import { asObject, errorMessage, fail, isUniqueViolation, logServerError, ok } from '@/lib/json';
 import { readBlogPostCreate } from '@/lib/blog';
+import { invalidateDomains } from '@/lib/revalidate';
 
 export async function GET() {
   try {
@@ -27,6 +28,9 @@ export async function POST(req: Request) {
     const row = readBlogPostCreate(asObject(await req.json()));
     if (!row.slug || !row.title) return fail('slug and title are required', 400);
     const [created] = await getDb().insert(blogPostsTable).values(row).returning();
+    // The blog index, the article page and the sitemap all read under this tag, so a new
+    // draft is not searchable and a newly published one appears without a rebuild.
+    invalidateDomains('blog');
     return ok(created, 201);
   } catch (e) {
     logServerError('POST /api/blog', e);

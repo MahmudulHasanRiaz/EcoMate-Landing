@@ -13,6 +13,7 @@ import Link from 'next/link';
 import { LayoutDashboard, LogOut, ShieldCheck, ExternalLink } from 'lucide-react';
 import type { AdminRole } from '@/lib/roles';
 import { AdminUsersPanel } from './AdminUsersPanel';
+import { TranslationGapBadge } from './TranslationGapBadge';
 
 interface AdminConsoleProps {
   email: string;
@@ -39,6 +40,7 @@ export function AdminConsole({ email, role, userId }: AdminConsoleProps) {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <TranslationGapBadge role={role} />
           <Link
             href="/admin/cms"
             className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-indigo-700"

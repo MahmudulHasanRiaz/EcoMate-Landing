@@ -11,6 +11,7 @@ import {
   parseId,
 } from '@/lib/json';
 import { readBlogPostPatch } from '@/lib/blog';
+import { invalidateDomains } from '@/lib/revalidate';
 
 /**
  * `/api/blog/[idOrSlug]`
@@ -52,6 +53,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ idOrSlug
       .where(eq(blogPostsTable.id, id))
       .returning();
     if (!updated) return fail('Blog post not found', 404);
+    // Flipping `status` to `published` (or away from it) is the edit that matters: it decides
+    // whether the article page and its sitemap entry exist at all.
+    invalidateDomains('blog');
     return ok(updated);
   } catch (e) {
     logServerError('PUT /api/blog/[idOrSlug]', e);

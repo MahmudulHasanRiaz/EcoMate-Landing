@@ -1,7 +1,9 @@
 import { eq } from 'drizzle-orm';
+import { updateTag } from 'next/cache';
 import { getDb } from '@/db/client';
 import { siteSettingsTable } from '@/db/schema';
 import { asObject, errorMessage, fail, logServerError, ok, optionalBoolean, optionalString } from '@/lib/json';
+import { invalidateDomains } from '@/lib/revalidate';
 
 export async function GET() {
   try {
@@ -42,6 +44,10 @@ export async function PUT(req: Request) {
       .where(eq(siteSettingsTable.id, 1))
       .returning();
     if (!updated) return fail('Settings not seeded', 404);
+    // `is_pricing_visible` lives on this row and the pricing cache reads it, so a settings
+    // edit has to invalidate pricing too — otherwise toggling pricing visibility from the
+    // "System & Branding" tab would leave the cached pricing section in the old mode.
+    invalidateDomains(['content', 'pricing'], updated.defaultLocale === 'bn' ? 'bn' : 'en');
     return ok(updated);
   } catch (e) {
     logServerError('PUT /api/settings', e);

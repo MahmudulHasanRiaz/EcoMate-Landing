@@ -19,6 +19,7 @@ import {
   parseId,
 } from '@/lib/json';
 import type { JsonObject } from '@/lib/json';
+import { invalidateDomains } from '@/lib/revalidate';
 
 const PLATFORMS = new Set<string>([
   'facebook',
@@ -87,6 +88,7 @@ export async function POST(req: Request) {
         isVisible: fields.isVisible ?? true,
       })
       .returning();
+    invalidateDomains('social');
     return ok(created, 201);
   } catch (e) {
     logServerError('POST /api/social-links', e);
@@ -125,6 +127,7 @@ export async function PUT(req: Request) {
       .where(eq(socialLinksTable.id, id))
       .returning();
     if (!updated) return fail('Social link not found', 404);
+    invalidateDomains('social');
     return ok(updated);
   } catch (e) {
     logServerError('PUT /api/social-links', e);
@@ -142,6 +145,7 @@ export async function DELETE(req: Request) {
       .where(eq(socialLinksTable.id, id))
       .returning({ id: socialLinksTable.id });
     if (!deleted) return fail('Social link not found', 404);
+    invalidateDomains('social');
     return ok({ success: true, id: deleted.id });
   } catch (e) {
     logServerError('DELETE /api/social-links', e);

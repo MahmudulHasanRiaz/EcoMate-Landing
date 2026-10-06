@@ -141,9 +141,14 @@ jobs:
       # URL + LHCI deltas on the PR. LHCI's filesystem upload writes
       # assertion-results.json; when it is absent (collect failed) the comment
       # says so instead of pretending green.
+      # `continue-on-error`: a PR comment is a notification, not a gate. It must
+      # never fail the workflow — and v4.2.0 (pinned before) crashed on Node 24
+      # with `TypeError: Cannot read properties of undefined (reading 'issues')`,
+      # so this now pins v7 (SHA below) instead.
       - name: Comment preview URL + LHCI deltas
         if: always()
-        uses: actions/github-script@10b53a9ec6c222bb4ce97aa6bd2b5f739696b536 # v4
+        continue-on-error: true
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
           script: |
             const fs = require('fs');

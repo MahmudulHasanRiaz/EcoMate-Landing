@@ -83,7 +83,10 @@ export async function verifyTurnstile(token: string, ip: string): Promise<Turnst
     return { ok: true, skipped: true };
   }
   const secret = envString('TURNSTILE_SECRET_KEY');
-  if (secret === '') return { ok: true, skipped: true };
+  if (secret === '') {
+    console.warn('[turnstile] secret not configured — widget renders but tokens cannot be verified, skipping (no bot protection active)');
+    return { ok: true, skipped: true };
+  }
 
   const candidate = token.trim();
   if (candidate === '' || candidate.length > MAX_TOKEN_LENGTH) {

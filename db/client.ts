@@ -82,7 +82,20 @@ export function getDb(): Database {
     //                  "Filling a cache during prerender timed out". Ten seconds bounds
     //                  every failure mode to fast-and-loud, so callers degrade to the
     //                  static fallback instead of hanging the build (2026-10-06).
-    client = postgres(url, { prepare: false, max: 10, connect_timeout: 10 });
+    // max_lifetime:60 + idle_timeout:20 -> pool self-healing (2026-10-08 prod).
+    //                  withTimeout rejects the WAITER after 12s, but the stuck query keeps
+    //                  holding its pool slot forever — slots accumulate until all 10 are
+    //                  zombies and every new query hangs (observed: even trivial COUNTs
+    //                  timing out). Rotating connections every minute guarantees a stuck
+    //                  slot dies and is replaced with a fresh one; idle ones are reaped
+    //                  even sooner. Hyperdrive multiplexes server-side, so churn is cheap.
+    client = postgres(url, {
+      prepare: false,
+      max: 10,
+      connect_timeout: 10,
+      idle_timeout: 20,
+      max_lifetime: 60,
+    });
     cached = drizzle(client, { schema });
     cachedUrl = url;
   }

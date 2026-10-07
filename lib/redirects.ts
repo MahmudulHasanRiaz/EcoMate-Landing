@@ -21,7 +21,7 @@ import { asc } from 'drizzle-orm';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { getDb } from '@/db/client';
 import { redirectsTable } from '@/db/schema';
-import { errorMessage } from '@/lib/json';
+import { errorMessage, logOnce } from '@/lib/json';
 
 /** Refresh window for the KV copy. Matches the content cache's `stale`. */
 const REDIRECT_TTL_SEC = 300;
@@ -91,7 +91,7 @@ async function loadRedirectTable(): Promise<ManagedRedirect[] | null> {
         }
       }
     } catch (e) {
-      console.warn('[redirects] KV read failed; falling back to the database', e);
+      logOnce('warn', 'redirects:kv-read', '[redirects] KV read failed; falling back to the database', e);
     }
   }
 
@@ -111,13 +111,13 @@ async function loadRedirectTable(): Promise<ManagedRedirect[] | null> {
         await kv.put(REDIRECT_KV_KEY, JSON.stringify(rows), { expirationTtl: REDIRECT_TTL_SEC });
       } catch (e) {
         // The database read already succeeded; a failed write only costs us the next lookup.
-        console.warn('[redirects] KV write failed', e);
+        logOnce('warn', 'redirects:kv-write', '[redirects] KV write failed', e);
       }
     }
     return rows;
   } catch (e) {
     memoryFailureUntil = now + FAILURE_MEMO_MS;
-    console.error('[redirects] table unavailable; requests will proceed un-redirected:', errorMessage(e));
+    logOnce('warn', 'redirects:table', '[redirects] table unavailable; requests will proceed un-redirected:', errorMessage(e));
     return null;
   }
 }

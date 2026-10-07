@@ -25,7 +25,7 @@ import {
   socialLinksTable,
   testimonialsTable,
 } from '@/db/schema';
-import { errorMessage } from '@/lib/json';
+import { errorMessage, logOnce } from '@/lib/json';
 import type { ContentSection } from '@/lib/merge';
 import type { Locale } from '@/src/types/landing';
 import { withTimeout } from '@/lib/withTimeout';
@@ -78,10 +78,7 @@ export async function getLandingContent(locale: Locale): Promise<ContentSection[
     // Task 20 §3 outage behaviour: serve the static copy, log server-side, never alert the
     // visitor. `isPostgresConfigured()` is deliberately not called here — it is a
     // request/binding probe, not content, and must stay out of a cached scope.
-    console.error(
-      `[content] landing content read failed for locale "${locale}", serving static fallback:`,
-      errorMessage(e),
-    );
+    logOnce('warn', 'content:landing', `[content] landing content read failed for locale "${locale}", serving static fallback:`, errorMessage(e));
     cacheLife(CONTENT_FAILURE_PROFILE);
     return null;
   }
@@ -150,7 +147,7 @@ export async function getMenu(key: MenuKey, locale: Locale): Promise<MenuItem[] 
     cacheLife(CONTENT_CACHE_PROFILE);
     return rows.length > 0 ? rows : null;
   } catch (e) {
-    console.error(`[content] menu "${key}" read failed for locale "${locale}", using hardcoded nav:`, errorMessage(e));
+    logOnce('warn', 'content:menu', `[content] menu "${key}" read failed for locale "${locale}", using hardcoded nav:`, errorMessage(e));
     cacheLife(CONTENT_FAILURE_PROFILE);
     return null;
   }
@@ -250,7 +247,7 @@ export async function getPublishedBlogPosts(): Promise<BlogPostSummary[] | null>
     cacheLife(CONTENT_CACHE_PROFILE);
     return rows.map(toBlogSummary);
   } catch (e) {
-    console.error('[content] blog index read failed, serving static sitemap only:', errorMessage(e));
+    logOnce('warn', 'content:blog-index', '[content] blog index read failed, serving static sitemap only:', errorMessage(e));
     cacheLife(CONTENT_FAILURE_PROFILE);
     return null;
   }
@@ -272,7 +269,7 @@ export async function getBlogPost(slug: string): Promise<BlogPostSummary & { con
     if (!row) return null;
     return { ...toBlogSummary(row), content: row.content };
   } catch (e) {
-    console.error(`[content] blog post "${slug}" read failed, rendering not-found:`, errorMessage(e));
+    logOnce('warn', 'content:blog-post', `[content] blog post "${slug}" read failed, rendering not-found:`, errorMessage(e));
     cacheLife(CONTENT_FAILURE_PROFILE);
     return null;
   }
@@ -348,7 +345,7 @@ export async function getPricingPlans(): Promise<{
         })),
     };
   } catch (e) {
-    console.error('[content] pricing read failed, serving static pricing copy:', errorMessage(e));
+    logOnce('warn', 'content:pricing', '[content] pricing read failed, serving static pricing copy:', errorMessage(e));
     cacheLife(CONTENT_FAILURE_PROFILE);
     return null;
   }
@@ -367,7 +364,7 @@ export async function getSocialLinks(): Promise<{ platform: string; url: string 
     cacheLife(CONTENT_CACHE_PROFILE);
     return rows.length > 0 ? rows : null;
   } catch (e) {
-    console.error('[content] social links read failed, rendering without them:', errorMessage(e));
+    logOnce('warn', 'content:social', '[content] social links read failed, rendering without them:', errorMessage(e));
     cacheLife(CONTENT_FAILURE_PROFILE);
     return null;
   }
@@ -398,7 +395,7 @@ export async function getTestimonials(): Promise<{
     cacheLife(CONTENT_CACHE_PROFILE);
     return rows.length > 0 ? rows : null;
   } catch (e) {
-    console.error('[content] testimonials read failed, serving static proof copy:', errorMessage(e));
+    logOnce('warn', 'content:testimonials', '[content] testimonials read failed, serving static proof copy:', errorMessage(e));
     cacheLife(CONTENT_FAILURE_PROFILE);
     return null;
   }
@@ -446,7 +443,7 @@ export async function getCaseStudies(): Promise<{
         }))
       : null;
   } catch (e) {
-    console.error('[content] case studies read failed, serving static sitemap only:', errorMessage(e));
+    logOnce('warn', 'content:case-studies', '[content] case studies read failed, serving static sitemap only:', errorMessage(e));
     cacheLife(CONTENT_FAILURE_PROFILE);
     return null;
   }
@@ -512,7 +509,7 @@ export async function getCaseStudy(slug: string): Promise<{
       lastModified: row.createdAt.toISOString(),
     };
   } catch (e) {
-    console.error(`[content] case study "${slug}" read failed, rendering not-found:`, errorMessage(e));
+    logOnce('warn', 'content:case-study', `[content] case study "${slug}" read failed, rendering not-found:`, errorMessage(e));
     cacheLife(CONTENT_FAILURE_PROFILE);
     return null;
   }

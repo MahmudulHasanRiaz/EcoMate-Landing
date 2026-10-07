@@ -16,6 +16,7 @@
  *   unparsable body (`lib/rateLimit.ts` documents the identical reasoning for KV).
  */
 import { envString } from '@/lib/env';
+import { logOnce } from '@/lib/json';
 
 const SITEVERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
 const MAX_TOKEN_LENGTH = 2048;
@@ -79,12 +80,12 @@ export async function verifyTurnstile(token: string, ip: string): Promise<Turnst
   // Fail open loudly instead — same direction as every other misconfiguration here.
   const siteKey = envString('NEXT_PUBLIC_TURNSTILE_SITE_KEY');
   if (siteKey === '') {
-    console.warn('[turnstile] site key not configured — widget cannot exist, skipping verification (no bot protection active)');
+    logOnce('warn', 'turnstile:no-sitekey', '[turnstile] site key not configured — widget cannot exist, skipping verification (no bot protection active)');
     return { ok: true, skipped: true };
   }
   const secret = envString('TURNSTILE_SECRET_KEY');
   if (secret === '') {
-    console.warn('[turnstile] secret not configured — widget renders but tokens cannot be verified, skipping (no bot protection active)');
+    logOnce('warn', 'turnstile:no-secret', '[turnstile] secret not configured — widget renders but tokens cannot be verified, skipping (no bot protection active)');
     return { ok: true, skipped: true };
   }
 

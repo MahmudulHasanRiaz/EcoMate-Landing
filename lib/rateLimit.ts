@@ -20,6 +20,7 @@
  *   fail-closed branch, because it is the deliberate security outcome.
  */
 import { getCloudflareContext } from '@opennextjs/cloudflare';
+import { logOnce } from '@/lib/json';
 
 /** KV keys allow more than this, but a bounded key keeps a hostile `key` from surprising us. */
 const MAX_KEY_LENGTH = 200;
@@ -60,7 +61,7 @@ export async function hitLimit(key: string, limit: number, windowSec: number): P
     return count > limit;
   } catch (error) {
     // Fail open — see the file header. Never let a KV outage break a public form.
-    console.warn('[rateLimit] KV unavailable; allowing request', error);
+    logOnce('warn', 'ratelimit:kv', '[rateLimit] KV unavailable; allowing request', error);
     return false;
   }
 }

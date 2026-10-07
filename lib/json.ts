@@ -73,6 +73,28 @@ export function logServerError(scope: string, e: unknown, requestId?: string): v
 }
 
 /**
+ * Deduplicated warning for handled fallbacks (empty DB, missing binding, skipped
+ * verification). These fire on EVERY request while the underlying condition persists —
+ * without dedup, one outage produces thousands of identical log events and burns the
+ * free-plan ingest quota with zero new information. First occurrence logs immediately;
+ * repeats are suppressed for 5 minutes per key. Genuine per-request failures
+ * (validation, auth, dispatch errors, 500s) must keep using direct console/logServerError.
+ */
+const loggedKeys = new Map<string, number>();
+const LOG_ONCE_TTL_MS = 5 * 60 * 1000;
+const LOG_ONCE_MAX_KEYS = 200;
+
+export function logOnce(level: 'warn' | 'error', key: string, ...args: unknown[]): void {
+  const now = Date.now();
+  const last = loggedKeys.get(key);
+  if (last !== undefined && now - last < LOG_ONCE_TTL_MS) return;
+  if (loggedKeys.size >= LOG_ONCE_MAX_KEYS) loggedKeys.clear();
+  loggedKeys.set(key, now);
+  if (level === 'warn') console.warn(...args);
+  else console.error(...args);
+}
+
+/**
  * The machine-readable error code from a driver, walking the `cause` chain the way
  * `isUniqueViolation` does. Empty string when there is none.
  */

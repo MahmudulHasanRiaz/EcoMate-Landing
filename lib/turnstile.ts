@@ -73,6 +73,15 @@ function readErrorCodes(record: { 'error-codes'?: unknown }): string[] {
 }
 
 export async function verifyTurnstile(token: string, ip: string): Promise<TurnstileVerdict> {
+  // The widget (public site key) and the verifier (secret) are a pair: without a rendered
+  // widget no legitimate visitor can possess a token, so demanding one would reject 100%
+  // of submissions over an operator half-configuration (secret set, site key missing).
+  // Fail open loudly instead — same direction as every other misconfiguration here.
+  const siteKey = envString('NEXT_PUBLIC_TURNSTILE_SITE_KEY');
+  if (siteKey === '') {
+    console.warn('[turnstile] site key not configured — widget cannot exist, skipping verification (no bot protection active)');
+    return { ok: true, skipped: true };
+  }
   const secret = envString('TURNSTILE_SECRET_KEY');
   if (secret === '') return { ok: true, skipped: true };
 

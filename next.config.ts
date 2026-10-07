@@ -8,21 +8,12 @@ const exposeTestingApi = process.env.EXPOSE_TESTING_API === '1';
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  // Next 16: replaces the old `experimental.ppr`. Enables Partial Prerendering so the
-  // marketing page ships static shell + cached content, with only genuinely fresh parts
-  // (consent state, locale) rendering per request.
-  //
-  // REQUIREMENT: with this on, `next build` prerenders the shell and runs every
-  // `'use cache'` function at BUILD time, where there is no request and therefore no
-  // Hyperdrive binding. `db/client.ts` (Task 3) handles that with a `DIRECT_URL`
-  // fallback, and CI must expose `DIRECT_URL` to the build step (Task 8).
-  cacheComponents: true,
-  // Task 24: Partial Prefetching (Next >= 16.3). Default links warm the shared
-  // App Shell (provider + `[locale]` layout); `prefetch={true}` additionally
-  // resolves cached URL-specific content. No per-route `prefetch = 'partial'`
-  // exports remain — the audit found zero `prefetch={true}` links, so there
-  // was nothing to adopt incrementally and the flag lands directly.
-  partialPrefetching: true,
+  // Cache Components + Partial Prefetching are OFF (2026-10-07): with no incremental-cache
+  // backend configured, opennext falls back to a "Dummy" cache whose `.set()` THROWS
+  // ("Dummy cache does not cache anything") inside page renders on Workers — every page
+  // 500'd or hung while APIs and static files worked. Dynamic render per request until
+  // the cache backend exists; re-enable per docs/CACHE.md (needs R2/DO tag-cache bindings
+  // proven on preview first, then flip this flag and restore the directives).
   experimental: {
     exposeTestingApiInProductionBuild: exposeTestingApi,
   },

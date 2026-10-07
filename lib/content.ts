@@ -11,7 +11,6 @@
  * fails the whole prerender, which would take the marketing page down with the database.
  * It returns `null` instead and the page renders the static `landingContent` fallback.
  */
-import { cacheLife, cacheTag } from 'next/cache';
 import { and, asc, desc, eq, isNull } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import {
@@ -30,35 +29,20 @@ import type { ContentSection } from '@/lib/merge';
 import type { Locale } from '@/src/types/landing';
 import { withTimeout } from '@/lib/withTimeout';
 
-/** 5 min stale / 1 h revalidate / 1 day expire — content edits are rare, visitors are not. */
+/**
+ * Cache profiles preserved for re-enabling Cache Components later (see docs/CACHE.md):
+ * - standard: 5 min stale / 1 h revalidate / 1 day expire
+ * - long (single bodies): 1 h stale / 1 d revalidate / 7 d expire
+ * - failure path: 30 s stale (non-zero — a zero window cannot satisfy a prerender)
+ * Currently unused: with no incremental-cache backend, opennext falls back to a Dummy
+ * cache whose `.set()` throws inside page renders, so every read here is uncached and
+ * dynamic until the backend exists.
+ */
 const CONTENT_CACHE_PROFILE = { stale: 300, revalidate: 3600, expire: 86400 } as const;
-
-/**
- * Longer profile for single-body reads (blog post / case study).
- *
- * The index lists change on every publish; a body changes only when that one document is
- * edited. Holding bodies 1 h stale / 1 d revalidate / 7 d expire keeps article pages fast
- * without delaying the index, which stays on the shorter profile above. Invalidation is
- * still per-domain (`blog`, `casestudies:${slug}`), so an edit appears immediately via
- * `updateTag` regardless of the longer lifetime.
- */
 const CONTENT_LONG_PROFILE = { stale: 3600, revalidate: 86400, expire: 604800 } as const;
-
-/**
- * Short profile for the failure path, so a transient outage is not cached for an hour.
- *
- * `stale` must be non-zero. A zero stale window makes the entry immediately stale, and a
- * stale entry cannot satisfy a prerender — so Next rejected every failure-path read with
- * `Route "/": Next.js encountered uncached or runtime data during prerendering` and the
- * **build failed whenever the database was unreachable**. Thirty seconds is the smallest
- * window that keeps the entry prerenderable while still refusing to memoise an outage for
- * any real length of time.
- */
 const CONTENT_FAILURE_PROFILE = { stale: 30, revalidate: 60, expire: 300 } as const;
 
 export async function getLandingContent(locale: Locale): Promise<ContentSection[] | null> {
-  'use cache';
-  cacheTag(`content:${locale}`);
   try {
     const rows = await withTimeout(getDb()
       .select({
@@ -72,14 +56,12 @@ export async function getLandingContent(locale: Locale): Promise<ContentSection[
         isNull(landingContentTable.deletedAt),
       ))
       .orderBy(asc(landingContentTable.sectionKey)), 'getLandingContent');
-    cacheLife(CONTENT_CACHE_PROFILE);
     return rows;
   } catch (e) {
     // Task 20 §3 outage behaviour: serve the static copy, log server-side, never alert the
     // visitor. `isPostgresConfigured()` is deliberately not called here — it is a
     // request/binding probe, not content, and must stay out of a cached scope.
     logOnce('warn', 'content:landing', `[content] landing content read failed for locale "${locale}", serving static fallback:`, errorMessage(e));
-    cacheLife(CONTENT_FAILURE_PROFILE);
     return null;
   }
 }
@@ -114,8 +96,6 @@ export type MenuKey = 'main' | 'footer';
  * duplicate entry in the nav bar.
  */
 export async function getMenu(key: MenuKey, locale: Locale): Promise<MenuItem[] | null> {
-  'use cache';
-  cacheTag(`menus:${key}:${locale}`);
   try {
     // Two queries rather than one `innerJoin`. The join is the more obvious shape, and it was
     // written that way first — but a `'use cache'` scope that assembles a join is not
@@ -129,7 +109,6 @@ export async function getMenu(key: MenuKey, locale: Locale): Promise<MenuItem[] 
       .where(and(eq(menusTable.key, key), eq(menusTable.locale, locale)))
       .limit(1);
     if (!menu) {
-      cacheLife(CONTENT_CACHE_PROFILE);
       return null;
     }
 
@@ -144,11 +123,9 @@ export async function getMenu(key: MenuKey, locale: Locale): Promise<MenuItem[] 
       // `sortOrder` then `id` so two items sharing an order keep a stable relative position
       // across reads; otherwise the nav reshuffles on every save.
       .orderBy(asc(menuItemsTable.sortOrder), asc(menuItemsTable.id));
-    cacheLife(CONTENT_CACHE_PROFILE);
     return rows.length > 0 ? rows : null;
   } catch (e) {
     logOnce('warn', 'content:menu', `[content] menu "${key}" read failed for locale "${locale}", using hardcoded nav:`, errorMessage(e));
-    cacheLife(CONTENT_FAILURE_PROFILE);
     return null;
   }
 }
@@ -236,28 +213,21 @@ function toBlogSummary(row: {
  * reason.
  */
 export async function getPublishedBlogPosts(): Promise<BlogPostSummary[] | null> {
-  'use cache';
-  cacheTag('blog');
   try {
     const rows = await withTimeout(getDb()
       .select(BLOG_SELECT)
       .from(blogPostsTable)
       .where(BLOG_PUBLIC)
       .orderBy(desc(blogPostsTable.publishedAt), desc(blogPostsTable.updatedAt)), 'getPublishedBlogPosts');
-    cacheLife(CONTENT_CACHE_PROFILE);
     return rows.map(toBlogSummary);
   } catch (e) {
     logOnce('warn', 'content:blog-index', '[content] blog index read failed, serving static sitemap only:', errorMessage(e));
-    cacheLife(CONTENT_FAILURE_PROFILE);
     return null;
   }
 }
 
 /** One published post by slug, with its body. `null` when absent, draft or soft-deleted. */
 export async function getBlogPost(slug: string): Promise<BlogPostSummary & { content: string } | null> {
-  'use cache';
-  cacheTag('blog');
-  cacheTag(`blog:${slug}`);
   try {
     const [row] = await withTimeout(getDb()
       .select({ ...BLOG_SELECT, content: blogPostsTable.content })
@@ -265,12 +235,10 @@ export async function getBlogPost(slug: string): Promise<BlogPostSummary & { con
       .where(and(eq(blogPostsTable.slug, slug), BLOG_PUBLIC))
       .limit(1), 'getBlogPost');
     // Body uses the long profile: a single document changes rarely, the index stays short.
-    cacheLife(CONTENT_LONG_PROFILE);
     if (!row) return null;
     return { ...toBlogSummary(row), content: row.content };
   } catch (e) {
     logOnce('warn', 'content:blog-post', `[content] blog post "${slug}" read failed, rendering not-found:`, errorMessage(e));
-    cacheLife(CONTENT_FAILURE_PROFILE);
     return null;
   }
 }
@@ -293,8 +261,6 @@ export async function getPricingPlans(): Promise<{
     popular: boolean;
   }[];
 } | null> {
-  'use cache';
-  cacheTag('pricing');
   try {
     const rows = await withTimeout(getDb()
       .select({
@@ -324,7 +290,6 @@ export async function getPricingPlans(): Promise<{
       .from(siteSettingsTable)
       .limit(1), 'getPricingPlans');
 
-    cacheLife(CONTENT_CACHE_PROFILE);
     return {
       isPricingVisible: settings?.isPricingVisible ?? true,
       plans: rows
@@ -346,26 +311,21 @@ export async function getPricingPlans(): Promise<{
     };
   } catch (e) {
     logOnce('warn', 'content:pricing', '[content] pricing read failed, serving static pricing copy:', errorMessage(e));
-    cacheLife(CONTENT_FAILURE_PROFILE);
     return null;
   }
 }
 
 /** Visible social links in display order. `null` when none are configured. */
 export async function getSocialLinks(): Promise<{ platform: string; url: string }[] | null> {
-  'use cache';
-  cacheTag('social');
   try {
     const rows = await withTimeout(getDb()
       .select({ platform: socialLinksTable.platform, url: socialLinksTable.url })
       .from(socialLinksTable)
       .where(eq(socialLinksTable.isVisible, true))
       .orderBy(asc(socialLinksTable.sortOrder), asc(socialLinksTable.platform)), 'getSocialLinks');
-    cacheLife(CONTENT_CACHE_PROFILE);
     return rows.length > 0 ? rows : null;
   } catch (e) {
     logOnce('warn', 'content:social', '[content] social links read failed, rendering without them:', errorMessage(e));
-    cacheLife(CONTENT_FAILURE_PROFILE);
     return null;
   }
 }
@@ -378,8 +338,6 @@ export async function getTestimonials(): Promise<{
   quoteBn: string;
   metrics: unknown;
 }[] | null> {
-  'use cache';
-  cacheTag('testimonials');
   try {
     const rows = await withTimeout(getDb()
       .select({
@@ -392,11 +350,9 @@ export async function getTestimonials(): Promise<{
       .from(testimonialsTable)
       .where(and(eq(testimonialsTable.isPublished, true), isNull(testimonialsTable.deletedAt)))
       .orderBy(asc(testimonialsTable.sortOrder), asc(testimonialsTable.id)), 'getTestimonials');
-    cacheLife(CONTENT_CACHE_PROFILE);
     return rows.length > 0 ? rows : null;
   } catch (e) {
     logOnce('warn', 'content:testimonials', '[content] testimonials read failed, serving static proof copy:', errorMessage(e));
-    cacheLife(CONTENT_FAILURE_PROFILE);
     return null;
   }
 }
@@ -416,8 +372,6 @@ export async function getCaseStudies(): Promise<{
    */
   lastModified: string;
 }[] | null> {
-  'use cache';
-  cacheTag('casestudies');
   try {
     const rows = await withTimeout(getDb()
       .select({
@@ -431,7 +385,6 @@ export async function getCaseStudies(): Promise<{
       .from(caseStudiesTable)
       .where(eq(caseStudiesTable.isPublished, true))
       .orderBy(desc(caseStudiesTable.createdAt)), 'getCaseStudies');
-    cacheLife(CONTENT_CACHE_PROFILE);
     return rows.length > 0
       ? rows.map((row) => ({
           slug: row.slug,
@@ -444,7 +397,6 @@ export async function getCaseStudies(): Promise<{
       : null;
   } catch (e) {
     logOnce('warn', 'content:case-studies', '[content] case studies read failed, serving static sitemap only:', errorMessage(e));
-    cacheLife(CONTENT_FAILURE_PROFILE);
     return null;
   }
 }
@@ -469,9 +421,6 @@ export async function getCaseStudy(slug: string): Promise<{
   seoDescription: string;
   lastModified: string;
 } | null> {
-  'use cache';
-  cacheTag('casestudies');
-  cacheTag(`casestudies:${slug}`);
   try {
     const [row] = await withTimeout(getDb()
       .select({
@@ -492,7 +441,6 @@ export async function getCaseStudy(slug: string): Promise<{
       .where(and(eq(caseStudiesTable.slug, slug), eq(caseStudiesTable.isPublished, true)))
       .limit(1), 'getCaseStudy');
     // Body uses the long profile, same reasoning as `getBlogPost`: one document, rare edits.
-    cacheLife(CONTENT_LONG_PROFILE);
     if (!row) return null;
     return {
       slug: row.slug,
@@ -510,7 +458,6 @@ export async function getCaseStudy(slug: string): Promise<{
     };
   } catch (e) {
     logOnce('warn', 'content:case-study', `[content] case study "${slug}" read failed, rendering not-found:`, errorMessage(e));
-    cacheLife(CONTENT_FAILURE_PROFILE);
     return null;
   }
 }

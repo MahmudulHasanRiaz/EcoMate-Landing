@@ -71,22 +71,13 @@ AUTH_TRUST_HOST = "true"
 RETENTION_DAYS = "180"
 
 # ---------------------------------------------------------------------------
-# Scheduled triggers
+# Scheduled triggers — REMOVED 2026-10-07. The Worker exports no `scheduled()`
+# handler, so every cron tick errored ("Handler does not export a scheduled()
+# function") while the actual jobs (`/api/cron/retention`, `/api/cron/publish`)
+# never ran. Both jobs now fire via `.github/workflows/cron.yml`, which calls
+# the same HTTP routes with CRON_SECRET from GitHub Secrets — same auth, same
+# code path, observable in Actions instead of silently erroring in dashboard.
 # ---------------------------------------------------------------------------
-# 03:17 UTC daily, deliberately off the :00 stampede every other tenant hits — a retention job
-# that starts scanning at exactly 03:00 competes with everyone else's backups for the same
-# Postgres connections.
-#
-# Cloudflare Cron Triggers call the Worker URL with a plain GET and cannot attach a header, so
-# the route accepts the secret as an `x-cron-secret` header or a `?secret=` parameter, and it
-# FAILS CLOSED when CRON_SECRET is unset. See the route header before trusting that this fires.
-[triggers]
-# - 03:17 UTC daily: lead-PII retention sweep (`/api/cron/retention`), deliberately off the
-#   :00 stampede.
-# - Every 15 minutes: scheduled publishing (`/api/cron/publish`, Task 19 §6) — a marketing
-#   team scheduling a post for 10:00 expects it live at 10:00, not at tomorrow's 03:17, and
-#   the job is one indexed scan that no-ops when nothing is due.
-crons = ["17 3 * * *", "*/15 * * * *"]
 
 # ---------------------------------------------------------------------------
 # Environments (Task 21 §1). The top-level bindings above are LOCAL DEV ONLY.
@@ -143,10 +134,9 @@ RETENTION_DAYS = "180"
 [env.production.observability]
 enabled = true
 
-# Production owns the crons. The retention sweep and the publish scheduler
-# must fire exactly once per tick — against the prod database, not preview's.
-[env.production.triggers]
-crons = ["17 3 * * *", "*/15 * * * *"]
+# No [env.production.triggers]: cron jobs run via .github/workflows/cron.yml
+# (HTTP calls with CRON_SECRET), not Cloudflare scheduled events — the Worker
+# exports no scheduled() handler, and triggers without one only produce errors.
 
 # --- preview (per-PR) ------------------------------------------------------
 [[env.preview.hyperdrive]]

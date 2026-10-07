@@ -1,0 +1,57 @@
+# Scheduled jobs via HTTP (not Cloudflare Cron Triggers).
+#
+# The Worker exports no `scheduled()` handler, so `[triggers]` in wrangler.toml only
+# produced "Handler does not export a scheduled() function" errors while the jobs
+# themselves never ran. These three jobs are plain HTTP routes guarded by CRON_SECRET,
+# so GitHub's scheduler calls them directly — same auth, same code path, with a
+# visible run history per tick instead of silent dashboard errors.
+#
+# - retention: daily 03:17 UTC (off the :00 stampede), lead-PII anonymisation.
+# - publish: every 15 min, scheduled blog posts going live on time.
+# - dispatch-drain: every 15 min alongside publish, retrying failed lead dispatches
+#   with backoff (a drain that never runs is how failed dispatches go stale).
+#
+# Manual trigger only otherwise: workflow_dispatch for on-demand runs.
+# Required secret: CRON_SECRET (same value the Worker holds — mismatch is a 401,
+# which is the correct fail-closed direction). SITE_URL override lets staging
+# target a non-production host if ever needed.
+name: Scheduled jobs (cron via HTTP)
+
+on:
+  schedule:
+    - cron: '17 3 * * *'
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cron-jobs
+  cancel-in-progress: false
+
+jobs:
+  fire:
+    name: Fire scheduled endpoints
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call retention + publish + dispatch-drain
+        run: |
+          BASE="https://ecomate.bd"
+          if [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error::CRON_SECRET is not set — refusing to call authenticated cron endpoints without it."
+            exit 1
+          fi
+          for route in api/cron/retention api/cron/publish api/cron/dispatch-drain; do
+            code=$(curl -s -o /tmp/cron-out.json -w "%{http_code}" --max-time 120 \
+              -H "x-cron-secret: $CRON_SECRET" "$BASE/$route")
+            echo "POST $route -> HTTP $code"
+            head -c 300 /tmp/cron-out.json; echo
+            case "$code" in
+              200|201|204) ;;
+              *) echo "::error::$route returned HTTP $code (expected 2xx). See body above."; exit 1 ;;
+            esac
+          done
+          echo "All scheduled endpoints acknowledged."
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}

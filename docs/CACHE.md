@@ -1,6 +1,21 @@
-# Cache map — Cache Components (`cacheComponents: true`)
+# Cache map — DISABLED 2026-10-07 (Cache Components off)
 
-One caching boundary: **`lib/content.ts`** is the only module that contains `'use cache'`.
+> **Status: caching is off.** `cacheComponents` was removed from `next.config.ts`
+> because opennext on Workers has no incremental-cache backend configured, so it
+> falls back to a "Dummy" cache whose `.set()` **throws** (`"Dummy" cache does not
+> cache anything`) inside page renders — every page 500'd or hung while APIs and
+> static files worked. Every read in `lib/content.ts` is therefore uncached and
+> dynamic; `lib/revalidate.ts` functions are no-ops keeping their signatures.
+>
+> **Re-enable path** (only after proving on preview): provision an R2 bucket +
+> Durable-Object tag cache for opennext, confirm a page renders against it, then
+> restore `cacheComponents: true` + `partialPrefetching: true` in `next.config.ts`,
+> the `'use cache'` / `cacheTag` / `cacheLife` directives below, and the bodies in
+> `lib/revalidate.ts`. The tag table below is preserved verbatim as the design to
+> restore — it was verified correct, only the backend was missing.
+
+Original design (preserved for re-enabling) — one caching boundary:
+**`lib/content.ts`** was the only module containing `'use cache'`.
 One invalidation boundary: **`lib/revalidate.ts`** is the only module that calls
 `updateTag` / `revalidateTag` (plus `app/api/menus/route.ts` before Task 22, now
 centralised — see below). If you add a cached read anywhere else, you have broken this

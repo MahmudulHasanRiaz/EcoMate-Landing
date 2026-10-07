@@ -257,8 +257,11 @@ jobs:
           # wrangler prints bordered tables (│ ─ ┌...), so column-position parsing
           # captures border glyphs instead of the id (shipped a literal '│' once).
           # Hyperdrive ids are UUIDs: match the name's line, extract the UUID.
+          # NOTE: `list` stderr is NOT suppressed: if list itself fails (auth, API
+          # outage), we must see it, not silently fall through to create (which then
+          # fails confusingly with 2017 "already exists" when the config is really there).
           get_id() {
-            npx wrangler hyperdrive list 2>/dev/null \
+            npx wrangler hyperdrive list 2>&1 \
               | grep -F "$HD_NAME" \
               | grep -oE "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}" \
               | head -1
@@ -272,6 +275,16 @@ jobs:
           if [ -z "$HD_ID" ]; then
             echo "Hyperdrive '$HD_NAME' not found — creating it from DIRECT_URL..."
             HD_OUT="$(npx wrangler hyperdrive create "$HD_NAME" --connection-string="$DIRECT_URL" 2>&1)" && HD_OK=1 || HD_OK=0
+            if [ "$HD_OK" != "1" ] && echo "$HD_OUT" | grep -qiE "already exists|2017"; then
+              echo "Create says it already exists but list missed it — dumping list for diagnosis:"
+              npx wrangler hyperdrive list 2>&1 | head -20
+              echo "Retrying id resolution..."
+              HD_ID="$(get_id)"
+              if [ -n "$HD_ID" ]; then
+                echo "Recovered id for existing '$HD_NAME' — continuing to sync."
+                HD_OK=1
+              fi
+            fi
             if [ "$HD_OK" != "1" ]; then
               echo "$HD_OUT" | grep -qiE "authenticat|10000|permission" && auth_hint
               echo "--- full wrangler output (no secrets: wrangler never echoes the URL) ---"

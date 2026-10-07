@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { hashPassword, verifyPassword } from '@/lib/password';
 
-// PBKDF2 at 600k iterations costs ~0.3-1s per derive; each `it` below performs at
-// most two derives so the default 5s timeout is never close.
+// PBKDF2 at the Workers-maximum 100k iterations costs ~0.1-0.3s per derive; each `it`
+// below performs at most two derives so the default 5s timeout is never close.
 describe('password hashing (lib/password.ts)', () => {
   it('hash-then-verify roundtrip accepts the correct password', async () => {
     const stored = await hashPassword('correct-horse-battery-staple-99');
-    expect(stored.startsWith('pbkdf2$600000$')).toBe(true);
+    expect(stored.startsWith('pbkdf2$100000$')).toBe(true);
     expect(await verifyPassword('correct-horse-battery-staple-99', stored)).toBe(true);
   });
 
@@ -17,7 +17,7 @@ describe('password hashing (lib/password.ts)', () => {
 
   it('rejects tampered iterations without hashing (out-of-range guard)', async () => {
     const stored = await hashPassword('correct-horse-battery-staple-99');
-    const tampered = stored.replace('$600000$', '$10$');
+    const tampered = stored.replace('$100000$', '$10$');
     expect(tampered).not.toBe(stored);
     expect(await verifyPassword('correct-horse-battery-staple-99', tampered)).toBe(false);
   });

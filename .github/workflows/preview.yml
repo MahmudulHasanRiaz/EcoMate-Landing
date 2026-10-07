@@ -148,6 +148,42 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
+      # Idempotent Hyperdrive ensure + sync for `ecomate-db-preview`, same contract
+      # as deploy.yml: create from PREVIEW_DIRECT_URL when missing, update it on
+      # every run so the tunnel always equals the secret, inject the id into the
+      # runner's wrangler.toml (placeholder stays committed). Skips cleanly with a
+      # clear message when PREVIEW_DIRECT_URL is unset (preview infra is opt-in;
+      # the migrate step below already requires the same secret).
+      - name: Ensure preview Hyperdrive config (idempotent)
+        run: |
+          HD_NAME="ecomate-db-preview"
+          if [ -z "${DIRECT_URL:-}" ]; then
+            echo "::error::PREVIEW_DIRECT_URL is not set — cannot create/sync Hyperdrive '$HD_NAME'. Set the GitHub Secret PREVIEW_DIRECT_URL (preview database, direct port-5432 URL) to enable preview deploys."
+            exit 1
+          fi
+          get_id() {
+            npx wrangler hyperdrive list 2>/dev/null | awk -v n="$HD_NAME" '{ for (i = 1; i <= NF; i++) if ($i == n) { print $1; exit } }'
+          }
+          HD_ID="$(get_id)"
+          if [ -z "$HD_ID" ]; then
+            echo "Hyperdrive '$HD_NAME' not found — creating it from PREVIEW_DIRECT_URL..."
+            npx wrangler hyperdrive create "$HD_NAME" --connection-string="$DIRECT_URL"
+            HD_ID="$(get_id)"
+          else
+            echo "Hyperdrive '$HD_NAME' exists — syncing its connection string..."
+            npx wrangler hyperdrive update "$HD_ID" --connection-string="$DIRECT_URL"
+          fi
+          if [ -z "$HD_ID" ]; then
+            echo "::error::Could not resolve a Hyperdrive id for '$HD_NAME' after create/update."
+            exit 1
+          fi
+          sed -i "s/PASTE_PREVIEW_HYPERDRIVE_ID/$HD_ID/" wrangler.toml
+          echo "Hyperdrive '$HD_NAME' ready and bound for deploy."
+        env:
+          DIRECT_URL: ${{ secrets.PREVIEW_DIRECT_URL }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
       # `--env preview` selects [env.preview.*] in wrangler.toml. Deploying a
       # PR without it would fall back to the top-level dev bindings.
       - name: Deploy preview via opennext

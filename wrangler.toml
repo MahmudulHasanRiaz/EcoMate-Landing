@@ -37,12 +37,11 @@ localConnectionString = "postgresql://postgres.<ref>@aws-0-ap-south-1.pooler.sup
 binding = "R2_BUCKET"
 bucket_name = "ecomate-media"
 
-# KV namespace for rate-limit counters (Task 14 lib/rateLimit.ts). Create with:
-#   npx wrangler kv namespace create RATE_LIMIT_KV
-#   npx wrangler kv namespace create RATE_LIMIT_KV --preview  # preview counters stay separate
-[[kv_namespaces]]
-binding = "RATE_LIMIT_KV"
-id = "PASTE_KV_ID" # from: npx wrangler kv namespace create RATE_LIMIT_KV
+# No KV namespace by decision: rate limiting runs on Cloudflare WAF rate rules
+# (dashboard, first layer) plus the per-isolate in-memory backstop. lib/rateLimit.ts
+# and /api/ready degrade gracefully when RATE_LIMIT_KV is unbound (fail-open by
+# design), so removing this block changes no code path. Re-add a [[kv_namespaces]]
+# block here any time to get distributed counters back with zero code change.
 
 [vars]
 NEXT_PUBLIC_SITE_URL = "https://dev.ecomate.bd"
@@ -108,9 +107,13 @@ crons = ["17 3 * * *", "*/15 * * * *"]
 # --- production ------------------------------------------------------------
 [[env.production.hyperdrive]]
 binding = "HYPERDRIVE"
-# Create with:
-#   npx wrangler hyperdrive create ecomate-db-prod --connection-string="postgresql://postgres:PASSWORD@db.REF.supabase.co:6543/postgres?pgbouncer=true"
-# then replace the placeholder with the id it prints.
+# The id below is INJECTED BY CI at deploy time (deploy.yml "Ensure Hyperdrive
+# config" step): it ensures a config named `ecomate-db-prod` exists (creating it
+# from the DIRECT_URL secret when missing), syncs its connection string to that
+# same secret on every deploy, and patches the real id into this file in the
+# runner workspace. The placeholder stays committed so no Hyperdrive id ever
+# lives in git. Hyperdrive is a tunnel to YOUR Postgres (Supabase now, any
+# Postgres later) — not a Cloudflare database; your data never leaves it.
 id = "PASTE_PROD_HYPERDRIVE_ID"
 
 [[env.production.r2_buckets]]
@@ -119,11 +122,6 @@ binding = "R2_BUCKET"
 # then attach the public custom domain the app expects:
 #   npx wrangler r2 bucket domain ecomate-media-prod --custom-domain media.ecomate.app
 bucket_name = "ecomate-media-prod"
-
-[[env.production.kv_namespaces]]
-binding = "RATE_LIMIT_KV"
-# Create with: npx wrangler kv namespace create RATE_LIMIT_KV-prod
-id = "PASTE_PROD_KV_ID"
 
 [env.production.vars]
 NEXT_PUBLIC_SITE_URL = "https://dev.ecomate.bd"
@@ -151,20 +149,14 @@ crons = ["17 3 * * *", "*/15 * * * *"]
 # --- preview (per-PR) ------------------------------------------------------
 [[env.preview.hyperdrive]]
 binding = "HYPERDRIVE"
-# Create with:
-#   npx wrangler hyperdrive create ecomate-db-preview --connection-string="postgresql://postgres:PASSWORD@db.PREVIEW_REF.supabase.co:6543/postgres?pgbouncer=true"
-# then replace the placeholder with the id it prints.
+# Same CI injection as production (preview.yml step): ensures `ecomate-db-preview`,
+# syncs it to PREVIEW_DIRECT_URL, patches the id at deploy time. Placeholder stays.
 id = "PASTE_PREVIEW_HYPERDRIVE_ID"
 
 [[env.preview.r2_buckets]]
 binding = "R2_BUCKET"
 # Create with: npx wrangler r2 bucket create ecomate-media-preview
 bucket_name = "ecomate-media-preview"
-
-[[env.preview.kv_namespaces]]
-binding = "RATE_LIMIT_KV"
-# Create with: npx wrangler kv namespace create RATE_LIMIT_KV-preview
-id = "PASTE_PREVIEW_KV_ID"
 
 [env.preview.vars]
 # Replace with the real preview hostname once the preview worker has one

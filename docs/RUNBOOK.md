@@ -44,9 +44,11 @@ mean **the workflow cannot currently complete**. See §9.
 NODE_OPTIONS="--max-old-space-size=2048" npm run deploy
 ```
 
-⚠️ **UNVERIFIED** — no live deploy has been performed from this machine. `wrangler.toml` still
-contains placeholder binding ids (`PASTE_HYPERDRIVE_ID_FROM_STEP_1`, `PASTE_KV_ID`); a deploy
-against those will fail or attach the wrong resources.
+`wrangler.toml` keeps `PASTE_*_HYPERDRIVE_ID` placeholders **by design**: CI injects
+the real ids at deploy time (deploy.yml / preview.yml "Ensure Hyperdrive config"
+steps — ensure by name, sync URL to the secret, patch the runner copy). No Hyperdrive
+id ever lives in git. There is intentionally no KV binding (rate limiting runs on
+WAF rules + in-memory backstop; see §13.3).
 
 ### 1.3 Command discipline
 
@@ -230,11 +232,12 @@ Already enforced **in code**, independent of the WAF:
 
 ```bash
 npx wrangler kv namespace list
-npx wrangler kv namespace create RATE_LIMIT_KV          # production
-npx wrangler kv namespace create RATE_LIMIT_KV --preview
 ```
 
-Then update `id` in `wrangler.toml` and redeploy.
+KV was removed from `wrangler.toml` by operator decision (R2 is the storage;
+rate limiting runs on WAF rules + in-memory backstop). No `kv namespace create`
+is needed. Re-adding a `[[kv_namespaces]]` block any time restores distributed
+counters with zero code change.
 
 **Blast radius:** `lib/rateLimit.ts` **fails open** — an absent binding or a KV error allows the
 request, logged as a warning. Losing KV therefore degrades rate limiting to the per-isolate
@@ -367,8 +370,11 @@ Ordered by how likely they are to bite during an incident.
 
 4. **PITR not confirmed enabled.** ⚠️ See §7.2.
 
-5. **Binding ids in `wrangler.toml` are placeholders.** ⚠️
-   `PASTE_HYPERDRIVE_ID_FROM_STEP_1`, `PASTE_KV_ID`. No deploy can succeed until these are real.
+5. **Binding ids in `wrangler.toml` are placeholders — by design.** ⚠️
+   CI injects the real Hyperdrive ids at deploy time (ensure-by-name + sync to the
+   secret); KV was removed deliberately (see above). If a deploy ever reports a
+   `PASTE_*` id literally, the inject step was skipped or failed — fix that step,
+   not the committed file.
 
 6. **Incident contacts are empty.** 🚧 §8.
 
@@ -469,10 +475,10 @@ test; expect it to fail until §13.2 is done.
 
 | Binding | Dev (top-level) | `[env.preview]` | `[env.production]` |
 | --- | --- | --- | --- |
-| Hyperdrive (`HYPERDRIVE`) | `PASTE_HYPERDRIVE_ID_FROM_STEP_1` | `PASTE_PREVIEW_HYPERDRIVE_ID` | `PASTE_PROD_HYPERDRIVE_ID` |
+| Hyperdrive (`HYPERDRIVE`) | placeholder (local emulation only) | `PASTE_PREVIEW_HYPERDRIVE_ID` → CI-injected `ecomate-db-preview` id | `PASTE_PROD_HYPERDRIVE_ID` → CI-injected `ecomate-db-prod` id |
 | R2 (`R2_BUCKET`) | `ecomate-media` | `ecomate-media-preview` | `ecomate-media-prod` |
-| KV (`RATE_LIMIT_KV`) | `PASTE_KV_ID` | `PASTE_PREVIEW_KV_ID` | `PASTE_PROD_KV_ID` |
-| Site URL | `https://ecomate.app` | `https://preview.ecomate.app` (replace with the real hostname) | `https://ecomate.app` |
+| KV (`RATE_LIMIT_KV`) | — removed by decision — | — | — |
+| Site URL | `https://dev.ecomate.bd` | `https://preview.ecomate.app` (replace with the real hostname) | `https://dev.ecomate.bd` |
 | Crons | yes (top-level) | **none — deliberate** (§13.3) | yes (`[env.production.triggers]`) |
 | Workers Logs | — | — | `observability.enabled = true` |
 
@@ -482,13 +488,14 @@ Run once per resource; each command prints the id to paste over the matching
 `PASTE_*` placeholder in `wrangler.toml`:
 
 ```bash
-npx wrangler hyperdrive create ecomate-db-prod --connection-string="postgresql://postgres:PASSWORD@db.REF.supabase.co:6543/postgres?pgbouncer=true"
-npx wrangler hyperdrive create ecomate-db-preview --connection-string="postgresql://postgres:PASSWORD@db.PREVIEW_REF.supabase.co:6543/postgres?pgbouncer=true"
+# Hyperdrive + R2 are CI-managed (deploy.yml / preview.yml ensure steps): nothing
+# below needs to run by hand unless CI is unavailable. Manual equivalents:
+npx wrangler hyperdrive create ecomate-db-prod --connection-string="$DIRECT_URL"
+npx wrangler hyperdrive create ecomate-db-preview --connection-string="$PREVIEW_DIRECT_URL"
 npx wrangler r2 bucket create ecomate-media-prod
 npx wrangler r2 bucket create ecomate-media-preview
 npx wrangler r2 bucket domain ecomate-media-prod --custom-domain media.ecomate.app
-npx wrangler kv namespace create RATE_LIMIT_KV-prod
-npx wrangler kv namespace create RATE_LIMIT_KV-preview
+# No KV commands: KV was removed by decision (WAF + in-memory backstop instead).
 ```
 
 Preview needs its OWN Supabase project/branch (`PREVIEW_REF`): sharing the

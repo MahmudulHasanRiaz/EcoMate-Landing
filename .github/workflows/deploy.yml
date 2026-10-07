@@ -230,6 +230,53 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
+      # Idempotent Hyperdrive ensure + sync. Hyperdrive is a TUNNEL to your Postgres
+      # (Supabase now, any Postgres later) — not a Cloudflare database; your data never
+      # leaves it. Workers cannot open raw Postgres TCP connections, so without this
+      # binding the Worker cannot reach the database at all (dashboard shows 0 bindings).
+      #   - ensure: find config by name; create it from DIRECT_URL when missing;
+      #   - sync: `hyperdrive update` on EVERY deploy so the tunnel always equals the
+      #     DIRECT_URL secret — changing DB later = update the secret, redeploy, done.
+      #   - inject: patch the real id into wrangler.toml IN THE RUNNER ONLY (the
+      #     PASTE_* placeholder stays committed; no Hyperdrive id ever lives in git).
+      # Uses only the existing DIRECT_URL + CLOUDFLARE_* secrets. Never echoes the URL.
+      - name: Ensure Hyperdrive config (idempotent, synced to DIRECT_URL)
+        run: |
+          ENV_NAME="${{ github.event.inputs.environment || 'production' }}"
+          if [ "$ENV_NAME" = "preview" ]; then
+            HD_NAME="ecomate-db-preview"
+            PLACEHOLDER="PASTE_PREVIEW_HYPERDRIVE_ID"
+          else
+            HD_NAME="ecomate-db-prod"
+            PLACEHOLDER="PASTE_PROD_HYPERDRIVE_ID"
+          fi
+          if [ -z "${DIRECT_URL:-}" ]; then
+            echo "::error::DIRECT_URL is empty — cannot create/sync Hyperdrive '$HD_NAME'. Set the GitHub Secret DIRECT_URL first."
+            exit 1
+          fi
+          get_id() {
+            npx wrangler hyperdrive list 2>/dev/null | awk -v n="$HD_NAME" '{ for (i = 1; i <= NF; i++) if ($i == n) { print $1; exit } }'
+          }
+          HD_ID="$(get_id)"
+          if [ -z "$HD_ID" ]; then
+            echo "Hyperdrive '$HD_NAME' not found — creating it from DIRECT_URL..."
+            npx wrangler hyperdrive create "$HD_NAME" --connection-string="$DIRECT_URL"
+            HD_ID="$(get_id)"
+          else
+            echo "Hyperdrive '$HD_NAME' exists — syncing its connection string to DIRECT_URL..."
+            npx wrangler hyperdrive update "$HD_ID" --connection-string="$DIRECT_URL"
+          fi
+          if [ -z "$HD_ID" ]; then
+            echo "::error::Could not resolve a Hyperdrive id for '$HD_NAME' after create/update. See wrangler output above."
+            exit 1
+          fi
+          sed -i "s/$PLACEHOLDER/$HD_ID/" wrangler.toml
+          echo "Hyperdrive '$HD_NAME' ready and bound for deploy (id injected into runner wrangler.toml)."
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
       # The opennext CLI must drive the deploy. A plain `wrangler deploy` (what
       # `cloudflare/wrangler-action` runs) does not carry the opennext build output/args
       # and silently ships a broken or empty Worker. `--env` selects the matching

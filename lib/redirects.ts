@@ -22,6 +22,7 @@ import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { getDb } from '@/db/client';
 import { redirectsTable } from '@/db/schema';
 import { errorMessage, logOnce } from '@/lib/json';
+import { withTimeout } from '@/lib/withTimeout';
 
 /** Refresh window for the KV copy. Matches the content cache's `stale`. */
 const REDIRECT_TTL_SEC = 300;
@@ -31,6 +32,18 @@ const REDIRECT_KV_KEY = 'redirects:v1';
 
 /** How long a *failure* is remembered when there is no KV to cache it in. */
 const FAILURE_MEMO_MS = 60_000;
+
+/**
+ * How long a *timeout* is remembered. Longer than a plain error: an error says "down
+ * right now", a timeout says "too slow to use" — retrying every minute would put an
+ * 8s stall back on every document request. Ten minutes of fast skips, then retry.
+ */
+const TIMEOUT_MEMO_MS = 10 * 60_000;
+
+/** Upper bound for the whole table load. Errors already fail fast; hangs must too —
+ * without this, one stalled backend burns 8s on EVERY document request forever,
+ * because an eternally-pending promise never reaches the error path that memos. */
+const LOAD_TIMEOUT_MS = 5_000;
 
 export interface ManagedRedirect {
   fromPath: string;
@@ -131,7 +144,20 @@ async function loadRedirectTable(): Promise<ManagedRedirect[] | null> {
  * slash is accepted, because that is how a human types it.
  */
 export async function findManagedRedirect(pathname: string): Promise<ManagedRedirect | null> {
-  const table = await loadRedirectTable();
+  let table: ManagedRedirect[] | null;
+  try {
+    table = await withTimeout(loadRedirectTable(), 'redirects:load', LOAD_TIMEOUT_MS);
+  } catch {
+    // Timeout (not error): memoize LONG so the stall happens once per ten minutes,
+    // not once per request. Logged loudly once via logOnce.
+    memoryFailureUntil = Date.now() + TIMEOUT_MEMO_MS;
+    logOnce(
+      'warn',
+      'redirects:timeout',
+      `[redirects] table load timed out after ${LOAD_TIMEOUT_MS}ms; skipping redirects for ${TIMEOUT_MEMO_MS / 60000}min`,
+    );
+    return null;
+  }
   if (!table || table.length === 0) return null;
   const wanted = pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
   return (

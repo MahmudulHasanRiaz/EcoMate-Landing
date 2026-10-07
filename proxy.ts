@@ -34,7 +34,6 @@ import { auth } from '@/auth';
 import { applySecurityHeaders } from '@/lib/securityHeaders';
 import { DEFAULT_LOCALE, localeFromPathname } from '@/lib/locales';
 import { findManagedRedirect } from '@/lib/redirects';
-import { withTimeout } from '@/lib/withTimeout';
 import { timed } from '@/lib/slowlog';
 
 /**
@@ -95,11 +94,10 @@ export async function proxy(request: NextRequest, event: Parameters<NextMiddlewa
   // Document requests only, and never for a mutating verb.
   const isDocument = request.method === 'GET' || request.method === 'HEAD';
   if (isDocument && !pathname.startsWith('/api/') && !pathname.startsWith('/admin')) {
-    // Bounded: findManagedRedirect fails open on ERROR but an ever-hanging query
-    // would stall the whole page (2026-10-07 prod: `/` never returned first byte
-    // while /api/* stayed fast, exactly the signature of this lookup hanging).
-    // Timeout converts hangs into the same null-and-proceed path as errors.
-    const rule = await withTimeout(findManagedRedirect(pathname), 'findManagedRedirect', 8000).catch(() => null);
+    // Timeout + failure-memo live INSIDE findManagedRedirect (5s bound, 10min memo
+    // on timeout): a single slow backend costs one request, not every request. Do not
+    // wrap another timeout here — nested timers only obscure which layer fired.
+    const rule = await findManagedRedirect(pathname);
     if (rule) {
       const destination = new URL(rule.toPath, request.url);
       // Drop the query string rather than carrying it over: `to_path` is a path, and

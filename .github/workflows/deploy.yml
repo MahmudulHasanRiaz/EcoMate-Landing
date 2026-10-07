@@ -328,6 +328,50 @@ jobs:
       # and silently ships a broken or empty Worker. `--env` selects the matching
       # `[env.*]` block in wrangler.toml (Task 21 §1): deploying without it would
       # fall back to the top-level dev bindings.
+      # Worker secrets, pushed from GitHub Secrets on every deploy (idempotent —
+      # `secret put` overwrites). This is why no dashboard secret setup is needed:
+      # add each value ONCE as a GitHub Secret and CI carries it to the Worker.
+      # Skip-if-unset (never wipe): a missing GitHub Secret keeps whatever value
+      # the Worker already has, so adopting this incrementally is safe. Removing a
+      # secret entirely is still a dashboard/manual `wrangler secret delete` — CI
+      # will not delete what you do not give it. Values never printed: GitHub
+      # masks secret-sourced env vars in logs, and `printf` (not echo) avoids
+      # trailing newlines becoming part of the stored value. `wrangler secret put`
+      # reads the value from stdin so it never appears in argv/`ps` either.
+      - name: Push Worker secrets from GitHub Secrets (idempotent)
+        run: |
+          ENV_NAME="${{ github.event.inputs.environment || 'production' }}"
+          put_secret() {
+            local name="$1" value="$2"
+            if [ -z "$value" ]; then
+              echo "::warning::GitHub Secret $name is not set — keeping the Worker's existing value (if any). Set it to manage this secret from CI."
+              return 0
+            fi
+            printf '%s' "$value" | npx wrangler secret put "$name" --env "$ENV_NAME"
+          }
+          put_secret AUTH_SECRET "$AUTH_SECRET"
+          put_secret SETUP_TOKEN "$SETUP_TOKEN"
+          put_secret TOTP_ENCRYPTION_KEY "$TOTP_ENCRYPTION_KEY"
+          put_secret META_CAPI_TOKEN "$META_CAPI_TOKEN"
+          put_secret META_TEST_EVENT_CODE "$META_TEST_EVENT_CODE"
+          put_secret TURNSTILE_SECRET_KEY "$TURNSTILE_SECRET_KEY"
+          put_secret LICENSE_PORTAL_API_KEY "$LICENSE_PORTAL_API_KEY"
+          put_secret RESEND_API_KEY "$RESEND_API_KEY"
+          put_secret CRON_SECRET "$CRON_SECRET"
+          echo "Worker secrets synced (unset ones left untouched)."
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+          SETUP_TOKEN: ${{ secrets.SETUP_TOKEN }}
+          TOTP_ENCRYPTION_KEY: ${{ secrets.TOTP_ENCRYPTION_KEY }}
+          META_CAPI_TOKEN: ${{ secrets.META_CAPI_TOKEN }}
+          META_TEST_EVENT_CODE: ${{ secrets.META_TEST_EVENT_CODE }}
+          TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
+          LICENSE_PORTAL_API_KEY: ${{ secrets.LICENSE_PORTAL_API_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+
       - name: Deploy to Cloudflare via opennext
         # wrangler 4+ requires a local Postgres connection string to emulate
         # Hyperdrive during deploy validation; it is the DIRECT URL itself

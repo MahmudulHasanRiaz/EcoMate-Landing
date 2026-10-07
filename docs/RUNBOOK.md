@@ -137,8 +137,12 @@ you have verified statement-by-statement against the live schema.
 
 ## 3. Secret rotation
 
-Secrets live in the Worker, never in the repo: `npx wrangler secret put <NAME>`. `.env.local`
-and `.env.example` hold skeletons only.
+Single source of truth is **GitHub Secrets**; the deploy workflow pushes them to the
+Worker on every run ("Push Worker secrets" step, idempotent). Add a value once as a
+GitHub Secret and CI carries it — no dashboard secret setup needed. `.env.local` and
+`.env.example` hold skeletons only, never values. To rotate: update the GitHub Secret,
+re-run deploy. Removing a GitHub Secret does NOT delete the Worker value (CI skips
+unset ones) — deletion stays a manual `wrangler secret delete <NAME> --env production`.
 
 | Secret | Blast radius of rotation |
 | --- | --- |

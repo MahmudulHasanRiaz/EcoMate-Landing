@@ -12,10 +12,15 @@ compatibility_flags = ["nodejs_compat"]
 # ---------------------------------------------------------------------------
 
 # Postgres through Hyperdrive (required by db/client.ts). Create with:
-#   npx wrangler hyperdrive create ecomate-db --connection-string="postgresql://postgres:PASSWORD@db.REF.supabase.co:6543/postgres?pgbouncer=true"
+#   npx wrangler hyperdrive create ecomate-db --connection-string="postgresql://postgres:PASSWORD@db.REF.supabase.co:5432/postgres?pgbouncer=true"
+# localConnectionString is used by `wrangler deploy` (and opennext) for
+# local Hyperdrive emulation — wrangler 4+ refuses to deploy without it.
+# Use the session-pooler URL (port 5432, NOT transaction pooler :6543):
+#   postgresql://postgres.<ref>@aws-0-ap-south-1.pooler.supabase.com:5432/postgres
 [[hyperdrive]]
 binding = "HYPERDRIVE"
 id = "PASTE_HYPERDRIVE_ID_FROM_STEP_1"
+localConnectionString = "postgresql://postgres.<ref>@aws-0-ap-south-1.pooler.supabase.com:5432/postgres"
 
 # R2 bucket backing the media library (app/api/media/*). Create with:
 #   npx wrangler r2 bucket create ecomate-media

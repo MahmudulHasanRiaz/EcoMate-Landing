@@ -236,11 +236,16 @@ jobs:
       # `[env.*]` block in wrangler.toml (Task 21 §1): deploying without it would
       # fall back to the top-level dev bindings.
       - name: Deploy to Cloudflare via opennext
+        # wrangler 4+ requires a local Postgres connection string to emulate
+        # Hyperdrive during deploy validation; it is the DIRECT URL itself
+        # (session pooler :5432, NOT transaction pooler :6543). The password
+        # is masked by GitHub Actions secret handling — never print it.
         run: npx opennextjs-cloudflare deploy --env ${{ github.event.inputs.environment || 'production' }}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           NODE_ENV: production
+          CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE: ${{ secrets.DIRECT_URL }}
 
       - name: Output Deployment Confirmation
         run: |

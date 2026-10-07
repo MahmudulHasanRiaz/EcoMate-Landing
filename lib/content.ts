@@ -28,6 +28,7 @@ import {
 import { errorMessage } from '@/lib/json';
 import type { ContentSection } from '@/lib/merge';
 import type { Locale } from '@/src/types/landing';
+import { withTimeout } from '@/lib/withTimeout';
 
 /** 5 min stale / 1 h revalidate / 1 day expire — content edits are rare, visitors are not. */
 const CONTENT_CACHE_PROFILE = { stale: 300, revalidate: 3600, expire: 86400 } as const;
@@ -59,7 +60,7 @@ export async function getLandingContent(locale: Locale): Promise<ContentSection[
   'use cache';
   cacheTag(`content:${locale}`);
   try {
-    const rows = await getDb()
+    const rows = await withTimeout(getDb()
       .select({
         sectionKey: landingContentTable.sectionKey,
         content: landingContentTable.content,
@@ -70,7 +71,7 @@ export async function getLandingContent(locale: Locale): Promise<ContentSection[
         eq(landingContentTable.status, 'published'),
         isNull(landingContentTable.deletedAt),
       ))
-      .orderBy(asc(landingContentTable.sectionKey));
+      .orderBy(asc(landingContentTable.sectionKey)), 'getLandingContent');
     cacheLife(CONTENT_CACHE_PROFILE);
     return rows;
   } catch (e) {
@@ -241,11 +242,11 @@ export async function getPublishedBlogPosts(): Promise<BlogPostSummary[] | null>
   'use cache';
   cacheTag('blog');
   try {
-    const rows = await getDb()
+    const rows = await withTimeout(getDb()
       .select(BLOG_SELECT)
       .from(blogPostsTable)
       .where(BLOG_PUBLIC)
-      .orderBy(desc(blogPostsTable.publishedAt), desc(blogPostsTable.updatedAt));
+      .orderBy(desc(blogPostsTable.publishedAt), desc(blogPostsTable.updatedAt)), 'getPublishedBlogPosts');
     cacheLife(CONTENT_CACHE_PROFILE);
     return rows.map(toBlogSummary);
   } catch (e) {
@@ -261,11 +262,11 @@ export async function getBlogPost(slug: string): Promise<BlogPostSummary & { con
   cacheTag('blog');
   cacheTag(`blog:${slug}`);
   try {
-    const [row] = await getDb()
+    const [row] = await withTimeout(getDb()
       .select({ ...BLOG_SELECT, content: blogPostsTable.content })
       .from(blogPostsTable)
       .where(and(eq(blogPostsTable.slug, slug), BLOG_PUBLIC))
-      .limit(1);
+      .limit(1), 'getBlogPost');
     // Body uses the long profile: a single document changes rarely, the index stays short.
     cacheLife(CONTENT_LONG_PROFILE);
     if (!row) return null;
@@ -298,7 +299,7 @@ export async function getPricingPlans(): Promise<{
   'use cache';
   cacheTag('pricing');
   try {
-    const rows = await getDb()
+    const rows = await withTimeout(getDb()
       .select({
         slug: pricingPlansTable.slug,
         nameEn: pricingPlansTable.nameEn,
@@ -316,15 +317,15 @@ export async function getPricingPlans(): Promise<{
         isActive: pricingPlansTable.isActive,
       })
       .from(pricingPlansTable)
-      .orderBy(asc(pricingPlansTable.sortOrder), asc(pricingPlansTable.monthlyPrice));
+      .orderBy(asc(pricingPlansTable.sortOrder), asc(pricingPlansTable.monthlyPrice)), 'getPricingPlans');
 
     // `is_pricing_visible` lives on the settings row. Reading it here keeps the pricing
     // domain self-contained: one tag invalidates the plans *and* the mode switch together,
     // so the two can never drift out of sync in a cached page.
-    const [settings] = await getDb()
+    const [settings] = await withTimeout(getDb()
       .select({ isPricingVisible: siteSettingsTable.isPricingVisible })
       .from(siteSettingsTable)
-      .limit(1);
+      .limit(1), 'getPricingPlans');
 
     cacheLife(CONTENT_CACHE_PROFILE);
     return {
@@ -358,11 +359,11 @@ export async function getSocialLinks(): Promise<{ platform: string; url: string 
   'use cache';
   cacheTag('social');
   try {
-    const rows = await getDb()
+    const rows = await withTimeout(getDb()
       .select({ platform: socialLinksTable.platform, url: socialLinksTable.url })
       .from(socialLinksTable)
       .where(eq(socialLinksTable.isVisible, true))
-      .orderBy(asc(socialLinksTable.sortOrder), asc(socialLinksTable.platform));
+      .orderBy(asc(socialLinksTable.sortOrder), asc(socialLinksTable.platform)), 'getSocialLinks');
     cacheLife(CONTENT_CACHE_PROFILE);
     return rows.length > 0 ? rows : null;
   } catch (e) {
@@ -383,7 +384,7 @@ export async function getTestimonials(): Promise<{
   'use cache';
   cacheTag('testimonials');
   try {
-    const rows = await getDb()
+    const rows = await withTimeout(getDb()
       .select({
         clientName: testimonialsTable.clientName,
         companyName: testimonialsTable.companyName,
@@ -393,7 +394,7 @@ export async function getTestimonials(): Promise<{
       })
       .from(testimonialsTable)
       .where(and(eq(testimonialsTable.isPublished, true), isNull(testimonialsTable.deletedAt)))
-      .orderBy(asc(testimonialsTable.sortOrder), asc(testimonialsTable.id));
+      .orderBy(asc(testimonialsTable.sortOrder), asc(testimonialsTable.id)), 'getTestimonials');
     cacheLife(CONTENT_CACHE_PROFILE);
     return rows.length > 0 ? rows : null;
   } catch (e) {
@@ -421,7 +422,7 @@ export async function getCaseStudies(): Promise<{
   'use cache';
   cacheTag('casestudies');
   try {
-    const rows = await getDb()
+    const rows = await withTimeout(getDb()
       .select({
         slug: caseStudiesTable.slug,
         title: caseStudiesTable.title,
@@ -432,7 +433,7 @@ export async function getCaseStudies(): Promise<{
       })
       .from(caseStudiesTable)
       .where(eq(caseStudiesTable.isPublished, true))
-      .orderBy(desc(caseStudiesTable.createdAt));
+      .orderBy(desc(caseStudiesTable.createdAt)), 'getCaseStudies');
     cacheLife(CONTENT_CACHE_PROFILE);
     return rows.length > 0
       ? rows.map((row) => ({
@@ -475,7 +476,7 @@ export async function getCaseStudy(slug: string): Promise<{
   cacheTag('casestudies');
   cacheTag(`casestudies:${slug}`);
   try {
-    const [row] = await getDb()
+    const [row] = await withTimeout(getDb()
       .select({
         slug: caseStudiesTable.slug,
         title: caseStudiesTable.title,
@@ -492,7 +493,7 @@ export async function getCaseStudy(slug: string): Promise<{
       })
       .from(caseStudiesTable)
       .where(and(eq(caseStudiesTable.slug, slug), eq(caseStudiesTable.isPublished, true)))
-      .limit(1);
+      .limit(1), 'getCaseStudy');
     // Body uses the long profile, same reasoning as `getBlogPost`: one document, rare edits.
     cacheLife(CONTENT_LONG_PROFILE);
     if (!row) return null;

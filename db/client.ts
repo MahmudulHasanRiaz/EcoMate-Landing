@@ -68,8 +68,13 @@ export function getDb(): Database {
     }
     // prepare:false -> transaction-pooler safe (Supabase 6543 / Hyperdrive): prepared
     //                  statements do not survive PgBouncer in transaction mode.
-    // max:1          -> a Workers isolate serves one request at a time; Hyperdrive
-    //                  already multiplexes across the fleet.
+    // max:10         -> was 1. A single connection serializes every parallel query of a
+    //                  page behind one slot: one stuck query stalls ALL of them until the
+    //                  runtime kills the request ("hung", 2026-10-07 prod). Hyperdrive
+    //                  multiplexes server-side and one isolate serves one request, so 10
+    //                  local slots cannot exhaust anything — but one bad query can no
+    //                  longer deadlock the other nine. Combined with withTimeout on reads
+    //                  and connect_timeout below, no DB wait is unbounded anymore.
     // connect_timeout:10 -> without this, a blackholed network (SYN dropped, no RST —
     //                  exactly what GitHub runners hit against an unreachable Supabase
     //                  host) hangs TCP connect for minutes. Next's prerender cache-fill
@@ -77,7 +82,7 @@ export function getDb(): Database {
     //                  "Filling a cache during prerender timed out". Ten seconds bounds
     //                  every failure mode to fast-and-loud, so callers degrade to the
     //                  static fallback instead of hanging the build (2026-10-06).
-    client = postgres(url, { prepare: false, max: 1, connect_timeout: 10 });
+    client = postgres(url, { prepare: false, max: 10, connect_timeout: 10 });
     cached = drizzle(client, { schema });
     cachedUrl = url;
   }

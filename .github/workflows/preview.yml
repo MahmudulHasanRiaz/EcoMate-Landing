@@ -167,14 +167,15 @@ jobs:
           # NOTE: `list` stderr is NOT suppressed: if list itself fails (auth, API
           # outage), we must see it, not silently fall through to create (which then
           # fails confusingly with 2017 "already exists" when the config is really there).
-          # Hyperdrive ids print as 32 plain hex chars (no dashes) in `list`
-          # output, but wrangler.toml requires dashed UUID (code 10156 otherwise).
-          # Match either form, then normalize to 8-4-4-4-12 before injecting.
+          # `list` prints ids as 32 plain hex chars. The API (`get`/`update`) wants
+          # that raw hex form ("use the hexadecimal ID", code 2005 otherwise), and
+          # so does wrangler.toml (like every other Cloudflare resource id: KV,
+          # D1 — all undashed). Match a standalone 32-hex token on the name's line.
           get_id() {
             npx wrangler hyperdrive list 2>&1 \
               | grep -F "$HD_NAME" \
-              | grep -oE "[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}" \
-              | head -1 | tr -d '-' | sed -E 's/^(.{8})(.{4})(.{4})(.{4})(.{12})$/\1-\2-\3-\4-\5/'
+              | grep -oE "(^|[^0-9a-f])[0-9a-f]{32}([^0-9a-f]|$)" \
+              | grep -oE "[0-9a-f]{32}" | head -1
           }
           auth_hint() {
             echo "::error::Cloudflare API rejected the Hyperdrive call (auth error). Add the Hyperdrive permission to CLOUDFLARE_API_TOKEN: Dashboard → Profile → API Tokens → edit token → Permissions → Hyperdrive Read+Edit."
@@ -217,8 +218,8 @@ jobs:
             exit 1
           fi
           case "$HD_ID" in
-            ????????-????-????-????-????????????) ;;
-            *) echo "::error::Resolved Hyperdrive id '$HD_ID' is not a UUID — refusing to patch wrangler.toml (a bad id breaks the deploy with code 10156)."; exit 1 ;;
+            ????????????????????????????????) ;;
+            *) echo "::error::Resolved Hyperdrive id '$HD_ID' is not 32 hex chars — refusing to patch wrangler.toml (a bad id breaks the deploy with code 10156)."; exit 1 ;;
           esac
           sed -i "s/PASTE_PREVIEW_HYPERDRIVE_ID/$HD_ID/" wrangler.toml
           echo "Hyperdrive '$HD_NAME' ready and bound for deploy."

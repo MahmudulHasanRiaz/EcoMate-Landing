@@ -260,11 +260,14 @@ jobs:
           # NOTE: `list` stderr is NOT suppressed: if list itself fails (auth, API
           # outage), we must see it, not silently fall through to create (which then
           # fails confusingly with 2017 "already exists" when the config is really there).
+          # Hyperdrive ids print as 32 plain hex chars (no dashes) in `list`
+          # output, but wrangler.toml requires dashed UUID (code 10156 otherwise).
+          # Match either form, then normalize to 8-4-4-4-12 before injecting.
           get_id() {
             npx wrangler hyperdrive list 2>&1 \
               | grep -F "$HD_NAME" \
-              | grep -oE "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}" \
-              | head -1
+              | grep -oE "[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}" \
+              | head -1 | tr -d '-' | sed -E 's/^(.{8})(.{4})(.{4})(.{4})(.{12})$/\1-\2-\3-\4-\5/'
           }
           HD_ID="$(get_id)"
           auth_hint() {

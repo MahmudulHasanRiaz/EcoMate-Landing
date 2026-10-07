@@ -6,6 +6,12 @@ name = "ecomate-landing"
 compatibility_date = "2026-06-01"
 compatibility_flags = ["nodejs_compat"]
 
+# OpenNext builds the Worker bundle and static assets into .open-next/.
+# wrangler 4+ requires an explicit entry-point or assets directory.
+[assets]
+directory = ".open-next/assets"
+main = ".open-next/worker.js"
+
 # ---------------------------------------------------------------------------
 # Bindings. Each id below is created once against the real Cloudflare account;
 # the two placeholders must be replaced with the ids those commands print.

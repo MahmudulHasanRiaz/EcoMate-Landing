@@ -48,6 +48,7 @@ import {
 import { envString } from '@/lib/env';
 import { recordAudit } from '@/lib/audit';
 import { verifyPassword } from '@/lib/password';
+import { withTimeout } from '@/lib/withTimeout';
 import { hitLimit } from '@/lib/rateLimit';
 import { clientIp } from '@/lib/request';
 import { isAdminRole, normalizeRole } from '@/lib/roles';
@@ -161,16 +162,19 @@ export const authConfig = (): NextAuthConfig => {
           }
 
           // --- Per-account lockout (5 failures / 15 min) ---
-          const [accountFailures] = await db
-            .select({ total: count() })
-            .from(adminAuditLogsTable)
-            .where(
-              and(
-                eq(adminAuditLogsTable.action, 'LOGIN_FAIL'),
-                eq(adminAuditLogsTable.target, email),
-                gte(adminAuditLogsTable.createdAt, new Date(now - ACCOUNT_LOCKOUT_WINDOW_MS)),
+          const [accountFailures] = await withTimeout(
+            db
+              .select({ total: count() })
+              .from(adminAuditLogsTable)
+              .where(
+                and(
+                  eq(adminAuditLogsTable.action, 'LOGIN_FAIL'),
+                  eq(adminAuditLogsTable.target, email),
+                  gte(adminAuditLogsTable.createdAt, new Date(now - ACCOUNT_LOCKOUT_WINDOW_MS)),
+                ),
               ),
-            );
+            'auth:lockout-check',
+          );
           if ((accountFailures?.total ?? 0) >= ACCOUNT_LOCKOUT_MAX_FAILURES) {
             await recordAudit({ actorId: null, action: 'LOGIN_LOCKED', target: email, ip });
             return null;
@@ -178,27 +182,29 @@ export const authConfig = (): NextAuthConfig => {
 
           // --- Per-client throttle (10 failures / 10 min) ---
           if (ip) {
-            const [ipFailures] = await db
-              .select({ total: count() })
-              .from(adminAuditLogsTable)
-              .where(
-                and(
-                  eq(adminAuditLogsTable.action, 'LOGIN_FAIL'),
-                  eq(adminAuditLogsTable.ip, ip),
-                  gte(adminAuditLogsTable.createdAt, new Date(now - IP_THROTTLE_WINDOW_MS)),
+            const [ipFailures] = await withTimeout(
+              db
+                .select({ total: count() })
+                .from(adminAuditLogsTable)
+                .where(
+                  and(
+                    eq(adminAuditLogsTable.action, 'LOGIN_FAIL'),
+                    eq(adminAuditLogsTable.ip, ip),
+                    gte(adminAuditLogsTable.createdAt, new Date(now - IP_THROTTLE_WINDOW_MS)),
+                  ),
                 ),
-              );
+              'auth:throttle-check',
+            );
             if ((ipFailures?.total ?? 0) >= IP_THROTTLE_MAX_FAILURES) {
               await recordAudit({ actorId: null, action: 'LOGIN_LOCKED', target: email, ip });
               return null;
             }
           }
 
-          const [adminUser] = await db
-            .select()
-            .from(adminUsersTable)
-            .where(eq(adminUsersTable.email, email))
-            .limit(1);
+          const [adminUser] = await withTimeout(
+            db.select().from(adminUsersTable).where(eq(adminUsersTable.email, email)).limit(1),
+            'auth:user-lookup',
+          );
 
           // Always run a KDF — see TIMING_EQUALIZER_HASH.
           const passwordOk = await verifyPassword(
@@ -252,7 +258,8 @@ export const authConfig = (): NextAuthConfig => {
 
           // Multi-table write: the identity row, the session registry row, the "last seen"
           // stamp and the audit entry must all land together or none of them should.
-          await db.transaction(async (tx) => {
+          await withTimeout(
+            db.transaction(async (tx) => {
             await tx
               .insert(usersTable)
               .values({ id: userId, name: adminUser.email, email: adminUser.email })
@@ -286,7 +293,9 @@ export const authConfig = (): NextAuthConfig => {
               target: adminUser.email,
               ip,
             });
-          });
+            }),
+            'auth:session-transaction',
+          );
 
           return {
             id: userId,

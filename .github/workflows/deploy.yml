@@ -211,6 +211,20 @@ jobs:
         env:
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
 
+      # Baseline content seed (idempotent — safe on every deploy, not just the
+      # first). Migrations create TABLES; without this step a fresh/restored
+      # database serves empty pages (`{"error":"Settings not seeded"}`) until a
+      # human runs the seed by hand — that manual step is what this removes.
+      # Safety, verified 2026-10-07: every insert is guarded (existence check or
+      # ON CONFLICT DO NOTHING); demo leads insert ONLY into an empty leads
+      # table, so real leads are never touched and nothing ever duplicates.
+      # A seed failure fails the deploy loudly: shipping code that renders
+      # against an empty database silently is worse than a red pipeline.
+      - name: Seed baseline content (idempotent)
+        run: npm run db:seed
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+
       - name: Ensure R2 bucket exists (idempotent, never deletes)
         run: |
           ENV_NAME="${{ github.event.inputs.environment || 'production' }}"

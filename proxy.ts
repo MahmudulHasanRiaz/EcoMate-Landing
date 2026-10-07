@@ -35,6 +35,7 @@ import { applySecurityHeaders } from '@/lib/securityHeaders';
 import { DEFAULT_LOCALE, localeFromPathname } from '@/lib/locales';
 import { findManagedRedirect } from '@/lib/redirects';
 import { withTimeout } from '@/lib/withTimeout';
+import { timed } from '@/lib/slowlog';
 
 /**
  * `auth` is an intersection of five call signatures (server session, `getServerSideProps`,
@@ -121,7 +122,12 @@ export async function proxy(request: NextRequest, event: Parameters<NextMiddlewa
   // admin session check, the mutating-method rule, the public lead POST exception, the
   // bootstrap endpoints, the security headers and the admin `no-store` — still happens inside
   // `auth.ts`'s `authorized` callback, so this wrapper adds only what it must.
-  const response = await authAsProxy(request, event);
+  const response = await timed(
+    Promise.resolve(authAsProxy(request, event)),
+    `proxy:auth:${pathname}`,
+    10000,
+    { pathname },
+  );
 
   // `auth` returns `undefined` when it answers the request itself (an unauthenticated
   // redirect to the sign-in page, or a 401 for an API call). There is no response object to

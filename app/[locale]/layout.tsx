@@ -27,6 +27,7 @@ import { getLandingContent, getMenu, getPricingPlans } from '@/lib/content';
 import { assembleLandingContent } from '@/lib/merge';
 import { LOCALES, isLocale } from '@/lib/locales';
 import { localeAlternates } from '@/lib/seo';
+import { timed } from '@/lib/slowlog';
 
 export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));
@@ -64,10 +65,10 @@ export default async function LocaleLayout({
   // Components tracks a dynamic API access through the `await` that reaches it, and joined
   // branches can read as uncached data and refuse the prerender. Cache reads follow the
   // first as microtasks, not queries, so this costs nothing.
-  const sections = await getLandingContent(locale);
-  const mainMenu = await getMenu('main', locale);
-  const footerMenu = await getMenu('footer', locale);
-  const pricing = await getPricingPlans();
+  const sections = await timed(getLandingContent(locale), `layout:content:${locale}`, 10000, { locale });
+  const mainMenu = await timed(getMenu('main', locale), `layout:menu-main:${locale}`, 10000, { locale });
+  const footerMenu = await timed(getMenu('footer', locale), `layout:menu-footer:${locale}`, 10000, { locale });
+  const pricing = await timed(getPricingPlans(), `layout:pricing:${locale}`, 10000, { locale });
 
   return (
     <LocaleThemeProvider

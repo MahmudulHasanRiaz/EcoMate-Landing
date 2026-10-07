@@ -81,43 +81,34 @@ jobs:
           "
 
       # Supabase publishes AAAA records and GitHub-hosted runners have
-      # no IPv6 route: resolving the DIRECT_URL hostname can dial
-      # IPv6, which fails with ENETUNREACH. DNS-order hints do not
-      # reliably control which family postgres-js dials (observed in
-      # CI, 2026-10-06), so DIRECT_URL is rewritten to its IPv4
-      # address here. Under `cacheComponents: true` cached data
-      # functions run during the build with no Hyperdrive binding
-      # and fall back to DIRECT_URL — without this they cannot reach
-      # the database and prerender an empty shell instead of real
-      # content. The rewritten value lands in DIRECT_URL for every
-      # later step via GITHUB_ENV; the secret value is never printed.
-      # An URL that is already an IPv4 literal passes through unchanged.
-      - name: Pin DIRECT_URL to IPv4 (runners have no IPv6 route)
+      # no IPv6 route. The direct hostname (db.<ref>.supabase.co) has
+      # no A record here, so DNS-based IPv4 pinning cannot help.
+      # Instead DIRECT_URL uses the session-pooler endpoint on the
+      # standard Postgres port 5432 (aws-0-ap-south-1.pooler.supabase.com),
+      # which resolves to IPv4 and is genuine direct connection — NOT
+      # the Drizzle/pooler tab URL (port 6543, transaction mode, no DDL).
+      # Under `cacheComponents: true` cached data functions run during the
+      # build with no Hyperdrive binding and fall back to DIRECT_URL —
+      # without this they cannot reach the database and prerender an
+      # empty shell instead of real content.
+      - name: Validate DIRECT_URL shape (session pooler :5432, not transaction pooler :6543)
+        run: |
+          node -e "
+            const u = process.env.DIRECT_URL || '';
+            let p;
+            try { p = new URL(u); } catch { console.error('::error::DIRECT_URL is not a valid URL. Set the GitHub Secret DIRECT_URL to the Supabase session-pooler URL:'); console.error('::error::  postgresql://postgres.<ref>@aws-0-ap-south-1.pooler.supabase.com:5432/postgres'); process.exit(1); }
+            if (p.protocol !== 'postgresql:' && p.protocol !== 'postgres:') { console.error('::error::DIRECT_URL must use the postgresql:// scheme.'); process.exit(1); }
+            if (!p.username) { console.error('::error::DIRECT_URL has no username.'); process.exit(1); }
+            if (p.port === '6543') { console.error('::error::DIRECT_URL uses port 6543 (transaction pooler). DDL migrations cannot run in transaction mode. Use the session pooler on port 5432: Supabase dashboard → Connect → Session pooler.'); process.exit(1); }
+            console.log('DIRECT_URL shape OK (direct Postgres URL with credentials present; host not shown).');
+          "
         env:
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
-        run: |
-          node -e '
-            const dns = require("node:dns");
-            const raw = process.env.DIRECT_URL || "";
-            if (!raw) { console.log("DIRECT_URL not set — leaving unset."); process.exit(0); }
-            const url = new URL(raw);
-            dns.lookup(url.hostname, { family: 4 }, (err, address) => {
-              if (err) {
-                console.error("::error::Could not resolve an IPv4 address for " + url.hostname + ": " + err.message);
-                process.exit(1);
-              }
-              url.hostname = address;
-              require("node:fs").appendFileSync(process.env.GITHUB_ENV, "DIRECT_URL=" + url.toString() + "\n");
-              console.log("DIRECT_URL pinned to " + address + " (IPv4).");
-            });
-          '
 
-      # The opennext CLI produces the deployable Worker bundle (`.open-next`); it runs
-      # `npm run build` (`next build`) internally. The package.json build script must
-      # never point back at `opennextjs-cloudflare build` — that recurses without bound.
-      # DIRECT_URL (IPv4-pinned above) arrives via GITHUB_ENV and is required here
-      # under `cacheComponents: true` so cached data functions prerender real content.
       - name: Build production bundle
+        # DIRECT_URL (session pooler :5432) arrives via secret,
+        # required here under `cacheComponents: true` so cached
+        # data functions prerender real content.
         run: npx opennextjs-cloudflare build
 
       - name: Verify build artifact integrity

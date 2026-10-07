@@ -11,7 +11,11 @@
  */
 
 const SCHEME = 'pbkdf2';
-const ITERATIONS = 600_000;
+// Cloudflare Workers caps PBKDF2 at 100,000 iterations (production proved it:
+// "iteration counts above 100000 are not supported"). This is the platform maximum,
+// not a choice — and the self-describing format means it can rise if Workers ever
+// raise the cap, without invalidating existing hashes.
+const ITERATIONS = 100_000;
 const SALT_BYTES = 16;
 const KEY_BITS = 256;
 

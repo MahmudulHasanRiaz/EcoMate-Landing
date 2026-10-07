@@ -164,14 +164,27 @@ jobs:
           get_id() {
             npx wrangler hyperdrive list 2>/dev/null | awk -v n="$HD_NAME" '{ for (i = 1; i <= NF; i++) if ($i == n) { print $1; exit } }'
           }
+          auth_hint() {
+            echo "::error::Cloudflare API rejected the Hyperdrive call (auth error). Add the Hyperdrive permission to CLOUDFLARE_API_TOKEN: Dashboard → Profile → API Tokens → edit token → Permissions → Hyperdrive Read+Edit."
+          }
           HD_ID="$(get_id)"
           if [ -z "$HD_ID" ]; then
             echo "Hyperdrive '$HD_NAME' not found — creating it from PREVIEW_DIRECT_URL..."
-            npx wrangler hyperdrive create "$HD_NAME" --connection-string="$DIRECT_URL"
+            HD_OUT="$(npx wrangler hyperdrive create "$HD_NAME" --connection-string="$DIRECT_URL" 2>&1)" && HD_OK=1 || HD_OK=0
+            echo "$HD_OUT" | tail -3
+            if [ "$HD_OK" != "1" ]; then
+              echo "$HD_OUT" | grep -qiE "authenticat|10000|permission" && auth_hint
+              exit 1
+            fi
             HD_ID="$(get_id)"
           else
             echo "Hyperdrive '$HD_NAME' exists — syncing its connection string..."
-            npx wrangler hyperdrive update "$HD_ID" --connection-string="$DIRECT_URL"
+            HD_OUT="$(npx wrangler hyperdrive update "$HD_ID" --connection-string="$DIRECT_URL" 2>&1)" && HD_OK=1 || HD_OK=0
+            echo "$HD_OUT" | tail -3
+            if [ "$HD_OK" != "1" ]; then
+              echo "$HD_OUT" | grep -qiE "authenticat|10000|permission" && auth_hint
+              exit 1
+            fi
           fi
           if [ -z "$HD_ID" ]; then
             echo "::error::Could not resolve a Hyperdrive id for '$HD_NAME' after create/update."

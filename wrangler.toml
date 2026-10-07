@@ -1,4 +1,7 @@
 name = "ecomate-landing"
+# Worker entry point (top level where it belongs — wrangler 4 warns if nested
+# under [assets]; opennext builds this file during `opennextjs-cloudflare build`).
+main = ".open-next/worker.js"
 # Current date, not a stale one: Cloudflare enables new platform behaviour on/after
 # this date, and opennext + Next 16 rely on it. 2025-09-01 was already 13 months
 # behind at the time of writing. Verify with `npx wrangler deploy --dry-run`
@@ -10,7 +13,6 @@ compatibility_flags = ["nodejs_compat"]
 # wrangler 4+ requires an explicit entry-point or assets directory.
 [assets]
 directory = ".open-next/assets"
-main = ".open-next/worker.js"
 
 # ---------------------------------------------------------------------------
 # Bindings. Each id below is created once against the real Cloudflare account;

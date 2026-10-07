@@ -28,7 +28,10 @@ const nextConfig: NextConfig = {
   },
   images: {
     remotePatterns: [
-      // Current site host (same-origin absolute media URLs from the `/media` proxy).
+      // Production host, then the preview worker host (same-origin absolute media
+      // URLs from the `/media` proxy). The old `ecomate-landing` worker keeps
+      // serving dev.ecomate.bd as the preview/staging deployment.
+      { protocol: 'https', hostname: 'ecomate.bd' },
       { protocol: 'https', hostname: 'dev.ecomate.bd' },
       // Reserved for a future dedicated R2 custom domain (`R2_PUBLIC_ORIGIN`).
       // `media.ecomate.app` does not resolve today; kept so already-stored absolute

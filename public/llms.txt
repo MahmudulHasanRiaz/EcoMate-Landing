@@ -37,9 +37,9 @@ per-locale canonical. The unprefixed `/` is the canonical English URL.
 
 The machine-readable index of every indexable URL, in both locales, with `lastmod`:
 
-https://dev.ecomate.bd/sitemap.xml
+https://ecomate.bd/sitemap.xml
 
-Robots policy and crawl directives: https://dev.ecomate.bd/robots.txt
+Robots policy and crawl directives: https://ecomate.bd/robots.txt
 
 ## Contact
 

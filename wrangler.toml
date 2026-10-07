@@ -126,7 +126,7 @@ binding = "R2_BUCKET"
 bucket_name = "ecomate-media-prod"
 
 [env.production.vars]
-NEXT_PUBLIC_SITE_URL = "https://dev.ecomate.bd"
+NEXT_PUBLIC_SITE_URL = "https://ecomate.bd"
 NEXT_PUBLIC_DEFAULT_LOCALE = "en"
 NEXT_PUBLIC_META_PIXEL_ID = ""
 NEXT_PUBLIC_TURNSTILE_SITE_KEY = ""

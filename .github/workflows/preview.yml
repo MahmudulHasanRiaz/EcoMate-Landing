@@ -161,8 +161,14 @@ jobs:
             echo "::error::PREVIEW_DIRECT_URL is not set — cannot create/sync Hyperdrive '$HD_NAME'. Set the GitHub Secret PREVIEW_DIRECT_URL (preview database, direct port-5432 URL) to enable preview deploys."
             exit 1
           fi
+          # wrangler prints bordered tables (│ ─ ┌...), so column-position parsing
+          # captures border glyphs instead of the id (shipped a literal '│' once).
+          # Hyperdrive ids are UUIDs: match the name's line, extract the UUID.
           get_id() {
-            npx wrangler hyperdrive list 2>/dev/null | awk -v n="$HD_NAME" '{ for (i = 1; i <= NF; i++) if ($i == n) { print $1; exit } }'
+            npx wrangler hyperdrive list 2>/dev/null \
+              | grep -F "$HD_NAME" \
+              | grep -oE "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}" \
+              | head -1
           }
           auth_hint() {
             echo "::error::Cloudflare API rejected the Hyperdrive call (auth error). Add the Hyperdrive permission to CLOUDFLARE_API_TOKEN: Dashboard → Profile → API Tokens → edit token → Permissions → Hyperdrive Read+Edit."
@@ -190,6 +196,10 @@ jobs:
             echo "::error::Could not resolve a Hyperdrive id for '$HD_NAME' after create/update."
             exit 1
           fi
+          case "$HD_ID" in
+            ????????-????-????-????-????????????) ;;
+            *) echo "::error::Resolved Hyperdrive id '$HD_ID' is not a UUID — refusing to patch wrangler.toml (a bad id breaks the deploy with code 10156)."; exit 1 ;;
+          esac
           sed -i "s/PASTE_PREVIEW_HYPERDRIVE_ID/$HD_ID/" wrangler.toml
           echo "Hyperdrive '$HD_NAME' ready and bound for deploy."
         env:

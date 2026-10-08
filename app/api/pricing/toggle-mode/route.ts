@@ -1,10 +1,14 @@
 import { eq, not } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { siteSettingsTable } from '@/db/schema';
+import { ADMIN_ONLY_ROLES, requireRole } from '@/lib/authz';
 import { errorMessage, fail, logServerError, ok } from '@/lib/json';
 import { invalidateDomains } from '@/lib/revalidate';
 
 export async function POST() {
+  // H-5: site-wide pricing visibility flip (Decision 1) — editors cannot toggle it.
+  const guard = await requireRole(ADMIN_ONLY_ROLES);
+  if (!guard.ok) return guard.response;
   try {
     const [updated] = await getDb()
       .update(siteSettingsTable)

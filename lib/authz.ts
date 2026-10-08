@@ -30,12 +30,24 @@ export type AdminGuard =
   | { ok: false; response: Response };
 
 /**
+ * Per-resource role sets (Decision 1 — editors do CMS content work, not site
+ * customization). Use these instead of ad-hoc literals so the matrix stays greppable:
+ *
+ * - `CONTENT_EDITOR_ROLES`: blog / case-study / testimonial / media / lead
+ *   viewing + lead status updates — every signed-in operator.
+ * - `ADMIN_ONLY_ROLES`: pricing, site settings, landing sections, social links,
+ *   user/role management, integrations logs, lead sync routes, setup.
+ */
+export const CONTENT_EDITOR_ROLES: readonly AdminRole[] = ['superadmin', 'admin', 'editor'];
+export const ADMIN_ONLY_ROLES: readonly AdminRole[] = ['superadmin', 'admin'];
+
+/**
  * Resolve the caller's session and assert it holds one of `allowed` roles.
  *
  * Fails closed: a session lookup that throws (database unreachable, bad AUTH_SECRET) is a
  * 503, never an accidental "allowed".
  */
-export async function requireAdminRole(allowed: readonly AdminRole[]): Promise<AdminGuard> {
+export async function requireRole(allowed: readonly AdminRole[]): Promise<AdminGuard> {
   let session: Session | null;
   try {
     session = await auth();
@@ -53,3 +65,9 @@ export async function requireAdminRole(allowed: readonly AdminRole[]): Promise<A
   }
   return { ok: true, session, role, actorId: actorIdOf(session) };
 }
+
+/**
+ * Historic name for {@link requireRole} — kept so existing call sites keep working.
+ * New code should prefer `requireRole` with `CONTENT_EDITOR_ROLES` / `ADMIN_ONLY_ROLES`.
+ */
+export const requireAdminRole = requireRole;

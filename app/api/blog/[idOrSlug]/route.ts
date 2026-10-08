@@ -45,7 +45,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ idOrSlu
 }
 
 export async function PUT(req: Request, { params }: { params: Promise<{ idOrSlug: string }> }) {
-  const guard = await requireAdminRole(['superadmin', 'admin']);
+  // Decision 1: editors do blog posting, so blog CRUD is editor-allowed.
+  const guard = await requireAdminRole(['superadmin', 'admin', 'editor']);
   if (!guard.ok) return guard.response;
 
   try {
@@ -121,7 +122,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ idOrSlug
  * never intended to expose (`id`, `slug`, `deleted_at`, ...).
  */
 export async function POST(req: Request, { params }: { params: Promise<{ idOrSlug: string }> }) {
-  const guard = await requireAdminRole(['superadmin', 'admin']);
+  // Decision 1: editors do blog posting, so blog CRUD is editor-allowed.
+  const guard = await requireAdminRole(['superadmin', 'admin', 'editor']);
   if (!guard.ok) return guard.response;
 
   try {

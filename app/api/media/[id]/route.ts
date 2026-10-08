@@ -2,6 +2,7 @@ import { and, eq, gte, isNull, ne, or } from 'drizzle-orm';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { getDb } from '@/db/client';
 import { mediaAssetsTable } from '@/db/schema';
+import { CONTENT_EDITOR_ROLES, requireRole } from '@/lib/authz';
 import { errorMessage, fail, logServerError, ok, parseId } from '@/lib/json';
 import { assertMediaNotInUse } from '@/lib/guard';
 
@@ -25,6 +26,9 @@ const REFERENCE_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
  * as a soft-deleted row with an object still publicly served.
  */
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  // H-9: media deletion needs a role check (Decision 1 — editors manage media).
+  const guard = await requireRole(CONTENT_EDITOR_ROLES);
+  if (!guard.ok) return guard.response;
   try {
     const { id: rawId } = await params;
     const id = parseId(rawId);

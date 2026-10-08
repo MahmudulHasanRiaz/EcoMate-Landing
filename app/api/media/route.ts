@@ -1,6 +1,7 @@
 import { desc, isNull, sql } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { mediaAssetsTable } from '@/db/schema';
+import { CONTENT_EDITOR_ROLES, requireRole } from '@/lib/authz';
 import {
   errorMessage,
   fail,
@@ -43,6 +44,9 @@ export async function GET(req: Request) {
 
 // NEVER `.values(body)` — allowlist every column this endpoint may write.
 export async function POST(req: Request) {
+  // H-9: media metadata writes need a role check (Decision 1 — editors manage media).
+  const guard = await requireRole(CONTENT_EDITOR_ROLES);
+  if (!guard.ok) return guard.response;
   try {
     const parsed = mediaCreate.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {

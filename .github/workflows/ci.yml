@@ -53,6 +53,11 @@ jobs:
       - name: Validate TypeScript code
         run: npm run lint
 
+      # H-11: the suite existed but never ran in CI. Unit tests need no DB;
+      # integration tests loud-skip without DIRECT_URL_TEST — expected, not failures.
+      - name: Run tests (vitest with coverage)
+        run: npx vitest run --coverage
+
       # Every secret in this repo goes through `wrangler secret put` — nothing
       # secret may sit in files or history. Scans the full history (hence
       # fetch-depth: 0 above) against .gitleaks.toml. The only allowlists in

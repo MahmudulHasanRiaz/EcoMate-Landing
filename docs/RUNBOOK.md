@@ -537,6 +537,21 @@ npx wrangler secret put AUTH_SECRET --env preview
 # TURNSTILE_SECRET_KEY, LICENSE_PORTAL_API_KEY, RESEND_API_KEY
 ```
 
+### 13.4.1 Plain config values pushed by deploy.yml (Decision 7)
+
+Three non-secret values are pushed by the deploy workflow's "Push Worker secrets"
+step (`put_config` — same `wrangler secret put` mechanism, so the single source of
+truth stays GitHub Secrets) and documented here:
+
+| Name | Meaning | Empty-safe default |
+| --- | --- | --- |
+| `NOTIFY_FROM_EMAIL` | Resend sender for new-lead sales notifications (`lib/notifyResend.ts`) | unset = notifications stay in log-only mode (`isNotificationProviderConfigured()` false) |
+| `NOTIFY_TO_EMAIL` | Resend recipient (sales inbox) for new-lead notifications | unset = same log-only mode as above; both must be set with `RESEND_API_KEY` |
+| `LICENSE_PORTAL_API_BASE_URL` | Future license-portal base URL (`lib/licensePortal.ts`); e.g. `https://license.ecomate.bd` | unset = portal dispatches queue locally as `Pending` — never a failure |
+
+Set them once as GitHub Secrets and redeploy; an unset value keeps whatever the
+Worker already has (the step never wipes). `.env.example` carries local/dev skeletons only.
+
 Rotation blast radius per secret is unchanged from §3 (rotating `AUTH_SECRET`
 logs everyone out on THAT env only). Order when several are compromised:
 `TOTP_ENCRYPTION_KEY` first, then `AUTH_SECRET`, then the rest — per env.

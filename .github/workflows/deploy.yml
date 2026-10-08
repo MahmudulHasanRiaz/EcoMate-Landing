@@ -356,6 +356,16 @@ jobs:
             fi
             printf '%s' "$value" | npx wrangler secret put "$name" --env "$ENV_NAME"
           }
+          # Plain config variant of put_secret: unset is an accepted state (empty-safe
+          # defaults in code), so no warning — just leave the Worker's value alone.
+          put_config() {
+            local name="$1" value="$2"
+            if [ -z "$value" ]; then
+              echo "Config $name is not set in GitHub Secrets — leaving the Worker's existing value."
+              return 0
+            fi
+            printf '%s' "$value" | npx wrangler secret put "$name" --env "$ENV_NAME"
+          }
           put_secret AUTH_SECRET "$AUTH_SECRET"
           put_secret SETUP_TOKEN "$SETUP_TOKEN"
           put_secret TOTP_ENCRYPTION_KEY "$TOTP_ENCRYPTION_KEY"
@@ -365,6 +375,14 @@ jobs:
           put_secret LICENSE_PORTAL_API_KEY "$LICENSE_PORTAL_API_KEY"
           put_secret RESEND_API_KEY "$RESEND_API_KEY"
           put_secret CRON_SECRET "$CRON_SECRET"
+          # Decision 7 — plain (non-secret) config values, same push mechanism so the
+          # single source of truth stays GitHub Secrets. Unset is valid and silent:
+          # NOTIFY_* unset = lead-notification emails stay in log-only mode;
+          # LICENSE_PORTAL_API_BASE_URL unset = portal dispatches queue locally
+          # (empty-safe default, no failure).
+          put_config NOTIFY_FROM_EMAIL "$NOTIFY_FROM_EMAIL"
+          put_config NOTIFY_TO_EMAIL "$NOTIFY_TO_EMAIL"
+          put_config LICENSE_PORTAL_API_BASE_URL "$LICENSE_PORTAL_API_BASE_URL"
           echo "Worker secrets synced (unset ones left untouched)."
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -378,6 +396,9 @@ jobs:
           LICENSE_PORTAL_API_KEY: ${{ secrets.LICENSE_PORTAL_API_KEY }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          NOTIFY_FROM_EMAIL: ${{ secrets.NOTIFY_FROM_EMAIL }}
+          NOTIFY_TO_EMAIL: ${{ secrets.NOTIFY_TO_EMAIL }}
+          LICENSE_PORTAL_API_BASE_URL: ${{ secrets.LICENSE_PORTAL_API_BASE_URL }}
 
       - name: Deploy to Cloudflare via opennext
         # wrangler 4+ requires a local Postgres connection string to emulate

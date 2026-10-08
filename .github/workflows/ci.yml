@@ -153,6 +153,18 @@ jobs:
           fi
           echo "no db:push in any workflow"
 
+      # §8.8: public locale pages must stay Server Components. A `'use client'`
+      # in `app/[locale]/**/page.tsx` would push the page (and its 100 KB copy)
+      # back into the client bundle (M-25/M-26 regression). Client interactivity
+      # lives in small islands under `src/components`, never in the page itself.
+      - name: Assert no client pages under app/[locale]
+        run: |
+          if grep -rnE "^['\"]use client['\"]" 'app/[locale]/'; then
+            echo "::error::'use client' found in a public locale page. Keep pages as Server Components (Item 16/M-25); move interactivity into client islands."
+            exit 1
+          fi
+          echo "no client pages under app/[locale]"
+
       # The opennext CLI is what produces the deployable Worker bundle (`.open-next`).
       # It internally runs `npm run build` (`next build`), which is why the package.json
       # build script must NEVER point back at `opennextjs-cloudflare build` — that

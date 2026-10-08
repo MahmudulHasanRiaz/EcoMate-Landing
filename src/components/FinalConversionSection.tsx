@@ -38,11 +38,17 @@ function newEventId(): string {
 
 export const FinalConversionSection: React.FC = () => {
   const { content, locale } = useLanding();
+  const channels = content.leadForm.channels;
+  // M-42: never invent an English volume when the configured options are short —
+  // prefer the admin's own list, then the locale seed fallback. A stale hardcoded
+  // string here would post a value the visitor never chose.
+  const defaultVolume = (options: readonly string[]): string =>
+    options[1] ?? options[0] ?? content.leadForm.volumeFallback;
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
     email: '',
-                        volume: content.leadForm.volumeOptions[1] || '150-500 orders / day',
+    volume: defaultVolume(content.leadForm.volumeOptions),
     note: '',
   });
 
@@ -190,7 +196,7 @@ export const FinalConversionSection: React.FC = () => {
 
             <div className="pt-2 sm:pt-4 space-y-2.5 sm:space-y-3">
               <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">
-                Direct Channels Available Now:
+                {channels.title}
               </p>
 
               {/* WhatsApp direct CTA */}
@@ -205,8 +211,8 @@ export const FinalConversionSection: React.FC = () => {
                     WA
                   </span>
                   <div>
-                    <span className="font-bold text-slate-900 dark:text-white block">WhatsApp Live Chat</span>
-                    <span className="text-slate-600 dark:text-slate-300 text-[10px] sm:text-[11px]">Chat with an operations specialist</span>
+                    <span className="font-bold text-slate-900 dark:text-white block">{channels.waTitle}</span>
+                    <span className="text-slate-600 dark:text-slate-300 text-[10px] sm:text-[11px]">{channels.waSub}</span>
                   </div>
                 </div>
                 <ArrowRight className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
@@ -214,7 +220,7 @@ export const FinalConversionSection: React.FC = () => {
 
               {/* Messenger direct CTA */}
               <a
-                href="https://m.me/ecomate.app"
+                href="https://m.me/ecomate.bd"
                 target="_blank"
                 rel="noreferrer"
                 className="flex items-center justify-between p-3 sm:p-3.5 rounded-xl border border-indigo-200 dark:border-indigo-500/30 bg-indigo-50 dark:bg-indigo-950/20 hover:bg-indigo-100/70 dark:hover:bg-indigo-950/30 transition-all text-xs shadow-2xs cursor-pointer"
@@ -224,8 +230,8 @@ export const FinalConversionSection: React.FC = () => {
                     FB
                   </span>
                   <div>
-                    <span className="font-bold text-slate-900 dark:text-white block">Facebook Messenger</span>
-                    <span className="text-slate-600 dark:text-slate-300 text-[10px] sm:text-[11px]">Direct message EcoMate page</span>
+                    <span className="font-bold text-slate-900 dark:text-white block">{channels.messengerTitle}</span>
+                    <span className="text-slate-600 dark:text-slate-300 text-[10px] sm:text-[11px]">{channels.messengerSub}</span>
                   </div>
                 </div>
                 <ArrowRight className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
@@ -241,11 +247,11 @@ export const FinalConversionSection: React.FC = () => {
                     <PhoneCall className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   </span>
                   <div>
-                    <span className="font-bold text-slate-900 dark:text-white block">Direct Phone Line</span>
-                    <span className="text-slate-600 dark:text-slate-300 text-[10px] sm:text-[11px] font-mono-numbers">+880 1894-828290</span>
+                    <span className="font-bold text-slate-900 dark:text-white block">{channels.phoneTitle}</span>
+                    <span className="text-slate-600 dark:text-slate-300 text-[10px] sm:text-[11px] font-mono-numbers">{content.footer.phone}</span>
                   </div>
                 </div>
-                <span className="text-slate-600 font-mono text-[10px] sm:text-[11px] dark:text-slate-300">Sun-Thu 9am-8pm</span>
+                <span className="text-slate-600 font-mono text-[10px] sm:text-[11px] dark:text-slate-300">{channels.phoneHours}</span>
               </a>
             </div>
           </div>
@@ -271,7 +277,7 @@ export const FinalConversionSection: React.FC = () => {
                         name: '',
                         phone: '',
                         email: '',
-    volume: content.leadForm.volumeOptions[1] || '150-500 orders / day',
+                        volume: defaultVolume(content.leadForm.volumeOptions),
                         note: '',
                       });
                       // Consent is per submission: a new request needs a fresh, explicit tick.
@@ -279,7 +285,7 @@ export const FinalConversionSection: React.FC = () => {
                     }}
                     className="text-xs font-semibold text-indigo-700 dark:text-indigo-300 hover:text-indigo-800 underline cursor-pointer"
                   >
-                    Submit another consultation request
+                    {channels.resubmit}
                   </button>
                 </div>
               </div>

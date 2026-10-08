@@ -34,10 +34,31 @@ localConnectionString = "postgresql://postgres.<ref>@aws-0-ap-south-1.pooler.sup
 #   npx wrangler r2 bucket create ecomate-media
 # then attach the public custom domain that next.config.ts images.remotePatterns and the
 # upload handler's CDN URL both expect:
-#   npx wrangler r2 bucket domain ecomate-media --custom-domain media.ecomate.app
+#   npx wrangler r2 bucket domain ecomate-media --custom-domain media.ecomate.bd
 [[r2_buckets]]
 binding = "R2_BUCKET"
 bucket_name = "ecomate-media"
+
+# Incremental cache for `'use cache'` (Phase 3a Item 16 / §8.6). OpenNext persists
+# prerendered shells + cached reads here instead of the Dummy cache that threw on
+# every page render (2026-10-07 outage). Create with:
+#   npx wrangler r2 bucket create ecomate-inc-cache
+# The tag side lives in the Durable Object below; the two are configured together
+# in open-next.config.ts.
+[[r2_buckets]]
+binding = "NEXT_INC_CACHE_R2_BUCKET"
+bucket_name = "ecomate-inc-cache"
+
+# Sharded tag cache for `cacheTag`/`updateTag` (Phase 3a Item 16 / §8.6). The
+# `DOShardedTagCache` class is auto-exported by the opennext worker template —
+# no app code declares it; wrangler only needs the binding + sqlite migration.
+[[durable_objects.bindings]]
+name = "NEXT_TAG_CACHE_DO_SHARDED"
+class_name = "DOShardedTagCache"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["DOShardedTagCache"]
 
 # No KV namespace by decision: rate limiting runs on Cloudflare WAF rate rules
 # (dashboard, first layer) plus the per-isolate in-memory backstop. lib/rateLimit.ts
@@ -115,8 +136,24 @@ id = "PASTE_PROD_HYPERDRIVE_ID"
 binding = "R2_BUCKET"
 # Create with: npx wrangler r2 bucket create ecomate-media-prod
 # then attach the public custom domain the app expects:
-#   npx wrangler r2 bucket domain ecomate-media-prod --custom-domain media.ecomate.app
+#   npx wrangler r2 bucket domain ecomate-media-prod --custom-domain media.ecomate.bd
 bucket_name = "ecomate-media-prod"
+
+# Production incremental cache (Phase 3a Item 16). Separate bucket from dev so a
+# local `wrangler dev` run can never poison production shells:
+#   npx wrangler r2 bucket create ecomate-inc-cache-prod
+[[env.production.r2_buckets]]
+binding = "NEXT_INC_CACHE_R2_BUCKET"
+bucket_name = "ecomate-inc-cache-prod"
+
+# Production tag-cache DO (Phase 3a Item 16). Same class/migration as above.
+[[env.production.durable_objects.bindings]]
+name = "NEXT_TAG_CACHE_DO_SHARDED"
+class_name = "DOShardedTagCache"
+
+[[env.production.migrations]]
+tag = "v1"
+new_sqlite_classes = ["DOShardedTagCache"]
 
 [env.production.vars]
 NEXT_PUBLIC_SITE_URL = "https://ecomate.bd"

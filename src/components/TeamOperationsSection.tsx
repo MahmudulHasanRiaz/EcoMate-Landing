@@ -4,6 +4,7 @@ import { Users, Shield, Check, Lock, Clock, Award } from 'lucide-react';
 
 export const TeamOperationsSection: React.FC = () => {
   const { content } = useLanding();
+  const labels = content.team.labels;
   return (
     <section id="team" className="relative py-14 md:py-24 border-t border-slate-200 dark:border-white/[0.06] bg-slate-50 dark:bg-[#080910] transition-colors">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -33,7 +34,7 @@ export const TeamOperationsSection: React.FC = () => {
                   <span className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 flex items-center justify-center text-amber-700 dark:text-amber-400">
                     <Shield className="h-4 w-4" />
                   </span>
-                  <span className="text-[10px] sm:text-[11px] font-mono text-slate-600 dark:text-slate-300 font-medium">Role #{idx + 1}</span>
+                  <span className="text-[10px] sm:text-[11px] font-mono text-slate-600 dark:text-slate-300 font-medium">{labels.rolePrefix}{idx + 1}</span>
                 </div>
 
                 <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mb-2">{item.role}</h3>
@@ -41,7 +42,7 @@ export const TeamOperationsSection: React.FC = () => {
                 <div className="space-y-2.5 text-xs">
                   <div>
                     <span className="text-slate-600 dark:text-slate-300 uppercase font-semibold text-[10px] tracking-wider block">
-                      Responsibilities
+                      {labels.responsibilities}
                     </span>
                     <p className="text-slate-700 dark:text-slate-200 mt-0.5 leading-relaxed">
                       {item.responsibilities}
@@ -50,7 +51,7 @@ export const TeamOperationsSection: React.FC = () => {
 
                   <div>
                     <span className="text-slate-600 dark:text-slate-300 uppercase font-semibold text-[10px] tracking-wider block">
-                      Enforced Boundary
+                      {labels.boundary}
                     </span>
                     <p className="text-slate-600 dark:text-slate-300 mt-0.5 leading-relaxed">
                       {item.accessControl}
@@ -61,7 +62,7 @@ export const TeamOperationsSection: React.FC = () => {
 
               <div className="mt-5 pt-3.5 border-t border-slate-100 dark:border-white/[0.06] flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-300 font-medium">
                 <Lock className="h-3.5 w-3.5 text-amber-700 dark:text-amber-400" />
-                <span>Audited activity log recorded</span>
+                <span>{labels.audited}</span>
               </div>
             </div>
           ))}
@@ -73,9 +74,9 @@ export const TeamOperationsSection: React.FC = () => {
             <div className="flex items-start gap-2.5 sm:gap-3">
               <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-amber-700 dark:text-amber-400 shrink-0 mt-0.5" />
               <div>
-                <h4 className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white">Shift Attendance & Overtime</h4>
+                <h4 className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white">{labels.hr1Title}</h4>
                 <p className="text-slate-600 dark:text-slate-400 mt-0.5 leading-relaxed">
-                  Track showroom cashier shifts and warehouse packing hours with automated late and overtime calculation.
+                  {labels.hr1Body}
                 </p>
               </div>
             </div>
@@ -83,9 +84,9 @@ export const TeamOperationsSection: React.FC = () => {
             <div className="flex items-start gap-2.5 sm:gap-3">
               <Award className="h-4 w-4 sm:h-5 sm:w-5 text-amber-700 dark:text-amber-400 shrink-0 mt-0.5" />
               <div>
-                <h4 className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white">Automated Sales Commissions</h4>
+                <h4 className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white">{labels.hr2Title}</h4>
                 <p className="text-slate-600 dark:text-slate-400 mt-0.5 leading-relaxed">
-                  Calculate showroom floor staff sales incentives automatically based on non-returned completed invoices.
+                  {labels.hr2Body}
                 </p>
               </div>
             </div>
@@ -93,9 +94,9 @@ export const TeamOperationsSection: React.FC = () => {
             <div className="flex items-start gap-2.5 sm:gap-3">
               <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-amber-700 dark:text-amber-400 shrink-0 mt-0.5" />
               <div>
-                <h4 className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white">Cryptographic Audit Trail</h4>
+                <h4 className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white">{labels.hr3Title}</h4>
                 <p className="text-slate-600 dark:text-slate-400 mt-0.5 leading-relaxed">
-                  Every inventory manual adjustment, price override, and discount application is tied to an employee ID.
+                  {labels.hr3Body}
                 </p>
               </div>
             </div>

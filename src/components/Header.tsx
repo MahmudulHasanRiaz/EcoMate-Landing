@@ -16,12 +16,23 @@ export const Header: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
-  const nav: readonly NavItem[] = navItems ?? content.header.nav;
+  // M-45: like the footer — a present-but-empty DB menu must not blank navigation.
+  const nav: readonly NavItem[] = navItems !== null && navItems.length > 0 ? navItems : content.header.nav;
 
   const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    // H-16: the menu is DB-driven — `href` may be an external URL or a path, not an
+    // in-page anchor. Only `#…` anchors take the smooth-scroll path; everything else
+    // keeps its native navigation (no preventDefault). The try/catch covers crafted
+    // values like `#` or `#foo bar` that are not valid selectors.
+    if (!href.startsWith('#')) return;
     e.preventDefault();
     setMobileMenuOpen(false);
-    const element = document.querySelector(href);
+    let element: Element | null = null;
+    try {
+      element = document.querySelector(href);
+    } catch {
+      element = null;
+    }
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' });
     }

@@ -15,7 +15,8 @@ import {
 } from 'lucide-react';
 
 export const EcosystemSection: React.FC = () => {
-  const { content, locale } = useLanding();
+  const { content } = useLanding();
+  const chrome = content.ecosystem.chrome;
   // CR-5: the CMS can save an empty `nodes` array — `nodes[0].id` would throw.
   // Null-safe init; the pillars grid + capabilities card render only when a node exists.
   const [activeNodeId, setActiveNodeId] = useState<string | null>(content.ecosystem.nodes[0]?.id ?? null);
@@ -76,7 +77,7 @@ export const EcosystemSection: React.FC = () => {
                 <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-wide">
                   {content.ecosystem.centerNodeTitle}
                 </span>
-                <p className="text-[11px] sm:text-xs text-indigo-700 dark:text-indigo-300 font-medium">Single Source of Operational Truth</p>
+                <p className="text-[11px] sm:text-xs text-indigo-700 dark:text-indigo-300 font-medium">{chrome.centerTagline}</p>
               </div>
             </div>
             <div className="w-0.5 h-4 sm:h-6 bg-gradient-to-b from-indigo-500 to-transparent" />
@@ -121,13 +122,13 @@ export const EcosystemSection: React.FC = () => {
                 </div>
                 <div>
                   <span className="text-[10px] sm:text-[11px] font-mono text-indigo-700 dark:text-indigo-300 uppercase tracking-wider font-semibold">
-                    Operational Pillar: {activeNode.subtitle}
+                    {chrome.pillarPrefix} {activeNode.subtitle}
                   </span>
                   <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">{activeNode.title}</h3>
                 </div>
               </div>
               <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/20">
-                Core Engine Integrated
+                {chrome.integratedBadge}
               </span>
             </div>
 
@@ -142,7 +143,7 @@ export const EcosystemSection: React.FC = () => {
                   </div>
                   <div>
                     <p className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-slate-100">{item}</p>
-                    <p className="text-[10px] sm:text-xs text-slate-600 dark:text-slate-300 mt-0.5">Continuous automated ledger sync</p>
+                    <p className="text-[10px] sm:text-xs text-slate-600 dark:text-slate-300 mt-0.5">{chrome.itemNote}</p>
                   </div>
                 </div>
               ))}
@@ -150,13 +151,13 @@ export const EcosystemSection: React.FC = () => {
 
             <div className="mt-5 sm:mt-6 pt-4 sm:pt-5 border-t border-slate-200 dark:border-white/[0.06] flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600 dark:text-slate-300">
               <p className="max-w-xl">
-                Connected directly to double-entry accounting, real-time inventory ledger, and courier APIs.
+                {chrome.connectBody}
               </p>
               <a
                 href="#lead-form"
                 className="font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
               >
-                Schedule an architecture walkthrough →
+                {chrome.walkthroughCta}
               </a>
             </div>
           </div>

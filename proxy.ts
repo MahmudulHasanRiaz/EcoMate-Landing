@@ -34,6 +34,7 @@ import { auth } from '@/auth';
 import { applySecurityHeaders } from '@/lib/securityHeaders';
 import { DEFAULT_LOCALE, localeFromPathname } from '@/lib/locales';
 import { findManagedRedirect } from '@/lib/redirects';
+import { getSlugByIdUncached } from '@/lib/content';
 import { timed } from '@/lib/slowlog';
 
 /**
@@ -94,6 +95,34 @@ export async function proxy(request: NextRequest, event: Parameters<NextMiddlewa
   // Document requests only, and never for a mutating verb.
   const isDocument = request.method === 'GET' || request.method === 'HEAD';
   if (isDocument && !pathname.startsWith('/api/') && !pathname.startsWith('/admin')) {
+    // Phase 3a Item 23 (post-name permalink): legacy numeric ID URLs 301 to the slug
+    // canonical at the edge. The page-level `permanentRedirect` fallback exists, but
+    // under the PPR shell it fires after the 200 streams — crawlers and curl would see
+    // 200 + redirect flight data instead of a real 301. Answering here settles the
+    // status before any rendering. Only purely-numeric segments match, so normal slug
+    // traffic (the overwhelming majority) never touches the database for this.
+    const idMatch = pathname.match(/^\/(en|bn)\/(blog|case-studies)\/(\d+)\/?$/);
+    if (idMatch) {
+      const [, locale, kind, rawId] = idMatch;
+      try {
+        const slug = await getSlugByIdUncached(
+          kind === 'blog' ? 'blog' : 'case-studies',
+          Number(rawId),
+        );
+        if (slug) {
+          const destination = new URL(`/${locale}/${kind}/${slug}`, request.url);
+          const response = NextResponse.redirect(destination, 301);
+          applySecurityHeaders(response.headers);
+          response.headers.set('Content-Language', contentLanguageFor(pathname));
+          response.headers.set('Cache-Control', 'no-store');
+          response.headers.set('x-request-id', requestId);
+          return response;
+        }
+      } catch {
+        // No tag store / DB outage in the edge context: fall through to the page,
+        // whose own numeric handling (redirect or not-found UI) still applies.
+      }
+    }
     // Timeout + failure-memo live INSIDE findManagedRedirect (5s bound, 10min memo
     // on timeout): a single slow backend costs one request, not every request. Do not
     // wrap another timeout here — nested timers only obscure which layer fired.

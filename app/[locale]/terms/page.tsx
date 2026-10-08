@@ -12,7 +12,7 @@ import { ArrowLeft } from 'lucide-react';
 import { getLandingContent } from '@/lib/content';
 import { LEGAL_TERMS_KEY, legalDoc } from '@/lib/legal';
 import { LOCALES, isLocale } from '@/lib/locales';
-import { articleJsonLd, breadcrumbJsonLd, localeAlternates, localeUrl, serializeJsonLd } from '@/lib/seo';
+import { articleJsonLd, breadcrumbJsonLd, localeAlternates, localeHomePath, localeUrl, ogLocale, serializeJsonLd } from '@/lib/seo';
 
 interface LegalPageProps {
   params: Promise<{ locale: string }>;
@@ -36,7 +36,7 @@ export async function generateMetadata({ params }: LegalPageProps): Promise<Meta
       url: localeUrl(locale, 'terms'),
       title: `${doc.title} | EcoMate`,
       description: doc.intro.slice(0, 160),
-      locale,
+      locale: ogLocale(locale),
     },
   };
 }
@@ -47,7 +47,7 @@ export default async function TermsPage({ params }: LegalPageProps) {
 
   const sections = await getLandingContent(locale).catch(() => null);
   const doc = legalDoc(sections, LEGAL_TERMS_KEY, locale);
-  const homeHref = locale === 'bn' ? '/bn' : '/';
+  const homeHref = localeHomePath(locale);
   const url = localeUrl(locale, 'terms');
 
   return (

@@ -21,16 +21,17 @@
  * PricingSection needs it). `locale`/`theme` stay client state on purpose — they are
  * interaction state, not data.
  *
- * Locale-switch behaviour moved here from `LandingShell`: scroll-anchor preserve (section
- * identity, not pixels — Bangla copy is taller), static-then-`/api/content` upgrade, and
- * `document.lang` / dark-class sync.
+ * Locale-switch behaviour (Decision 15): the toggle navigates to `/{locale}` via the
+ * client router — the URL carries the language, and the locale layout re-seeds
+ * server-merged content for the new locale. Scroll-anchor preserve (section identity,
+ * not pixels — Bangla copy is taller), theme persistence, and `document.lang` /
+ * dark-class sync live here.
  */
 
 import { createContext, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { LandingContent, Locale, NavItem, Theme } from '@/src/types/landing';
 import type { PublicTestimonial } from '@/lib/content';
-import { landingContent } from '@/src/data/landingContent';
-import { assembleLandingContent, isPlainObject } from '@/lib/merge';
 
 export interface ShellValue {
   locale: Locale;
@@ -137,61 +138,57 @@ export function LocaleThemeProvider({
   initialIsPricingVisible: boolean;
   children: React.ReactNode;
 }) {
+  const router = useRouter();
   const [locale, setLocale] = useState<Locale>(initialLocale);
-  const [theme, setTheme] = useState<Theme>('light');
+  // M-31: theme persists across reloads. Lazy initializer (client-only read, no SSR
+  // mismatch — this provider never server-renders differing markup from it, the class
+  // sync effect below applies it to `documentElement` after mount).
+  const [theme, setTheme] = useState<Theme>(() => {
+    try {
+      return window.localStorage.getItem('ecomate-theme') === 'dark' ? 'dark' : 'light';
+    } catch {
+      return 'light';
+    }
+  });
   const [content, setContent] = useState<LandingContent>(initialContent);
   // Pricing visibility is DB-driven (site_settings via /api/pricing). No local toggle in production.
   const isPricingVisible = initialIsPricingVisible;
 
-  // Which locales already hold DB-merged content, so a toggle does not refetch on every
-  // flip back and forth. Seeded with the server-rendered locale so `/bn` does not refetch
-  // the copy it already has.
-  const loadedLocales = useRef<Set<Locale>>(new Set<Locale>([initialLocale]));
   const localeRef = useRef<Locale>(initialLocale);
 
   // A cross-locale client navigation (`/en` → `/bn`) reuses this mounted provider with new
-  // seed props — `useState` does not pick those up, so re-seed explicitly. A client toggle
-  // never changes `initialLocale` and is unaffected.
+  // seed props — `useState` does not pick those up, so re-seed explicitly. A same-locale
+  // re-render never changes `initialLocale` and is unaffected.
   useEffect(() => {
     localeRef.current = initialLocale;
-    loadedLocales.current = new Set<Locale>([initialLocale]);
     setLocale(initialLocale);
     setContent(initialContent);
   }, [initialLocale, initialContent]);
 
-  const loadLocaleContent = useCallback(async (target: Locale) => {
-    try {
-      const response = await fetch(`/api/content?locale=${target}`);
-      if (!response.ok) return;
-      const payload: unknown = await response.json();
-      // Deep-merge the DB payload over the static copy for that locale. A malformed
-      // response leaves the static content in place — the page must never blank out
-      // because a JSON body was a string.
-      const merged = assembleLandingContent(target, isPlainObject(payload) ? payload : null);
-      loadedLocales.current.add(target);
-      if (localeRef.current === target) setContent(merged);
-    } catch {
-      // Offline / DB outage: the static fallback already rendered, so there is nothing to
-      // do and nothing to tell the visitor.
-    }
-  }, []);
-
+  // Decision 15 (M-29): the toggle navigates to `/{locale}` instead of swapping client
+  // state. The URL carries the language — share/bookmark/crawl/hreflang all agree — and
+  // the locale layout re-seeds server-merged content, so there is no stale-locale flash
+  // (M-30): the old locale stays painted until the new route is ready.
   const toggleLocale = useCallback(() => {
     const next: Locale = localeRef.current === 'en' ? 'bn' : 'en';
-    // Read the anchor *before* any state change: the switch swaps the whole document body,
-    // so after it lands the previous scroll offset points at an arbitrary section.
+    // Read the anchor *before* navigating: the switch swaps the whole document body,
+    // so afterwards the previous scroll offset points at an arbitrary section.
     const anchor = captureScrollAnchor();
     localeRef.current = next;
-    setLocale(next);
-    // Switch to the static copy immediately (no empty state / layout jump), then upgrade
-    // to the DB payload when it arrives.
-    setContent(landingContent[next]);
-    if (!loadedLocales.current.has(next)) void loadLocaleContent(next);
+    router.push(`/${next}`);
     restoreScrollAnchor(anchor);
-  }, [loadLocaleContent]);
+  }, [router]);
 
   const toggleTheme = useCallback(() => {
-    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+    setTheme((prev) => {
+      const next: Theme = prev === 'light' ? 'dark' : 'light';
+      try {
+        window.localStorage.setItem('ecomate-theme', next);
+      } catch {
+        // Private-mode storage denial must not break the toggle.
+      }
+      return next;
+    });
   }, []);
 
   // Sync document language attribute

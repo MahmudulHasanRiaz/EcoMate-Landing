@@ -19,6 +19,7 @@ import {
 
 export const Hero: React.FC = () => {
   const { content, locale } = useLanding();
+  const heroConsole = content.hero.console;
   const [activeHeroTab, setActiveHeroTab] = useState<'overview' | 'packing' | 'courier' | 'pos'>('overview');
 
   const scrollToLead = (e: React.MouseEvent) => {
@@ -86,7 +87,7 @@ export const Hero: React.FC = () => {
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 dark:border-white/15 bg-white dark:bg-white/[0.04] px-5 sm:px-7 py-3 sm:py-3.5 text-sm sm:text-base font-medium text-slate-700 dark:text-slate-200 shadow-xs backdrop-blur-md transition-all hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white cursor-pointer shrink-0"
             >
               <MessageCircle className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
-              <span>{locale === 'en' ? 'WhatsApp Sales' : 'হোয়াটসঅ্যাপে কথা বলুন'}</span>
+              <span>{content.hero.whatsappCta}</span>
             </a>
           </div>
 
@@ -103,7 +104,7 @@ export const Hero: React.FC = () => {
             </a>
             <span className="text-slate-300 dark:text-slate-400 hidden sm:inline">·</span>
             <a
-              href="https://m.me/ecomate.app"
+              href="https://m.me/ecomate.bd"
               target="_blank"
               rel="noreferrer"
               className="hidden sm:inline-flex items-center gap-1.5 text-indigo-700 dark:text-indigo-300 hover:underline transition-colors font-medium"
@@ -150,11 +151,11 @@ export const Hero: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" />
                   <span className="text-xs font-mono font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                    {locale === 'en' ? 'Central Operating Bus · Live Synchronized Feed' : 'সেন্ট্রাল অপারেটিং বাস · লাইভ সিনক্রোনাইজড ফিড'}
+                    {heroConsole.busLive}
                   </span>
                 </div>
                 <span className="text-[10px] sm:text-[11px] font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-100/70 dark:bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-500/20 font-semibold">
-                  Sales and fulfillment nodes connected
+                  {heroConsole.nodesConnected}
                 </span>
               </div>
 
@@ -165,7 +166,7 @@ export const Hero: React.FC = () => {
                     <Store className="h-3.5 w-3.5" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">Web Stores</p>
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{heroConsole.nodeWebTitle}</p>
                     <p className="text-[10px] text-slate-600 dark:text-slate-300 truncate">WooCommerce · Custom</p>
                   </div>
                 </div>
@@ -175,7 +176,7 @@ export const Hero: React.FC = () => {
                     <Store className="h-3.5 w-3.5" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">Physical POS</p>
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{heroConsole.nodePosTitle}</p>
                     <p className="text-[10px] text-slate-600 dark:text-slate-300 truncate">Banani · Dhanmondi</p>
                   </div>
                 </div>
@@ -185,8 +186,8 @@ export const Hero: React.FC = () => {
                     <Warehouse className="h-3.5 w-3.5" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">Warehouse Hub</p>
-                    <p className="text-[10px] text-slate-600 dark:text-slate-300 truncate">Multi-Bin · Barcode Lock</p>
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{heroConsole.nodeWarehouseTitle}</p>
+                    <p className="text-[10px] text-slate-600 dark:text-slate-300 truncate">{heroConsole.nodeWarehouseSub}</p>
                   </div>
                 </div>
 
@@ -195,7 +196,7 @@ export const Hero: React.FC = () => {
                     <Truck className="h-3.5 w-3.5" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">Courier Fleet</p>
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{heroConsole.nodeCourierTitle}</p>
                     <p className="text-[10px] text-slate-600 dark:text-slate-300 truncate">Steadfast · Pathao</p>
                   </div>
                 </div>
@@ -212,7 +213,7 @@ export const Hero: React.FC = () => {
                   EcoMate Central Operations Console · v4.2
                 </span>
                 <span className="ml-1 shrink-0 whitespace-nowrap rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
-                  Demo data
+                  {heroConsole.demoBadge}
                 </span>
               </div>
 
@@ -226,7 +227,7 @@ export const Hero: React.FC = () => {
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
                 >
-                  {locale === 'en' ? 'Live Overview' : 'লাইভ ড্যাশবোর্ড'}
+                  {heroConsole.tabOverview}
                 </button>
                 <button
                   onClick={() => setActiveHeroTab('packing')}
@@ -236,7 +237,7 @@ export const Hero: React.FC = () => {
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
                 >
-                  {locale === 'en' ? 'Smart Packing Station' : 'স্মার্ট প্যাকিং'}
+                  {heroConsole.tabPacking}
                 </button>
                 <button
                   onClick={() => setActiveHeroTab('courier')}
@@ -246,7 +247,7 @@ export const Hero: React.FC = () => {
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
                 >
-                  {locale === 'en' ? 'Fraud & Courier Check' : 'ফ্রড ও কুরিয়ার চেক'}
+                  {heroConsole.tabCourier}
                 </button>
                 <button
                   onClick={() => setActiveHeroTab('pos')}
@@ -256,7 +257,7 @@ export const Hero: React.FC = () => {
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
                 >
-                  {locale === 'en' ? 'Showroom POS Sync' : 'শোরুম পিওএস সিঙ্ক'}
+                  {heroConsole.tabPos}
                 </button>
               </div>
             </div>
@@ -276,18 +277,18 @@ export const Hero: React.FC = () => {
                       <p className="mt-2 text-xl sm:text-2xl font-bold text-slate-900 dark:text-white font-mono-numbers">
                         ৳ 2,84,650
                       </p>
-                      <p className="text-[11px] text-slate-600 mt-1 dark:text-slate-300">1,248 orders dispatched</p>
+                      <p className="text-[11px] text-slate-600 mt-1 dark:text-slate-300">{heroConsole.kpiOrdersSub}</p>
                     </div>
 
                     <div className="rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50/80 dark:bg-white/[0.02] p-4">
                       <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-300">
                         <span>{locale === 'en' ? 'Fulfillment Accuracy' : 'প্যাকিং নির্ভুলতা'}</span>
-                        <span className="text-indigo-600 dark:text-indigo-400 font-medium">Scan-checked</span>
+                        <span className="text-indigo-600 dark:text-indigo-400 font-medium">{heroConsole.kpiScanBadge}</span>
                       </div>
                       <p className="mt-2 text-xl sm:text-2xl font-bold text-emerald-700 dark:text-emerald-400 font-mono-numbers">
-                        Blocked at scan
+                        {heroConsole.kpiBlockedValue}
                       </p>
-                      <p className="text-[11px] text-slate-600 mt-1 dark:text-slate-300">Mismatches stopped before labels print</p>
+                      <p className="text-[11px] text-slate-600 mt-1 dark:text-slate-300">{heroConsole.kpiBlockedSub}</p>
                     </div>
 
                     <div className="rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50/80 dark:bg-white/[0.02] p-4">
@@ -313,7 +314,7 @@ export const Hero: React.FC = () => {
                       <p className="mt-2 text-xl sm:text-2xl font-bold text-indigo-700 dark:text-indigo-300 font-mono-numbers">
                         ৳ 14,20,500
                       </p>
-                      <p className="text-[11px] text-slate-600 mt-1 dark:text-slate-300">Matched line by line to bank deposits</p>
+                      <p className="text-[11px] text-slate-600 mt-1 dark:text-slate-300">{heroConsole.kpiCodSub}</p>
                     </div>
                   </div>
 
@@ -324,15 +325,15 @@ export const Hero: React.FC = () => {
                       <div className="flex items-center justify-between mb-4">
                         <div>
                           <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
-                            {locale === 'en' ? 'Real-Time Dispatch Velocity' : 'লাইভ ডিসপ্যাচ ভেলোসিটি'}
+                            {heroConsole.velocityTitle}
                           </h4>
                           <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
-                            {locale === 'en' ? 'Orders verified and handed over by hour' : 'প্রতি ঘণ্টায় ভেরিফাইড পার্সেল সংখ্যা'}
+                            {heroConsole.velocitySub}
                           </p>
                         </div>
                         <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-500/20 font-medium">
                           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" />
-                          Live Stream
+                          {heroConsole.liveStream}
                         </span>
                       </div>
 
@@ -364,14 +365,14 @@ export const Hero: React.FC = () => {
                         <div className="flex items-center gap-4">
                           <span className="flex items-center gap-1.5">
                             <span className="h-2 w-2 rounded-full bg-indigo-600 inline-block" />
-                            Smart Packed
+                            {heroConsole.legendPacked}
                           </span>
                           <span className="flex items-center gap-1.5">
                             <span className="h-2 w-2 rounded-full bg-purple-500 inline-block" />
-                            Courier Handover
+                            {heroConsole.legendHandover}
                           </span>
                         </div>
-                        <span className="text-slate-700 dark:text-slate-300 font-mono-numbers font-medium">Timed packing flow per order</span>
+                        <span className="text-slate-700 dark:text-slate-300 font-mono-numbers font-medium">{heroConsole.legendNote}</span>
                       </div>
                     </div>
 
@@ -379,8 +380,8 @@ export const Hero: React.FC = () => {
                     <div className="rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.02] p-4 sm:p-5 shadow-sm flex flex-col justify-between">
                       <div>
                         <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-3 flex items-center justify-between">
-                          <span>{locale === 'en' ? 'Active Commerce Nodes' : 'সক্রিয় সেলস নোড'}</span>
-                          <span className="text-[11px] text-indigo-700 dark:text-indigo-300 font-mono font-medium">All synchronized</span>
+                          <span>{heroConsole.channelsTitle}</span>
+                          <span className="text-[11px] text-indigo-700 dark:text-indigo-300 font-mono font-medium">{heroConsole.channelsSynced}</span>
                         </h4>
 
                         <div className="space-y-3">
@@ -389,10 +390,10 @@ export const Hero: React.FC = () => {
                               <Store className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
                               <div>
                                 <p className="text-xs font-semibold text-slate-900 dark:text-white">Main Woo Store (Online)</p>
-                                <p className="text-[10px] text-slate-600 dark:text-slate-300">842 orders today · Auto-Synced</p>
+                                <p className="text-[10px] text-slate-600 dark:text-slate-300">{heroConsole.channelWooSub}</p>
                               </div>
                             </div>
-                            <span className="text-xs font-mono text-emerald-700 dark:text-emerald-300 font-medium">● Live</span>
+                            <span className="text-xs font-mono text-emerald-700 dark:text-emerald-300 font-medium">{heroConsole.liveBadge}</span>
                           </div>
 
                           <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 dark:bg-black/30 border border-slate-200/80 dark:border-white/[0.04]">
@@ -400,10 +401,10 @@ export const Hero: React.FC = () => {
                               <Store className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                               <div>
                                 <p className="text-xs font-semibold text-slate-900 dark:text-white">Gulshan Flagship POS</p>
-                                <p className="text-[10px] text-slate-600 dark:text-slate-300">৳ 1,42,000 billed · Stock Synced</p>
+                                <p className="text-[10px] text-slate-600 dark:text-slate-300">{heroConsole.channelPosSub}</p>
                               </div>
                             </div>
-                            <span className="text-xs font-mono text-emerald-700 dark:text-emerald-300 font-medium">● Live</span>
+                            <span className="text-xs font-mono text-emerald-700 dark:text-emerald-300 font-medium">{heroConsole.liveBadge}</span>
                           </div>
 
                           <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 dark:bg-black/30 border border-slate-200/80 dark:border-white/[0.04]">
@@ -411,17 +412,17 @@ export const Hero: React.FC = () => {
                               <Warehouse className="h-4 w-4 text-amber-700 dark:text-amber-400" />
                               <div>
                                 <p className="text-xs font-semibold text-slate-900 dark:text-white">Central Hub (Tejgaon)</p>
-                                <p className="text-[10px] text-slate-600 dark:text-slate-300">4,280 items in stock · Bin Map A-G</p>
+                                <p className="text-[10px] text-slate-600 dark:text-slate-300">{heroConsole.channelHubSub}</p>
                               </div>
                             </div>
-                            <span className="text-xs font-mono text-emerald-700 dark:text-emerald-300 font-medium">● Live</span>
+                            <span className="text-xs font-mono text-emerald-700 dark:text-emerald-300 font-medium">{heroConsole.liveBadge}</span>
                           </div>
                         </div>
                       </div>
 
                       <div className="mt-4 pt-3 border-t border-slate-200 dark:border-white/[0.06] text-[11px] text-slate-600 dark:text-slate-300 flex items-center justify-between">
-                        <span>Central Inventory Lock: Active</span>
-                        <span className="text-indigo-600 dark:text-indigo-400 font-semibold">Zero Overselling</span>
+                        <span>{heroConsole.inventoryLock}</span>
+                        <span className="text-indigo-600 dark:text-indigo-400 font-semibold">{heroConsole.zeroOversell}</span>
                       </div>
                     </div>
                   </div>
@@ -438,7 +439,7 @@ export const Hero: React.FC = () => {
                         <div className="flex items-center gap-2">
                           <span className="font-mono text-sm font-bold text-slate-900 dark:text-white">ORDER #EM-84920</span>
                           <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30">
-                            PACKING IN PROGRESS
+                            {heroConsole.packingStatus}
                           </span>
                         </div>
                         <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
@@ -446,8 +447,8 @@ export const Hero: React.FC = () => {
                         </p>
                       </div>
                       <div className="text-right">
-                        <span className="text-xs font-mono text-emerald-700 dark:text-emerald-300 font-semibold">2 of 2 Items Verified</span>
-                        <p className="text-[10px] text-slate-600 dark:text-slate-300">Invoice total: ৳ 4,650 (COD)</p>
+                        <span className="text-xs font-mono text-emerald-700 dark:text-emerald-300 font-semibold">{heroConsole.packingVerified}</span>
+                        <p className="text-[10px] text-slate-600 dark:text-slate-300">{heroConsole.invoiceTotal}</p>
                       </div>
                     </div>
 
@@ -496,9 +497,9 @@ export const Hero: React.FC = () => {
                     <div className="mt-4 p-3 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2 text-indigo-800 dark:text-indigo-300">
                         <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping motion-reduce:animate-none" />
-                        <span>Barcode Scan Audio Verification: <strong>MATCHED (Chime Sound)</strong></span>
+                        <span>{heroConsole.scanFeedback}</span>
                       </div>
-                      <span className="text-slate-600 dark:text-slate-300 text-[11px]">Mismatch protection enabled</span>
+                      <span className="text-slate-600 dark:text-slate-300 text-[11px]">{heroConsole.scanFeedbackSub}</span>
                     </div>
                   </div>
 
@@ -506,7 +507,7 @@ export const Hero: React.FC = () => {
                   <div className="rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.02] p-5 shadow-sm flex flex-col justify-between">
                     <div>
                       <div className="flex items-center justify-between mb-3">
-                        <span className="text-xs font-semibold text-slate-900 dark:text-white">Courier Consignment</span>
+                        <span className="text-xs font-semibold text-slate-900 dark:text-white">{heroConsole.consignment}</span>
                         <span className="text-[11px] font-mono text-indigo-700 dark:text-indigo-300 font-semibold">Steadfast API</span>
                       </div>
 
@@ -524,9 +525,14 @@ export const Hero: React.FC = () => {
                     </div>
 
                     <div className="mt-4">
-                      <button className="w-full py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm cursor-pointer">
+                      {/* L-47: the demo-deck button was focusable but dead (no handler) —
+                          it now scrolls to the lead form like every other deck CTA. */}
+                      <button
+                        type="button"
+                        onClick={scrollToLead}
+                        className="w-full py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm cursor-pointer">
                         <PackageCheck className="h-4 w-4" />
-                        <span>Print Label & Seal Parcel</span>
+                        <span>{heroConsole.printLabel}</span>
                       </button>
                     </div>
                   </div>
@@ -540,31 +546,31 @@ export const Hero: React.FC = () => {
                   <div className="rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.02] p-5 shadow-sm">
                     <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/[0.08] pb-3">
                       <div>
-                        <h4 className="text-sm font-semibold text-slate-900 dark:text-white">Courier Network History Check</h4>
-                        <p className="text-xs text-slate-600 dark:text-slate-300">Pre-dispatch evaluation for Phone: 01711-892410</p>
+                        <h4 className="text-sm font-semibold text-slate-900 dark:text-white">{heroConsole.courierCheckTitle}</h4>
+                        <p className="text-xs text-slate-600 dark:text-slate-300">{heroConsole.courierCheckSub}</p>
                       </div>
                       <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 flex items-center gap-1">
-                        <ShieldCheck className="h-3.5 w-3.5" /> High Trust Score
+                        <ShieldCheck className="h-3.5 w-3.5" /> {heroConsole.trustBadge}
                       </span>
                     </div>
 
                     <div className="mt-4 grid grid-cols-3 gap-3 text-center">
                       <div className="p-3 rounded-lg bg-slate-50 dark:bg-black/30 border border-slate-200/80 dark:border-white/[0.04]">
                         <p className="text-lg font-bold text-slate-900 dark:text-white font-mono-numbers">48</p>
-                        <p className="text-[10px] text-slate-600 dark:text-slate-300">Total Deliveries</p>
+                        <p className="text-[10px] text-slate-600 dark:text-slate-300">{heroConsole.totalDeliveries}</p>
                       </div>
                       <div className="p-3 rounded-lg bg-slate-50 dark:bg-black/30 border border-slate-200/80 dark:border-white/[0.04]">
                         <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400 font-mono-numbers">47</p>
-                        <p className="text-[10px] text-slate-600 dark:text-slate-300">Successfully Received</p>
+                        <p className="text-[10px] text-slate-600 dark:text-slate-300">{heroConsole.receivedOk}</p>
                       </div>
                       <div className="p-3 rounded-lg bg-slate-50 dark:bg-black/30 border border-slate-200/80 dark:border-white/[0.04]">
                         <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400 font-mono-numbers">97.9%</p>
-                        <p className="text-[10px] text-slate-600 dark:text-slate-300">Delivery Success</p>
+                        <p className="text-[10px] text-slate-600 dark:text-slate-300">{heroConsole.deliverySuccess}</p>
                       </div>
                     </div>
 
                     <div className="mt-4 p-3 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-xs text-emerald-800 dark:text-emerald-300 font-medium">
-                      ✓ No fake order history. Safe to dispatch without upfront delivery charge.
+                      {heroConsole.safeDispatch}
                     </div>
                   </div>
 
@@ -572,31 +578,31 @@ export const Hero: React.FC = () => {
                   <div className="rounded-xl border border-rose-200 dark:border-rose-500/20 bg-rose-50/60 dark:bg-rose-950/10 p-5 shadow-sm">
                     <div className="flex items-center justify-between border-b border-rose-200 dark:border-rose-500/20 pb-3">
                       <div>
-                        <h4 className="text-sm font-semibold text-rose-800 dark:text-rose-300">Suspicious Order Flagged</h4>
+                        <h4 className="text-sm font-semibold text-rose-800 dark:text-rose-300">{heroConsole.suspiciousTitle}</h4>
                         <p className="text-xs text-slate-600 dark:text-slate-300">Order #EM-84918 · Phone: 01923-410982</p>
                       </div>
                       <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30 flex items-center gap-1">
-                        <AlertTriangle className="h-3.5 w-3.5" /> High Return Risk
+                        <AlertTriangle className="h-3.5 w-3.5" /> {heroConsole.highReturnRisk}
                       </span>
                     </div>
 
                     <div className="mt-4 grid grid-cols-3 gap-3 text-center">
                       <div className="p-3 rounded-lg bg-white dark:bg-black/30 border border-rose-100 dark:border-white/[0.04]">
                         <p className="text-lg font-bold text-slate-900 dark:text-white font-mono-numbers">14</p>
-                        <p className="text-[10px] text-slate-600 dark:text-slate-300">Past Orders</p>
+                        <p className="text-[10px] text-slate-600 dark:text-slate-300">{heroConsole.pastOrders}</p>
                       </div>
                       <div className="p-3 rounded-lg bg-white dark:bg-black/30 border border-rose-100 dark:border-white/[0.04]">
                         <p className="text-lg font-bold text-rose-700 dark:text-rose-400 font-mono-numbers">11</p>
-                        <p className="text-[10px] text-slate-600 dark:text-slate-300">Returned / Refused</p>
+                        <p className="text-[10px] text-slate-600 dark:text-slate-300">{heroConsole.returnedRefused}</p>
                       </div>
                       <div className="p-3 rounded-lg bg-white dark:bg-black/30 border border-rose-100 dark:border-white/[0.04]">
                         <p className="text-lg font-bold text-rose-700 dark:text-rose-400 font-mono-numbers">21.4%</p>
-                        <p className="text-[10px] text-slate-600 dark:text-slate-300">Success Rate</p>
+                        <p className="text-[10px] text-slate-600 dark:text-slate-300">{heroConsole.successRate}</p>
                       </div>
                     </div>
 
                     <div className="mt-4 p-3 rounded-lg bg-rose-100/70 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-xs text-rose-800 dark:text-rose-300 font-medium">
-                      ⚠ Serial returner. EcoMate recommends requesting advance delivery fee before courier dispatch.
+                      {heroConsole.serialReturner}
                     </div>
                   </div>
                 </div>
@@ -608,10 +614,10 @@ export const Hero: React.FC = () => {
                   <div className="lg:col-span-2 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.02] p-5 shadow-sm">
                     <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/[0.08] pb-3">
                       <div>
-                        <h4 className="text-sm font-semibold text-slate-900 dark:text-white">Gulshan Flagship POS Register 01</h4>
+                        <h4 className="text-sm font-semibold text-slate-900 dark:text-white">{heroConsole.posRegister}</h4>
                         <p className="text-xs text-slate-600 dark:text-slate-300">Cashier: Sajjad Hossain · Shift: Morning</p>
                       </div>
-                      <span className="text-xs font-mono text-emerald-700 dark:text-emerald-300 font-medium">● Connected to Central Hub</span>
+                      <span className="text-xs font-mono text-emerald-700 dark:text-emerald-300 font-medium">{heroConsole.posConnected}</span>
                     </div>
 
                     <div className="mt-4 space-y-2 text-xs">
@@ -626,7 +632,7 @@ export const Hero: React.FC = () => {
                     </div>
 
                     <div className="mt-4 p-3 rounded-lg bg-slate-100/70 dark:bg-black/40 border border-slate-200 dark:border-white/[0.06] flex items-center justify-between">
-                      <span className="text-xs text-slate-600 dark:text-slate-300 font-medium">Split Payment Applied:</span>
+                      <span className="text-xs text-slate-600 dark:text-slate-300 font-medium">{heroConsole.splitPayment}</span>
                       <div className="flex gap-2 text-xs font-mono-numbers">
                         <span className="px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-medium">Cash: ৳ 2,000</span>
                         <span className="px-2 py-0.5 rounded bg-indigo-100 dark:bg-indigo-500/20 text-indigo-800 dark:text-indigo-300 font-medium">bKash: ৳ 2,550</span>
@@ -636,28 +642,28 @@ export const Hero: React.FC = () => {
 
                   <div className="rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.02] p-5 shadow-sm flex flex-col justify-between">
                     <div>
-                      <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-2">Automated Inventory Deduction</h4>
+                      <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-2">{heroConsole.deductionTitle}</h4>
                       <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                        The moment this sale completes at the Gulshan showroom counter:
+                        {heroConsole.deductionIntro}
                       </p>
                       <ul className="mt-3 space-y-2 text-xs text-slate-700 dark:text-slate-300">
                         <li className="flex items-center gap-1.5">
                           <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700 dark:text-emerald-400 shrink-0" />
-                          <span>Gulshan floor stock decremented</span>
+                          <span>{heroConsole.deductionStock}</span>
                         </li>
                         <li className="flex items-center gap-1.5">
                           <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700 dark:text-emerald-400 shrink-0" />
-                          <span>Online WooCommerce stock auto-updated</span>
+                          <span>{heroConsole.deductionOnline}</span>
                         </li>
                         <li className="flex items-center gap-1.5">
                           <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700 dark:text-emerald-400 shrink-0" />
-                          <span>COGS & Cash-drawer ledger posted</span>
+                          <span>{heroConsole.deductionLedger}</span>
                         </li>
                       </ul>
                     </div>
 
                     <div className="mt-4 pt-3 border-t border-slate-200 dark:border-white/[0.06] text-xs font-mono text-indigo-700 dark:text-indigo-300 text-center font-medium">
-                      Zero stock desync across retail & web
+                      {heroConsole.zeroDesync}
                     </div>
                   </div>
                 </div>

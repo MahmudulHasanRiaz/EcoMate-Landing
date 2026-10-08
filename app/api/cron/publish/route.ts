@@ -18,7 +18,7 @@
  * whose next navigation must see the write synchronously, so stale-while-revalidate is
  * the correct direction.
  */
-import { and, eq, isNull, lte } from 'drizzle-orm';
+import { and, eq, isNull, lte, sql } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { blogPostsTable } from '@/db/schema';
 import { envString } from '@/lib/env';
@@ -93,7 +93,12 @@ export async function GET(req: Request): Promise<Response> {
         and(
           eq(blogPostsTable.status, 'scheduled'),
           isNull(blogPostsTable.deletedAt),
-          lte(blogPostsTable.publishedAt, now),
+          // Phase 3a: compare in the database's own clock (`now()`), not the app's
+          // `new Date()`. `published_at` is a naive timestamp and PG sessions can run
+          // in different timezones per connection (observed: Supavisor sessions in
+          // Asia/Dhaka vs UTC), so an app-supplied instant can phantom-shift the
+          // comparison by hours and a due post never publishes. One frame = no skew.
+          lte(blogPostsTable.publishedAt, sql`now()`),
         ),
       )
       .returning({ id: blogPostsTable.id, slug: blogPostsTable.slug });

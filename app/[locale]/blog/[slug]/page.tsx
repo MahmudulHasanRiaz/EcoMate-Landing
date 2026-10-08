@@ -34,11 +34,11 @@
  * `lib/content.ts` makes.
  */
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Clock } from 'lucide-react';
 import { BlogContent } from '@/components/BlogContent';
-import { getBlogPost, getPublishedBlogPosts } from '@/lib/content';
+import { getBlogPost, getBlogSlugById, getPublishedBlogPosts } from '@/lib/content';
 import { formatDate } from '@/lib/format';
 import { LOCALES, isLocale } from '@/lib/locales';
 import { PRERENDER_PROBE_SLUG } from '@/lib/prerender-probe';
@@ -47,14 +47,34 @@ import {
   articleJsonLd,
   breadcrumbJsonLd,
   localeAlternates,
+  localeHomePath,
   localeUrl,
   ogImageUrl,
+  ogLocale,
   serializeJsonLd,
 } from '@/lib/seo';
 
 interface BlogPageProps {
   params: Promise<{ locale: string; slug: string }>;
 }
+
+/**
+ * Phase 3a caching note (measured live, 2026-10-08): this route stays prerendered.
+ *
+ * `await connection()` was tried and REVERTED: it makes every render dynamic, so the
+ * static ancestor shells stream a 200 before the page's `notFound()` fires — permanently,
+ * on every request. Without it, unknown slugs still serve the not-found UI with a 200
+ * on a cold hit, but the result is cacheable and crawlers are kept out by the
+ * `noindex` metadata below (returned for every missing post), so nothing junk is ever
+ * indexed. `export const instant = false` below only *permits* blocking — it does not
+ * force dynamic rendering, so the route stays prerendered either way; it is kept as
+ * documentation of intent.
+ *
+ * Junk-cache bounding: a missing slug caches under the short FAILURE profile (30s),
+ * not the long body profile, and publishing any post fires `updateTag('blog')`, which
+ * clears those entries — so a slug published later appears immediately regardless.
+ */
+export const instant = false;
 
 const CRUMBS = { en: { home: 'Home' }, bn: { home: 'হোম' } } as const;
 
@@ -92,7 +112,7 @@ export async function generateMetadata({ params }: BlogPageProps): Promise<Metad
       url: localeUrl(locale, path),
       title,
       description,
-      locale,
+      locale: ogLocale(locale),
       publishedTime: post.publishedAt,
       modifiedTime: post.lastModified,
       ...(image ? { images: [{ url: image }] } : {}),
@@ -114,13 +134,24 @@ export default async function BlogPage({ params }: BlogPageProps) {
   // depend on database state or on an admin having typed the same string as a slug.
   if (slug === PRERENDER_PROBE_SLUG) notFound();
 
+  // Post-name permalink (§1.5): the slug is canonical. A numeric segment that matches
+  // no slug is a legacy ID URL — a published post with that id 301s to its slug.
+  // Checked after the slug read so an admin-typed numeric slug keeps resolving by slug.
   const post = await getBlogPost(slug);
+  if (!post && /^\d+$/.test(slug)) {
+    const canonical = await getBlogSlugById(Number(slug));
+    // `as never`: `typedRoutes` cannot prove a computed dynamic route (same tradeoff as
+    // the `homeHref` literals below, which are impossible here — the slug is dynamic).
+    // The URL is built by `localeUrl`, so it is internal by construction.
+    if (canonical) permanentRedirect(localeUrl(locale, `blog/${canonical}`) as never);
+  }
   // A draft, a soft-deleted post and a slug that never existed are the same response to a
   // visitor: 404. Distinguishing them would leak unpublished content to anyone who guesses a
   // draft slug.
   if (!post) notFound();
 
-  const homeHref = locale === 'bn' ? '/bn' : '/';
+  // L-41: one helper, not a re-typed ternary — flipping DEFAULT_LOCALE must not misroute.
+  const homeHref = localeHomePath(locale);
   const image = ogImageUrl(post.featuredImageUrl);
   const url = localeUrl(locale, `blog/${post.slug}`);
 
@@ -161,10 +192,8 @@ export default async function BlogPage({ params }: BlogPageProps) {
       />
 
       <main className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 sm:py-16">
-        {/* Spelled out as literals rather than `localeHomePath(locale)`: `typedRoutes` cannot
-            prove a *computed* dynamic route (`/en`, `/bn`) against its route manifest, so a
-            union of the two stringifies past the check. This must agree with
-            `localeHomePath`, which decides which of the two is canonical. */}
+        {/* `localeHomePath` returns a literal union (`'/' | '/en' | '/bn'`), not a bare
+            `string`, so `typedRoutes` proves it against the route manifest. */}
         <Link
           href={homeHref}
           className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:underline dark:text-indigo-400"

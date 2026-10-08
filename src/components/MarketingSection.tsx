@@ -3,7 +3,8 @@ import { useLanding } from '@/components/shell/useLanding';
 import { TrendingUp, CheckCircle2, ShieldCheck, Database, Layers } from 'lucide-react';
 
 export const MarketingSection: React.FC = () => {
-  const { content, locale } = useLanding();
+  const { content } = useLanding();
+  const stages = content.marketing.stages;
   return (
     <section id="marketing" className="relative py-14 md:py-24 border-t border-slate-200 dark:border-white/[0.06] bg-white dark:bg-[#07080E] transition-colors">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -25,44 +26,44 @@ export const MarketingSection: React.FC = () => {
         <div className="mt-8 sm:mt-12 rounded-2xl border border-rose-200 dark:border-rose-500/20 bg-gradient-to-br from-rose-50/50 via-white to-purple-50/30 dark:from-[#110B18] dark:via-[#090A14] dark:to-[#07080F] p-4 sm:p-7 shadow-sm">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-2 border-b border-rose-200/60 dark:border-white/[0.08] pb-3 mb-5">
             <span className="text-[11px] sm:text-xs font-mono font-semibold uppercase tracking-wider text-rose-700 dark:text-rose-300">
-              {locale === 'en' ? 'Server-Side Deduplicated Tracking Architecture' : 'সার্ভার-সাইড ট্র্যাকিং আর্কিটেকচার'}
+              {stages.archTitle}
             </span>
             <span className="text-[10px] sm:text-[11px] font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-100/80 dark:bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-500/20 font-semibold">
-              ● EMQ Quality Score 9.4/10
+              {stages.archBadge}
             </span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
             {/* Stage 1: Ad Click */}
             <div className="p-3.5 rounded-xl bg-white dark:bg-black/40 border border-slate-200 dark:border-white/[0.06] shadow-2xs">
-              <span className="text-[10px] font-mono text-rose-700 dark:text-rose-300 font-bold block mb-1">DATA STAGE 01</span>
-              <p className="font-bold text-slate-900 dark:text-white">Customer Ad Click</p>
-              <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5">Meta / TikTok sponsored click</p>
-              <div className="mt-2 text-[10px] font-mono text-slate-600 dark:text-slate-300">fbp / fbc clickID captured</div>
+              <span className="text-[10px] font-mono text-rose-700 dark:text-rose-300 font-bold block mb-1">{stages.stagePrefix} 01</span>
+              <p className="font-bold text-slate-900 dark:text-white">{stages.s1Title}</p>
+              <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5">{stages.s1Sub}</p>
+              <div className="mt-2 text-[10px] font-mono text-slate-600 dark:text-slate-300">{stages.s1Note}</div>
             </div>
 
             {/* Stage 2: Browser Adblocker bypass */}
             <div className="p-3.5 rounded-xl bg-white dark:bg-black/40 border border-slate-200 dark:border-white/[0.06] shadow-2xs">
-              <span className="text-[10px] font-mono text-purple-600 dark:text-purple-400 font-bold block mb-1">DATA STAGE 02</span>
-              <p className="font-bold text-slate-900 dark:text-white">iOS & AdBlock Immunity</p>
-              <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5">Bypasses Safari 7-day cookie limits</p>
-              <div className="mt-2 text-[10px] font-mono text-purple-600 dark:text-purple-400 font-semibold">1st-Party Domain Cookied</div>
+              <span className="text-[10px] font-mono text-purple-600 dark:text-purple-400 font-bold block mb-1">{stages.stagePrefix} 02</span>
+              <p className="font-bold text-slate-900 dark:text-white">{stages.s2Title}</p>
+              <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5">{stages.s2Sub}</p>
+              <div className="mt-2 text-[10px] font-mono text-purple-600 dark:text-purple-400 font-semibold">{stages.s2Note}</div>
             </div>
 
             {/* Stage 3: EcoMate Server Dispatch */}
             <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/20 border border-rose-300 dark:border-rose-500/30 shadow-2xs">
-              <span className="text-[10px] font-mono text-rose-700 dark:text-rose-300 font-bold block mb-1">DATA STAGE 03</span>
-              <p className="font-bold text-slate-900 dark:text-white">Server-Side CAPI Event</p>
-              <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5">Dispatched directly from backend</p>
-              <div className="mt-2 text-[10px] font-mono text-emerald-700 dark:text-emerald-300 font-bold">PURCHASE MATCHED</div>
+              <span className="text-[10px] font-mono text-rose-700 dark:text-rose-300 font-bold block mb-1">{stages.stagePrefix} 03</span>
+              <p className="font-bold text-slate-900 dark:text-white">{stages.s3Title}</p>
+              <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5">{stages.s3Sub}</p>
+              <div className="mt-2 text-[10px] font-mono text-emerald-700 dark:text-emerald-300 font-bold">{stages.s3Note}</div>
             </div>
 
             {/* Stage 4: Net Real Cash ROAS */}
             <div className="p-3.5 rounded-xl bg-white dark:bg-black/40 border border-emerald-300 dark:border-emerald-500/30 shadow-2xs">
-              <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-300 font-bold block mb-1">DATA STAGE 04</span>
-              <p className="font-bold text-slate-900 dark:text-white">True Net Cash ROAS</p>
-              <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5">Subtracts courier returns automatically</p>
-              <div className="mt-2 text-[10px] font-mono text-emerald-700 dark:text-emerald-300 font-bold">REAL PROFIT VISIBILITY</div>
+              <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-300 font-bold block mb-1">{stages.stagePrefix} 04</span>
+              <p className="font-bold text-slate-900 dark:text-white">{stages.s4Title}</p>
+              <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5">{stages.s4Sub}</p>
+              <div className="mt-2 text-[10px] font-mono text-emerald-700 dark:text-emerald-300 font-bold">{stages.s4Note}</div>
             </div>
           </div>
         </div>
@@ -79,7 +80,7 @@ export const MarketingSection: React.FC = () => {
                   <span className="text-[11px] sm:text-xs font-mono font-bold text-rose-700 dark:text-rose-300 uppercase tracking-wider">
                     {feature.type}
                   </span>
-                  <span className="text-[10px] sm:text-[11px] text-emerald-700 dark:text-emerald-300 font-mono font-semibold">● Server Connected</span>
+                  <span className="text-[10px] sm:text-[11px] text-emerald-700 dark:text-emerald-300 font-mono font-semibold">{stages.connectedBadge}</span>
                 </div>
 
                 <h3 className="text-base sm:text-xl font-bold text-slate-900 dark:text-white mb-1.5">
@@ -92,8 +93,8 @@ export const MarketingSection: React.FC = () => {
               </div>
 
               <div className="mt-5 pt-3.5 border-t border-slate-200/80 dark:border-white/[0.06] flex items-center justify-between text-xs text-slate-600 dark:text-slate-300">
-                <span>Deduplicated Purchase Events</span>
-                <span className="text-slate-900 dark:text-white font-mono font-semibold">EMQ 9.2/10 Match</span>
+                <span>{stages.dedupLabel}</span>
+                <span className="text-slate-900 dark:text-white font-mono font-semibold">{stages.emqMatch}</span>
               </div>
             </div>
           ))}
@@ -110,7 +111,7 @@ export const MarketingSection: React.FC = () => {
                 "{content.marketing.attributionQuote}"
               </h4>
               <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
-                EcoMate bridges the gap between ad click telemetry and real money collected by your courier trucks.
+                {stages.calloutBody}
               </p>
             </div>
           </div>

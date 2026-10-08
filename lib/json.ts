@@ -85,7 +85,11 @@ const LOG_ONCE_TTL_MS = 5 * 60 * 1000;
 const LOG_ONCE_MAX_KEYS = 200;
 
 export function logOnce(level: 'warn' | 'error', key: string, ...args: unknown[]): void {
-  const now = Date.now();
+  // performance.now(), not Date.now(): this runs inside `'use cache'` failure paths
+  // (`lib/content.ts` catch blocks), and an on-demand prerender that hits a DB error
+  // would otherwise bail out on the "unstable value" — turning a degradable fallback
+  // into a 500. Monotonic clock is all a relative dedup window needs.
+  const now = performance.now();
   const last = loggedKeys.get(key);
   if (last !== undefined && now - last < LOG_ONCE_TTL_MS) return;
   if (loggedKeys.size >= LOG_ONCE_MAX_KEYS) loggedKeys.clear();

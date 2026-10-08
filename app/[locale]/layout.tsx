@@ -26,7 +26,7 @@ import { LocaleThemeProvider } from '@/components/shell/LocaleThemeProvider';
 import { getLandingContent, getMenu, getPricingPlans, getTestimonials } from '@/lib/content';
 import { assembleLandingContent } from '@/lib/merge';
 import { LOCALES, isLocale } from '@/lib/locales';
-import { localeAlternates } from '@/lib/seo';
+import { localeAlternates, ogLocale } from '@/lib/seo';
 import { timed } from '@/lib/slowlog';
 
 export function generateStaticParams() {
@@ -42,10 +42,20 @@ export async function generateMetadata({
   // Unknown locale -> this layout's `notFound()` below fires, but `generateMetadata` runs
   // before/independently of it, so it must also refuse rather than emit hreflang for a URL
   // that 404s. Advertising a language alternate that does not resolve is the exact failure
-  // the old root-layout comment warned about.
-  if (!isLocale(locale)) return {};
+  // the old root-layout comment warned about. `noindex` covers the cold-hit window where
+  // the not-found UI serves with a 200 status before the 404 result caches (Phase 3a note
+  // on the slug pages): crawlers drop it instead of indexing a junk URL.
+  if (!isLocale(locale)) return { robots: { index: false, follow: true } };
 
-  return { alternates: localeAlternates(locale) };
+  // H-15 (static-safe half) + M-23: per-locale OG locale + content-language, emitted at
+  // build time per path. The `<html lang>` attribute itself stays `en` in the shared
+  // root layout (reading it per request would de-static every route — see root layout);
+  // the client provider syncs `document.lang` post-hydration.
+  return {
+    alternates: localeAlternates(locale),
+    openGraph: { locale: ogLocale(locale) },
+    other: { 'content-language': locale },
+  };
 }
 
 export default async function LocaleLayout({

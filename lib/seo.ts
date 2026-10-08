@@ -25,7 +25,7 @@ export const SITE_DESCRIPTION =
   'EcoMate is the complete operating platform for scaling e-commerce businesses. Unify online stores, showrooms, inventory, smart packing, couriers, finance, and marketing.';
 
 /** Support details mirrored from the seeded `site_settings` row (Task 12 makes them DB-driven). */
-const SUPPORT_EMAIL = 'hello@ecomate.app';
+const SUPPORT_EMAIL = 'hello@ecomate.bd';
 const SUPPORT_PHONE = '+880 1894-828290';
 
 export type JsonLdObject = Record<string, unknown>;
@@ -208,19 +208,39 @@ export function localeAlternates(locale: Locale, path = '') {
  * Absolute URL for a social share image.
  *
  * `featuredImageUrl` is whatever the admin typed, so it can be a bare `/media/x.png` or an
- * absolute `https://media.ecomate.app/x.png`. Resolving through `absoluteUrl` means a
+ * absolute `https://media.ecomate.bd/x.png`. Resolving through `absoluteUrl` means a
  * relative value still produces a valid absolute OG URL, and an absolute one is passed
  * through unchanged. Empty input returns `undefined` so callers can omit the field entirely:
  * an OG `images` entry pointing at a 404 renders a broken card, which is worse than no card.
+ *
+ * M-24: URLs on the dead `media.ecomate.app` host (never resolved — agent mistake, Decision
+ * 13) are rewritten to the same-origin `/media/<key>` proxy instead of being passed
+ * through to a 404ing share card. Only that exact host is rewritten; any other absolute
+ * URL keeps its origin.
  */
 export function ogImageUrl(imageUrl: string | null | undefined): string | undefined {
   const raw = (imageUrl ?? '').trim();
   if (!raw) return undefined;
   try {
+    // Dead-host repair first: `absoluteUrl` would happily resolve the dead origin into a
+    // valid-looking absolute URL that 404s.
+    if (/^https?:\/\/media\.ecomate\.app(?=\/|$)/i.test(raw)) {
+      const path = new URL(raw).pathname;
+      return absoluteUrl(path.startsWith('/media/') ? path : `/media/${path.replace(/^\/+/, '')}`);
+    }
     return absoluteUrl(raw);
   } catch {
     return undefined;
   }
+}
+
+/**
+ * OG `locale` for a site locale (L-35). The spec wants `en_US`/`bn_BD`, not bare
+ * `en`/`bn` — a single helper so the four article/legal pages and the locale layout
+ * cannot drift apart.
+ */
+export function ogLocale(locale: Locale): 'en_US' | 'bn_BD' {
+  return locale === 'bn' ? 'bn_BD' : 'en_US';
 }
 
 export interface BreadcrumbEntry {

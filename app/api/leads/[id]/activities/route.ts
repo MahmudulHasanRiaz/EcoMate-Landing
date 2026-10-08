@@ -9,7 +9,7 @@
 import { eq, sql } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { leadActivitiesTable, leadsTable } from '@/db/schema';
-import { requireAdminRole } from '@/lib/authz';
+import { CONTENT_EDITOR_ROLES, requireRole } from '@/lib/authz';
 import {
   errorMessage,
   fail,
@@ -24,7 +24,7 @@ import { requestId } from '@/lib/request';
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const reqId = requestId(req);
   // Read-gated the same way as the lead list (Decision 1: editors view leads).
-  const guard = await requireAdminRole(['superadmin', 'admin', 'editor']);
+  const guard = await requireRole(CONTENT_EDITOR_ROLES);
   if (!guard.ok) return guard.response;
 
   try {

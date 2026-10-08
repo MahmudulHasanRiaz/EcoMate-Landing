@@ -7,17 +7,16 @@
  * `sortOrder` sequence free of the gaps an incremental editor leaves behind.
  *
  * Reads are *public*: the header and the footer render menu data on the marketing page, which
- * is prerendered. Writes are not — they are `POST`/`PUT`, so `proxy.ts` already demands a
- * session for them, and `requireAdminRole` adds the author check (editors are read-only,
- * `lib/roles.ts` → `canWriteContent`).
+ * is prerendered. Writes are admin-only: navigation is site chrome (Decision 1 matrix —
+ * same as social links and landing sections), so `POST`/`PUT` require
+ * `requireRole(ADMIN_ONLY_ROLES)`, not just any session.
  */
 import { and, asc, eq, inArray } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { menuItemsTable, menusTable } from '@/db/schema';
 import { errorMessage, fail, logServerError, ok } from '@/lib/json';
 import { requestId } from '@/lib/request';
-import { requireAdminRole } from '@/lib/authz';
-import { canWriteContent } from '@/lib/roles';
+import { ADMIN_ONLY_ROLES, requireRole } from '@/lib/authz';
 import { isLocale } from '@/lib/locales';
 import { menuCreate, menuReplace, type MENU_KEYS } from '@/lib/validation';
 import { invalidateMenus } from '@/lib/revalidate';
@@ -95,9 +94,8 @@ export async function GET(req: Request) {
  * make a partially-completed save look like a successful one that deleted the navigation.
  */
 export async function POST(req: Request) {
-  const guard = await requireAdminRole(['superadmin', 'admin', 'editor']);
+  const guard = await requireRole(ADMIN_ONLY_ROLES);
   if (!guard.ok) return guard.response;
-  if (!canWriteContent(guard.role)) return fail('Editors cannot edit navigation', 403);
 
   try {
     const parsed = menuCreate.safeParse(await req.json().catch(() => null));
@@ -142,9 +140,8 @@ export async function POST(req: Request) {
  * unseeded table and is rendered differently (the shell falls back only on `null`).
  */
 export async function PUT(req: Request) {
-  const guard = await requireAdminRole(['superadmin', 'admin', 'editor']);
+  const guard = await requireRole(ADMIN_ONLY_ROLES);
   if (!guard.ok) return guard.response;
-  if (!canWriteContent(guard.role)) return fail('Editors cannot edit navigation', 403);
 
   try {
     const parsed = menuReplace.safeParse(await req.json().catch(() => null));

@@ -19,11 +19,6 @@ export function normalizeRole(value: unknown): AdminRole {
   return isAdminRole(value) ? value : 'editor';
 }
 
-/** Content authors and above may write; editors are read-only. */
-export function canWriteContent(role: AdminRole): boolean {
-  return role === 'superadmin' || role === 'admin';
-}
-
 /** Only a superadmin may manage operators (create, deactivate, re-role, reset). */
 export function canManageUsers(role: AdminRole): boolean {
   return role === 'superadmin';

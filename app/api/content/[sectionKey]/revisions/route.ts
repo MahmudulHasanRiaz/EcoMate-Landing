@@ -8,7 +8,7 @@
 import { getDb } from '@/db/client';
 import { and, desc, eq } from 'drizzle-orm';
 import { contentRevisionsTable } from '@/db/schema';
-import { requireAdminRole } from '@/lib/authz';
+import { ADMIN_ONLY_ROLES, requireRole } from '@/lib/authz';
 import { errorMessage, fail, logServerError, ok } from '@/lib/json';
 import { landingContentKey } from '@/lib/revisions';
 
@@ -17,7 +17,7 @@ interface RouteContext {
 }
 
 export async function GET(req: Request, { params }: RouteContext) {
-  const guard = await requireAdminRole(['superadmin', 'admin']);
+  const guard = await requireRole(ADMIN_ONLY_ROLES);
   if (!guard.ok) return guard.response;
 
   try {

@@ -1,6 +1,6 @@
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { desc, eq, sql } from 'drizzle-orm';
-import { requireAdminRole } from '@/lib/authz';
+import { CONTENT_EDITOR_ROLES, requireRole } from '@/lib/authz';
 import { getDb } from '@/db/client';
 import { leadsTable } from '@/db/schema';
 import {
@@ -126,7 +126,7 @@ export async function GET(req: Request) {
   // Role-gated, not merely session-gated. A lead row carries name, phone, email, client IP
   // and user agent — personal data. Decision 1 gives editors lead viewing + status updates,
   // so the list is editor-allowed (bulk export stays admin-only).
-  const guard = await requireAdminRole(['superadmin', 'admin', 'editor']);
+  const guard = await requireRole(CONTENT_EDITOR_ROLES);
   if (!guard.ok) return guard.response;
 
   try {

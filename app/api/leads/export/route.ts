@@ -27,7 +27,7 @@ import { and, desc, lt } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { leadsTable } from '@/db/schema';
 import { recordAudit } from '@/lib/audit';
-import { requireAdminRole } from '@/lib/authz';
+import { ADMIN_ONLY_ROLES, requireRole } from '@/lib/authz';
 import { csvDocument, UTF8_BOM, type CsvCell } from '@/lib/csv';
 import { errorMessage, fail, failWithRequestId, logServerError } from '@/lib/json';
 import { clientIp, requestId } from '@/lib/request';
@@ -65,7 +65,7 @@ function iso(value: Date | null): string {
 
 export async function GET(req: Request): Promise<Response> {
   const reqId = requestId(req);
-  const guard = await requireAdminRole(['superadmin', 'admin']);
+  const guard = await requireRole(ADMIN_ONLY_ROLES);
   if (!guard.ok) return guard.response;
 
   try {

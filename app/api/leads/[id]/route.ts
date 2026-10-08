@@ -20,7 +20,7 @@
 import { eq } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { adminUsersTable, leadsTable } from '@/db/schema';
-import { requireAdminRole } from '@/lib/authz';
+import { CONTENT_EDITOR_ROLES, requireRole } from '@/lib/authz';
 import { recordLeadActivity } from '@/lib/leads';
 import {
   errorMessage,
@@ -80,7 +80,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   const reqId = requestId(req);
   // Status changes are sales-pipeline writes — and Decision 1 gives editors lead status
   // updates — so this route is editor-allowed. Bulk export stays admin-only.
-  const guard = await requireAdminRole(['superadmin', 'admin', 'editor']);
+  const guard = await requireRole(CONTENT_EDITOR_ROLES);
   if (!guard.ok) return guard.response;
 
   try {

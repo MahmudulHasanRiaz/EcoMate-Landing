@@ -1,7 +1,7 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { blogPostsTable } from '@/db/schema';
-import { requireAdminRole } from '@/lib/authz';
+import { CONTENT_EDITOR_ROLES, requireRole } from '@/lib/authz';
 import {
   errorMessage,
   fail,
@@ -46,7 +46,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ idOrSlu
 
 export async function PUT(req: Request, { params }: { params: Promise<{ idOrSlug: string }> }) {
   // Decision 1: editors do blog posting, so blog CRUD is editor-allowed.
-  const guard = await requireAdminRole(['superadmin', 'admin', 'editor']);
+  const guard = await requireRole(CONTENT_EDITOR_ROLES);
   if (!guard.ok) return guard.response;
 
   try {
@@ -123,7 +123,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ idOrSlug
  */
 export async function POST(req: Request, { params }: { params: Promise<{ idOrSlug: string }> }) {
   // Decision 1: editors do blog posting, so blog CRUD is editor-allowed.
-  const guard = await requireAdminRole(['superadmin', 'admin', 'editor']);
+  const guard = await requireRole(CONTENT_EDITOR_ROLES);
   if (!guard.ok) return guard.response;
 
   try {

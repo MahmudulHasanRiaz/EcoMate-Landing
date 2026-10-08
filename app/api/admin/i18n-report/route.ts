@@ -24,7 +24,7 @@
 import { isNull } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { landingContentTable } from '@/db/schema';
-import { requireAdminRole } from '@/lib/authz';
+import { ADMIN_ONLY_ROLES, requireRole } from '@/lib/authz';
 import { errorMessage, fail, logServerError, ok } from '@/lib/json';
 import { isPlainObject } from '@/lib/merge';
 
@@ -38,7 +38,7 @@ export async function GET() {
   // Translation status is an editorial signal, not a public datum, and `editor` is the
   // read-only role: an editor can read the content but this report is used to drive a
   // publishing queue, so it stays with the roles that may publish.
-  const guard = await requireAdminRole(['superadmin', 'admin']);
+  const guard = await requireRole(ADMIN_ONLY_ROLES);
   if (!guard.ok) return guard.response;
 
   try {

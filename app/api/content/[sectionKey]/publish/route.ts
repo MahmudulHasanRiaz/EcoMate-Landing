@@ -14,7 +14,7 @@ import { and, desc, eq, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { getDb } from '@/db/client';
 import { contentRevisionsTable, landingContentTable } from '@/db/schema';
-import { requireAdminRole } from '@/lib/authz';
+import { ADMIN_ONLY_ROLES, requireRole } from '@/lib/authz';
 import { errorMessage, fail, logServerError, ok } from '@/lib/json';
 import { recordAudit } from '@/lib/audit';
 import { invalidateDomains } from '@/lib/revalidate';
@@ -29,7 +29,7 @@ interface RouteContext {
 }
 
 export async function POST(req: Request, { params }: RouteContext) {
-  const guard = await requireAdminRole(['superadmin', 'admin']);
+  const guard = await requireRole(ADMIN_ONLY_ROLES);
   if (!guard.ok) return guard.response;
 
   try {

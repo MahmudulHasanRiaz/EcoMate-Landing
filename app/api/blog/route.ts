@@ -1,7 +1,7 @@
 import { desc, isNull, sql } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { blogPostsTable } from '@/db/schema';
-import { requireAdminRole } from '@/lib/authz';
+import { CONTENT_EDITOR_ROLES, requireRole } from '@/lib/authz';
 import {
   errorMessage,
   fail,
@@ -52,7 +52,7 @@ export async function GET(req: Request) {
 // NEVER `.values(body)` — mass assignment on insert is the same hole as on update.
 export async function POST(req: Request) {
   // Decision 1: editors do blog posting, so blog CRUD is editor-allowed.
-  const guard = await requireAdminRole(['superadmin', 'admin', 'editor']);
+  const guard = await requireRole(CONTENT_EDITOR_ROLES);
   if (!guard.ok) return guard.response;
 
   try {

@@ -67,11 +67,15 @@ export function MetaPixel() {
 }
 
 /**
- * Fire the browser half of the deduplicated `Lead` event. Safe to call when the pixel is
+ * Fire the browser half of the deduplicated conversion. Safe to call when the pixel is
  * not configured, blocked by an extension, or not consented: `fbq` is simply undefined
  * or the consent check below refuses.
+ *
+ * H-1/Decision 14: `eventName` selects which half this is — `'Lead'` in instant mode
+ * (pre-2b behavior), the configured instant name in validated mode. The server sends
+ * the same name with the same `event_id`, which is what lets Meta collapse the pair.
  */
-export function trackBrowserLead(eventId: string): void {
+export function trackBrowserLead(eventId: string, eventName = 'Lead'): void {
   if (typeof window === 'undefined') return;
   // Consent gate: never fire a conversion for an opted-out visitor, even if the
   // form was submitted (the server independently refuses non-consented leads).
@@ -80,5 +84,5 @@ export function trackBrowserLead(eventId: string): void {
   } catch {
     return;
   }
-  window.fbq?.('track', 'Lead', {}, { eventId });
+  window.fbq?.('track', eventName, {}, { eventId });
 }

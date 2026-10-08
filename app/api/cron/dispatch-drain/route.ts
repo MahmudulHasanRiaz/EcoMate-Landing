@@ -126,9 +126,16 @@ export async function GET(req: Request): Promise<Response> {
 
     for (const row of due) {
       try {
+        // H-1: the queue payload carries the Meta event kind that failed
+        // (`full` | `instant`), so the retry resends the same shape — a failed
+        // validated-mode instant is not "upgraded" to a full Lead by the drain.
+        // Pre-2b rows carry no kind: they predate validated mode, so they are
+        // owed the full conversion, not the instant signal.
+        const payload = (row.payload ?? {}) as { metaEvent?: 'full' | 'instant' };
         const summary = await dispatchLeadIntegrations(row.leadId, {
           metaCapi: row.kind === 'meta-capi',
           licensePortal: row.kind === 'license-portal',
+          ...(row.kind === 'meta-capi' ? { metaEvent: payload.metaEvent ?? 'full' } : {}),
         });
         const settled =
           (row.kind === 'meta-capi' &&

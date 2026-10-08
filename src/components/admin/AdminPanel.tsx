@@ -2075,8 +2075,59 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                     aria-describedby={settingsErrors.seoDescription ? 'settings-seoDescription-error' : undefined}
                     className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white resize-none"
                   />
-                  <FieldError id="settings-seoDescription-error" message={settingsErrors.seoDescription} />
-                </div>
+                    <FieldError id="settings-seoDescription-error" message={settingsErrors.seoDescription} />
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-100 dark:border-white/5">
+                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">Meta Conversions API mode (H-1)</h3>
+                    <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5 mb-3">
+                      Instant sends the full Lead event on submit. Validated sends a lightweight instant event on submit and the full Lead only when a lead reaches the trigger status. Applies to consented visitors only.
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                      <div>
+                        <label htmlFor="settings-metaCapiMode" className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">CAPI mode</label>
+                        <select
+                          id="settings-metaCapiMode"
+                          value={settings.metaCapiMode ?? 'instant'}
+                          onChange={(e) => setSettings({ ...settings, metaCapiMode: e.target.value as SiteSettings['metaCapiMode'] })}
+                          aria-describedby={settingsErrors.metaCapiMode ? 'settings-metaCapiMode-error' : undefined}
+                          className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                        >
+                          <option value="instant">Instant — full Lead on submit</option>
+                          <option value="validated">Validated — full Lead on trigger status</option>
+                        </select>
+                        <FieldError id="settings-metaCapiMode-error" message={settingsErrors.metaCapiMode} />
+                      </div>
+                      <div>
+                        <label htmlFor="settings-metaLeadStatusTrigger" className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Trigger status (validated mode)</label>
+                        <select
+                          id="settings-metaLeadStatusTrigger"
+                          value={settings.metaLeadStatusTrigger ?? ''}
+                          onChange={(e) => setSettings({ ...settings, metaLeadStatusTrigger: e.target.value })}
+                          aria-describedby={settingsErrors.metaLeadStatusTrigger ? 'settings-metaLeadStatusTrigger-error' : undefined}
+                          className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                        >
+                          <option value="">Not configured (instant events only)</option>
+                          {(['New', 'Contacted', 'Qualified', 'Demo Scheduled', 'Won', 'Lost'] as const).map((s) => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </select>
+                        <FieldError id="settings-metaLeadStatusTrigger-error" message={settingsErrors.metaLeadStatusTrigger} />
+                      </div>
+                      <div>
+                        <label htmlFor="settings-metaInstantEventName" className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Instant event name</label>
+                        <input
+                          id="settings-metaInstantEventName"
+                          type="text"
+                          value={settings.metaInstantEventName ?? 'LeadInitiated'}
+                          onChange={(e) => setSettings({ ...settings, metaInstantEventName: e.target.value })}
+                          aria-describedby={settingsErrors.metaInstantEventName ? 'settings-metaInstantEventName-error' : undefined}
+                          className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white font-mono"
+                        />
+                        <FieldError id="settings-metaInstantEventName-error" message={settingsErrors.metaInstantEventName} />
+                      </div>
+                    </div>
+                  </div>
 
                 <div className="pt-2 flex justify-end">
                   <button

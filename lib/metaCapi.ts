@@ -65,26 +65,50 @@ async function sendLead(input: TrackLeadInput): Promise<TrackLeadResult> {
     hashPhoneForMeta(input.phone),
   ]);
 
+  /**
+   * Field allowlist (H-1/Decision 14 data minimization).
+   *
+   * FULL event (`minimal`/`light` unset — instant mode + manual retry): hashed
+   * email/phone, click IDs, client IP/UA for matching, event metadata, and the
+   * internal lead id for reconciliation.
+   *
+   * MINIMIZED event (`minimal: true` — validated-mode full `Lead`): hashed
+   * identifiers + event metadata ONLY. Never sent: `fbp`/`fbc`, `client_ip_address`,
+   * `client_user_agent`, `custom_data`, name, or any raw PII. The signal Meta learns
+   * on is "a validated lead converted", not the lead's data.
+   *
+   * LIGHT event (`light: true` — validated-mode instant event): event metadata +
+   * `fbp`/`fbc` passthrough ONLY. Not even hashed identifiers: Meta learns "data
+   * arrived" with no lead data at all.
+   */
   const userData: Record<string, unknown> = {};
   // `em`/`ph` are arrays of hashes per the Graph schema; fbp/fbc are passthrough values.
-  if (em) userData.em = [em];
-  if (ph) userData.ph = [ph];
-  if (input.fbp) userData.fbp = input.fbp;
-  if (input.fbc) userData.fbc = input.fbc;
-  if (input.clientIp) userData.client_ip_address = input.clientIp;
-  if (input.userAgent) userData.client_user_agent = input.userAgent;
+  if (!input.light) {
+    if (em) userData.em = [em];
+    if (ph) userData.ph = [ph];
+  }
+  if (!input.minimal) {
+    if (input.fbp) userData.fbp = input.fbp;
+    if (input.fbc) userData.fbc = input.fbc;
+    if (!input.light) {
+      if (input.clientIp) userData.client_ip_address = input.clientIp;
+      if (input.userAgent) userData.client_user_agent = input.userAgent;
+    }
+  }
 
   const body: Record<string, unknown> = {
     data: [
       {
-        event_name: 'Lead',
+        event_name: input.eventName ?? 'Lead',
         event_time: Math.floor(Date.now() / 1000),
         // Deduplication key shared with the browser pixel. Meta collapses the pair.
         event_id: input.eventId,
         action_source: 'website',
         event_source_url: input.eventSourceUrl,
         user_data: userData,
-        custom_data: { lead_id: input.leadId, source: 'landing_page_lead_form' },
+        ...(input.minimal || input.light
+          ? {}
+          : { custom_data: { lead_id: input.leadId, source: 'landing_page_lead_form' } }),
       },
     ],
   };

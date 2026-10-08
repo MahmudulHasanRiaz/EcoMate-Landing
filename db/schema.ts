@@ -27,6 +27,13 @@ export const siteSettingsTable = pgTable('site_settings', {
   messengerUrl: text('messenger_url').notNull().default('https://m.me/ecomate.app'),
   address: text('address').notNull().default('Tejgaon I/A, Dhaka 1208, Bangladesh'),
   isPricingVisible: boolean('is_pricing_visible').notNull().default(true),
+  // --- Meta CAPI two-mode config (H-1/Decision 14, admin-configurable) -----------------
+  /** 'instant' = full Lead on submit; 'validated' = light instant event on submit + full Lead on status trigger. */
+  metaCapiMode: text('meta_capi_mode').notNull().default('instant'),
+  /** Lead status whose transition triggers the full server-side Lead event in validated mode. '' = unconfigured (instant events only). */
+  metaLeadStatusTrigger: text('meta_lead_status_trigger').notNull().default(''),
+  /** Lightweight submit-time event name in validated mode (browser + server share it for dedup). */
+  metaInstantEventName: text('meta_instant_event_name').notNull().default('LeadInitiated'),
   seoTitle: text('seo_title').default('EcoMate — Your Entire E-commerce Operation, Managed From One Place'),
   seoDescription: text('seo_description').default('Complete operating platform for high-volume e-commerce brands: multi-store sync, physical showrooms, smart barcode packing, courier COD reconciliation, and ledger.'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -109,6 +116,16 @@ export const leadsTable = pgTable('leads', {
   consentGiven: boolean('consent_given').notNull().default(false),
   consentAt: timestamp('consent_at'),
   consentText: text('consent_text').default(''), // exact privacy-policy version accepted
+  /**
+   * Tracking consent (H-1/Decision 14): whether the visitor accepted Meta tracking
+   * (`ecomate_consent` cookie = accepted at submit time). Distinct from `consentGiven`
+   * (contact consent — every stored lead has it): an Essential-only visitor asks to be
+   * contacted while refusing Pixel/CAPI. This boolean is the enforcement behind the
+   * documented invariant "opted-out visitors never dispatch to Meta" — `metaCapiStatus`
+   * text (`Skipped`) is the visible audit trail, this column is the gate every dispatch
+   * path checks. Derived from the submitted consent payload at insert, never from clients.
+   */
+  trackingConsent: boolean('tracking_consent').notNull().default(false),
   /**
    * Sales ownership (Task 16 §1). A FK, not free text like the legacy `assignedTo` column:
    * "the row must still exist when the assignee is deleted" is exactly what SET NULL gives,

@@ -1,6 +1,7 @@
 import { desc, sql } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { integrationLogsTable } from '@/db/schema';
+import { requireAdminRole } from '@/lib/authz';
 import { errorMessage, fail, failWithRequestId, logServerError, ok } from '@/lib/json';
 import { paginate } from '@/lib/paginate';
 import { requestId } from '@/lib/request';
@@ -8,6 +9,10 @@ import { requestId } from '@/lib/request';
 /** Newest first. Paginated because this table grows by a row per dispatch, without bound. */
 export async function GET(req: Request) {
   const reqId = requestId(req);
+  // CR-1: dispatch payloads carry lead PII (name, phone, email, UTM). Session-only
+  // gating is not enough — this is an admin-only surface.
+  const guard = await requireAdminRole(['superadmin', 'admin']);
+  if (!guard.ok) return guard.response;
   try {
     const page = await paginate(
       req.url,

@@ -22,6 +22,26 @@ export interface TrackLeadInput {
   clientIp: string;
   userAgent: string;
   eventSourceUrl: string;
+  /**
+   * CAPI event name (H-1/Decision 14). Default `'Lead'` (instant mode + manual retry).
+   * In validated mode the submit-time event uses the admin-configured instant name
+   * (default `'LeadInitiated'`); the browser fires the same name with the same
+   * `event_id` so the pair still deduplicates.
+   */
+  eventName?: string;
+  /**
+   * Minimized payload (H-1 data minimization): when true only the hashed
+   * identifiers + event metadata are sent — no click IDs, IPs, user agents or
+   * custom data. The validated-mode full `Lead` event uses this.
+   */
+  minimal?: boolean;
+  /**
+   * Lightweight signal (H-1 validated mode): event metadata + fbp/fbc passthrough
+   * only — no hashed identifiers either. The submit-time instant event uses this so
+   * Meta learns "data arrived" without receiving any lead data. Never combined with
+   * `minimal` (light already excludes everything minimal excludes, and more).
+   */
+  light?: boolean;
 }
 
 export interface TrackLeadResult {

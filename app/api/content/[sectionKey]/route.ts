@@ -29,7 +29,7 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { landingContentTable } from '@/db/schema';
-import { requireAdminRole } from '@/lib/authz';
+import { ADMIN_ONLY_ROLES, requireRole } from '@/lib/authz';
 import { errorMessage, fail, logServerError, ok } from '@/lib/json';
 import { recordAudit } from '@/lib/audit';
 import { invalidateDomains } from '@/lib/revalidate';
@@ -56,6 +56,9 @@ export async function GET(req: Request, { params }: RouteContext) {
       .from(landingContentTable)
       .where(and(
         eq(landingContentTable.sectionKey, sectionKey),
+        // Public read (M-3): only the published copy is served. Draft rows and staged
+        // draft revisions are visible exclusively through the admin-gated preview endpoint.
+        eq(landingContentTable.status, 'published'),
         isNull(landingContentTable.deletedAt),
         ...(locale ? [eq(landingContentTable.locale, locale)] : []),
       ))
@@ -74,10 +77,10 @@ function payloadEqual(a: unknown, b: unknown): boolean {
 }
 
 export async function PUT(req: Request, { params }: RouteContext) {
-  // Content writes are operator writes, not just "a session exists": an editor is
-  // read-only everywhere else (`lib/roles.ts` → `canWriteContent`), and the same rule
-  // holds here or the weakest role could rewrite the marketing site.
-  const guard = await requireAdminRole(['superadmin', 'admin']);
+  // Content writes are operator writes, not just "a session exists": landing sections are
+  // site customization under Decision 1, so this route requires ADMIN_ONLY_ROLES —
+  // editors cannot rewrite the marketing site.
+  const guard = await requireRole(ADMIN_ONLY_ROLES);
   if (!guard.ok) return guard.response;
 
   try {

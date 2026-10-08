@@ -20,7 +20,9 @@
 import { eq } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { adminUsersTable, leadsTable } from '@/db/schema';
-import { requireAdminRole } from '@/lib/authz';
+import { CONTENT_EDITOR_ROLES, requireRole } from '@/lib/authz';
+import { dispatchLeadIntegrations, keepAlive } from '@/lib/leadDispatch';
+import { getMetaCapiSettings } from '@/lib/metaCapiSettings';
 import { recordLeadActivity } from '@/lib/leads';
 import {
   errorMessage,
@@ -80,7 +82,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   const reqId = requestId(req);
   // Status changes are sales-pipeline writes — and Decision 1 gives editors lead status
   // updates — so this route is editor-allowed. Bulk export stays admin-only.
-  const guard = await requireAdminRole(['superadmin', 'admin', 'editor']);
+  const guard = await requireRole(CONTENT_EDITOR_ROLES);
   if (!guard.ok) return guard.response;
 
   try {
@@ -194,6 +196,24 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       }
       return row;
     });
+
+    // Validated-mode trigger (H-1/Decision 14): on a real transition TO the
+    // admin-configured trigger status, send the full server-side `Lead` event —
+    // but only in validated mode (instant mode sent it at submit), only with
+    // persisted tracking consent, and never over an already-`Sent` conversion.
+    // Handed to the platform: a dispatch failure must not fail the status update.
+    if (statusChanged) {
+      const capiSettings = await getMetaCapiSettings();
+      if (
+        capiSettings.mode === 'validated' &&
+        capiSettings.trigger !== '' &&
+        nextStatus === capiSettings.trigger &&
+        current.trackingConsent === true &&
+        updated.metaCapiStatus !== 'Sent'
+      ) {
+        keepAlive(dispatchLeadIntegrations(id, { licensePortal: false, metaEvent: 'full' }));
+      }
+    }
 
     return ok(updated);
   } catch (e) {

@@ -8,7 +8,7 @@
 import { eq } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { adminAuditLogsTable, adminUsersTable } from '@/db/schema';
-import { requireAdminRole } from '@/lib/authz';
+import { CONTENT_EDITOR_ROLES, requireRole } from '@/lib/authz';
 import { errorMessage, fail, logServerError, ok, parseId } from '@/lib/json';
 import { clientIp } from '@/lib/request';
 import { listActiveSessions, revokeAllSessions } from '@/lib/sessions';
@@ -22,7 +22,7 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
-  const guard = await requireAdminRole(['superadmin', 'admin', 'editor']);
+  const guard = await requireRole(CONTENT_EDITOR_ROLES);
   if (!guard.ok) return guard.response;
 
   try {
@@ -43,7 +43,7 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
-  const guard = await requireAdminRole(['superadmin', 'admin', 'editor']);
+  const guard = await requireRole(CONTENT_EDITOR_ROLES);
   if (!guard.ok) return guard.response;
 
   try {

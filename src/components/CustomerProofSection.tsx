@@ -2,14 +2,24 @@ import React, { useState } from 'react';
 import type { CaseStudy } from '../types/landing';
 import { useLanding } from '@/components/shell/useLanding';
 import { CaseStudyVideoModal } from './CaseStudyVideoModal';
+import { TestimonialCard } from './TestimonialCard';
 import { ShieldCheck, Play, Globe, Building2, CheckCircle2, ArrowRight } from 'lucide-react';
 
 export const CustomerProofSection: React.FC = () => {
-  const { content } = useLanding();
+  const { content, locale, testimonials } = useLanding();
   const [selectedVideoCase, setSelectedVideoCase] = useState<CaseStudy | null>(null);
 
   const featuredStudy = content.proof.caseStudies[0];
   const supportingStudies = content.proof.caseStudies.slice(1);
+  // 2c: published DB testimonials render below the static proof copy when seeded.
+  // Null-safe (CR-4/5/6 lesson): a malformed row is dropped, never rendered — and an
+  // empty/null seed keeps the exact static render below, so the page never blanks
+  // before the first seed.
+  const dbTestimonials = Array.isArray(testimonials)
+    ? testimonials.filter(
+        (row): row is NonNullable<typeof row> => typeof row === 'object' && row !== null,
+      )
+    : [];
 
   return (
     <section id="case-studies" className="relative py-14 md:py-24 border-t border-slate-200 dark:border-white/[0.06] bg-slate-50 dark:bg-[#080910] transition-colors">
@@ -172,6 +182,16 @@ export const CustomerProofSection: React.FC = () => {
               </div>
             ))}
           </div>
+
+          {/* 2c: live client voices from the CMS (public mode — no admin chrome, no draft
+              badges; the seed only ever carries published rows). Absent when unseeded. */}
+          {dbTestimonials.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mt-4 sm:mt-6">
+              {dbTestimonials.map((t) => (
+                <TestimonialCard key={t.id} data={t} locale={locale} />
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

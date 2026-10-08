@@ -1,7 +1,7 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { blogPostsTable } from '@/db/schema';
-import { requireAdminRole } from '@/lib/authz';
+import { CONTENT_EDITOR_ROLES, requireRole } from '@/lib/authz';
 import {
   errorMessage,
   fail,
@@ -28,13 +28,21 @@ import { contentRestore } from '@/lib/validation/content';
  */
 
 // Next 16: `params` is a Promise in route handlers. Never destructure it synchronously.
+// Public read: only `status = 'published'` rows are served (M-2). Drafts/scheduled posts
+// are available exclusively through the admin-gated preview endpoint.
 export async function GET(_req: Request, { params }: { params: Promise<{ idOrSlug: string }> }) {
   try {
     const { idOrSlug } = await params;
     const [post] = await getDb()
       .select()
       .from(blogPostsTable)
-      .where(and(eq(blogPostsTable.slug, idOrSlug), isNull(blogPostsTable.deletedAt)))
+      .where(
+        and(
+          eq(blogPostsTable.slug, idOrSlug),
+          eq(blogPostsTable.status, 'published'),
+          isNull(blogPostsTable.deletedAt),
+        ),
+      )
       .limit(1);
     if (!post) return fail('Blog post not found', 404);
     return ok(post);
@@ -46,7 +54,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ idOrSlu
 
 export async function PUT(req: Request, { params }: { params: Promise<{ idOrSlug: string }> }) {
   // Decision 1: editors do blog posting, so blog CRUD is editor-allowed.
-  const guard = await requireAdminRole(['superadmin', 'admin', 'editor']);
+  const guard = await requireRole(CONTENT_EDITOR_ROLES);
   if (!guard.ok) return guard.response;
 
   try {
@@ -123,7 +131,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ idOrSlug
  */
 export async function POST(req: Request, { params }: { params: Promise<{ idOrSlug: string }> }) {
   // Decision 1: editors do blog posting, so blog CRUD is editor-allowed.
-  const guard = await requireAdminRole(['superadmin', 'admin', 'editor']);
+  const guard = await requireRole(CONTENT_EDITOR_ROLES);
   if (!guard.ok) return guard.response;
 
   try {

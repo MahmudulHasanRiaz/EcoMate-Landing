@@ -33,10 +33,14 @@ type Domain =
 
 /**
  * Content is tagged per locale (`content:en`, `content:bn`), so an edit to one language must
- * not invalidate the other. Everything else is locale-independent.
+ * not invalidate the other. Everything else is locale-independent. Case studies carry an
+ * additional per-slug tag (`casestudies:{slug}`) so the study page invalidates precisely —
+ * pass the slug when the write names one (H-20 closes the "no writer" gap for both tags).
  */
-function tagsFor(domain: Domain, locale: string): string[] {
-  return domain === CONTENT_DOMAIN ? [`content:${locale}`] : [domain];
+function tagsFor(domain: Domain, locale: string, slug?: string): string[] {
+  if (domain === CONTENT_DOMAIN) return [`content:${locale}`];
+  if (domain === CASE_STUDIES_DOMAIN && slug) return [domain, `${domain}:${slug}`];
+  return [domain];
 }
 
 /** Menu keys matching the `menus` table contract (`lib/validation.ts` → `MENU_KEYS`). */
@@ -66,9 +70,14 @@ export function invalidateMenusInBackground(_key: InvalidatableMenuKey, _locale 
  * Invalidate one or more domains from inside the request that performed the write.
  *
  * `locale` is required because a content write is locale-scoped; passing it for every domain
- * is simpler and more honest than making callers remember which ones care.
+ * is simpler and more honest than making callers remember which ones care. `slug` addresses
+ * the per-slug tag (`casestudies:{slug}`) when the write names a slug.
  */
-export function invalidateDomains(_domain: Domain | readonly Domain[], _locale = 'en'): void {
+export function invalidateDomains(
+  _domain: Domain | readonly Domain[],
+  _locale = 'en',
+  _slug?: string,
+): void {
   // No-op while Cache Components is off (see file header): reads are uncached,
   // so there is nothing to invalidate. Signature kept for callers.
 }

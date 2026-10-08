@@ -11,7 +11,7 @@ import { auth } from '@/auth';
 import { fail, logServerError } from '@/lib/json';
 import { type AdminRole, normalizeRole } from '@/lib/roles';
 
-export { ADMIN_ROLES, canManageUsers, canWriteContent, isAdminRole, normalizeRole } from '@/lib/roles';
+export { ADMIN_ROLES, canManageUsers, isAdminRole, normalizeRole } from '@/lib/roles';
 export type { AdminRole } from '@/lib/roles';
 
 /** The session's role, or `null` when there is no session. */

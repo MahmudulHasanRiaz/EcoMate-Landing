@@ -64,6 +64,20 @@
       "when": 1791274962042,
       "tag": "0008_safe_puma",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791475894347,
+      "tag": "0009_young_moon_knight",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791476130180,
+      "tag": "0010_daily_iceman",
+      "breakpoints": true
     }
   ]
 }

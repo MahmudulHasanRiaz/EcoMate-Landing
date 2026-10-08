@@ -29,6 +29,10 @@
  * this one reads the request URL and the Cloudflare context on every call, so there is no
  * `'use cache'` boundary to defeat. It is **not** `export const dynamic = 'force-dynamic'`,
  * which Next 16 removed.
+ *
+ * Throttling note: probes run at most once per 10s per isolate (`READY_THROTTLE_MS`);
+ * callers inside the window get the last result. That is a load shed, not a cache —
+ * the window is seconds, and a recovery is visible at the next probe, not after a TTL.
  */
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { sql } from 'drizzle-orm';
@@ -47,6 +51,21 @@ interface Check {
 
 /** A probe key that is never written. A miss is a successful round trip. */
 const PROBE_KEY = '__readiness_probe__';
+
+/**
+ * In-memory per-isolate throttle (H-12/Decision 8).
+ *
+ * This endpoint stays PUBLIC (uptime monitors cannot authenticate), so every
+ * unauthenticated caller can trigger a DB + R2 + KV round trip. Probes run at
+ * most once per `READY_THROTTLE_MS` per isolate; concurrent callers inside the
+ * window get the last result instead of triggering fresh probes. No KV/D1/Queues
+ * involved — just module-scope state, which is exactly the per-isolate backstop
+ * this platform allows.
+ */
+const READY_THROTTLE_MS = 10_000;
+let lastProbeAt = 0;
+let lastProbeStatus = 503;
+let lastProbeBody: unknown = null;
 
 async function timed<T>(run: () => Promise<T>): Promise<{ value: T; latencyMs: number }> {
   const started = Date.now();
@@ -76,6 +95,16 @@ async function probe(run: () => Promise<unknown>): Promise<Check> {
 
 export async function GET(req: Request): Promise<Response> {
   const reqId = requestId(req);
+
+  // Throttled: serve the last probe result inside the window instead of touching
+  // every dependency again. Uptime monitors poll frequently; without this each poll
+  // is a DB + R2 + KV round trip from an unauthenticated caller.
+  if (lastProbeBody !== null && Date.now() - lastProbeAt < READY_THROTTLE_MS) {
+    return Response.json(lastProbeBody, {
+      status: lastProbeStatus,
+      headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' },
+    });
+  }
 
   // Read the bindings once. `getCloudflareContext()` throws outside a Worker request (build
   // time, a plain Node script), which is exactly the "not configured" case.
@@ -117,7 +146,15 @@ export async function GET(req: Request): Promise<Response> {
 
   const body = {
     status: ready ? (degraded ? 'degraded' : 'ready') : 'not_ready',
-    checks: { database, storage, cache },
+    // H-12: error details are stripped — callers get status + latency only, plus a
+    // generic message and the requestId. Driver messages (host, constraint, wiring
+    // detail) stay in the server log, never in the response.
+    checks: {
+      database: { status: database.status, latencyMs: database.latencyMs },
+      storage: { status: storage.status, latencyMs: storage.latencyMs },
+      cache: { status: cache.status, latencyMs: cache.latencyMs },
+    },
+    message: ready ? 'ready' : 'A dependency check failed; see server logs for requestId',
     // Informational, not part of the readiness decision: a queued-notification state is an
     // operational fact an operator wants, not an outage.
     notificationProvider: isNotificationProviderConfigured() ? 'configured' : 'log_only',
@@ -126,11 +163,24 @@ export async function GET(req: Request): Promise<Response> {
   };
 
   if (!ready) {
-    console.error(JSON.stringify({ event: 'readiness.failed', level: 'error', ...body }));
+    console.error(JSON.stringify({
+      event: 'readiness.failed',
+      level: 'error',
+      requestId: reqId,
+      // Full detail server-side only: which check failed and why never leaves the log.
+      database,
+      storage,
+      cache,
+    }));
   }
 
+  const status = ready ? 200 : 503;
+  lastProbeAt = Date.now();
+  lastProbeStatus = status;
+  lastProbeBody = body;
+
   return Response.json(body, {
-    status: ready ? 200 : 503,
+    status,
     headers: {
       // The one header that matters most here. A cached readiness answer outlives the state it
       // describes, in both directions — a stale "ready" during an outage, a stale "not ready"

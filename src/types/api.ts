@@ -26,6 +26,12 @@ export interface SiteSettings {
   isPricingVisible: boolean;
   seoTitle: string;
   seoDescription: string;
+  /** Meta CAPI mode (H-1/Decision 14): full Lead on submit vs validated trigger. */
+  metaCapiMode: 'instant' | 'validated';
+  /** Lead status whose transition triggers the full Lead event in validated mode ('' = unconfigured). */
+  metaLeadStatusTrigger: string;
+  /** Lightweight submit-time event name in validated mode. */
+  metaInstantEventName: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -95,6 +101,8 @@ export interface Lead {
   consentGiven: boolean;
   consentAt?: string;
   consentText?: string;
+  /** Persisted tracking consent (H-1): the Meta dispatch gate. Distinct from contact consent. */
+  trackingConsent: boolean;
   // Sales ownership + retention (Task 16).
   /** `admin_users.id`, or null when unassigned or the operator was deleted. */
   assignedToId?: number | null;
@@ -159,6 +167,12 @@ export interface Testimonial {
   logoUrl: string;
   videoUrl: string;
   videoDuration: string;
+  /** 'youtube' embeds the player; 'upload' plays videoUrl directly. */
+  videoProvider: 'youtube' | 'upload';
+  /** Image-testimonial photo (distinct from the company logoUrl). */
+  imageUrl: string;
+  /** 1–5 client rating; null when not given. */
+  rating: number | null;
   format: string;
   metrics: { label: string; stat: string }[];
   sortOrder: number;

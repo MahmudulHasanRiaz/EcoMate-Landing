@@ -13,14 +13,14 @@
 import { eq } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { adminAuditLogsTable, adminUsersTable } from '@/db/schema';
-import { requireAdminRole } from '@/lib/authz';
+import { CONTENT_EDITOR_ROLES, requireRole } from '@/lib/authz';
 import { errorMessage, fail, logServerError, ok, readString } from '@/lib/json';
 import { totpAction } from '@/lib/validation';
 import { clientIp } from '@/lib/request';
 import { createTotpEnrollment, storedTotpMatches } from '@/lib/totp';
 
 export async function POST(request: Request): Promise<Response> {
-  const guard = await requireAdminRole(['superadmin', 'admin', 'editor']);
+  const guard = await requireRole(CONTENT_EDITOR_ROLES);
   if (!guard.ok) return guard.response;
   const actorId = guard.actorId;
   if (actorId === null) return fail('Session is missing an operator id', 401);

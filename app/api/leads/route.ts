@@ -1,6 +1,5 @@
-import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { desc, eq, sql } from 'drizzle-orm';
-import { requireAdminRole } from '@/lib/authz';
+import { CONTENT_EDITOR_ROLES, requireRole } from '@/lib/authz';
 import { getDb } from '@/db/client';
 import { leadsTable } from '@/db/schema';
 import {
@@ -11,7 +10,8 @@ import {
   ok,
   readString,
 } from '@/lib/json';
-import { dispatchLeadIntegrations } from '@/lib/leadDispatch';
+import { dispatchLeadIntegrations, keepAlive } from '@/lib/leadDispatch';
+import { getMetaCapiSettings } from '@/lib/metaCapiSettings';
 import {
   countOverdueFollowUps,
   findRecentLeadByPhone,
@@ -126,7 +126,7 @@ export async function GET(req: Request) {
   // Role-gated, not merely session-gated. A lead row carries name, phone, email, client IP
   // and user agent — personal data. Decision 1 gives editors lead viewing + status updates,
   // so the list is editor-allowed (bulk export stays admin-only).
-  const guard = await requireAdminRole(['superadmin', 'admin', 'editor']);
+  const guard = await requireRole(CONTENT_EDITOR_ROLES);
   if (!guard.ok) return guard.response;
 
   try {
@@ -287,6 +287,10 @@ export async function POST(req: Request) {
           consentGiven: true,
           consentAt: new Date(),
           consentText,
+          // H-1: tracking consent persisted on the row (derived from the submit-time
+          // consent payload above). Every Meta dispatch path gates on this boolean;
+          // the `Skipped` status text is the audit trail, this is the enforcement.
+          trackingConsent: trackingAccepted,
           // Essential-only visitors skip the conversion pipeline visibly (`Skipped`,
           // not `Pending`) so the admin never mistakes them for a failed dispatch.
           metaCapiStatus: trackingAccepted ? 'Pending' : 'Skipped',
@@ -342,8 +346,9 @@ export async function POST(req: Request) {
     // Meta CAPI + License Portal + notification, all handed to the platform. `keepAlive`
     // reuses `ctx.waitUntil` so a recycled isolate cannot cancel any of them — and the lead
     // row is already committed, so a dispatch failure never loses the lead.
-    // Task 20 §5: opted-out visitors never dispatch Meta — not inline, not via the
-    // retry queue (`metaCapi: false` skips it; the row was stored as `Skipped` above).
+    // H-1: the inline dispatch reads the persisted `trackingConsent` AND the configured
+    // mode itself — opted-out visitors never dispatch Meta (not inline, not via the
+    // retry queue), and validated mode sends only the lightweight instant event here.
     keepAlive(
       Promise.all([
         dispatchLeadIntegrations(lead.id, { metaCapi: trackingAccepted }),
@@ -351,11 +356,18 @@ export async function POST(req: Request) {
       ]),
     );
 
+    // H-1: tell the browser which conversion event to fire with the shared `eventId`.
+    // Instant mode = `Lead` (pre-2b); validated mode = the configured instant name.
+    // The browser pixel consent-gates independently, so opted-out visitors fire nothing.
+    const capiSettings = await getMetaCapiSettings();
+    const browserEventName = capiSettings.mode === 'validated' ? capiSettings.instantEventName : 'Lead';
+
     return ok(
       {
         success: true,
         leadId: lead.id,
         eventId: lead.eventId,
+        meta: { eventName: browserEventName },
         message:
           'Demo request registered successfully. Our operations team will reach out promptly.',
         // Absent (rather than null) when there is no match, so a client can feature-detect on
@@ -380,20 +392,3 @@ export async function POST(req: Request) {
   }
 }
 
-/**
- * Hand background work to the platform instead of leaving it as a bare floating promise.
- *
- * A `.catch()` after the response has been returned can be cancelled the moment the
- * isolate is recycled, and the lead would silently never reach the License Portal.
- * `ctx.waitUntil` keeps the isolate alive until the promise settles. Outside a Worker
- * request (`next dev`, tests) there is no execution context, and the promise — already
- * running, already carrying its own `.catch` — simply continues.
- */
-function keepAlive(work: Promise<unknown>): void {
-  const settled = work.catch((error: unknown) => logServerError('lead dispatch', error));
-  try {
-    getCloudflareContext().ctx.waitUntil(settled);
-  } catch {
-    // No Cloudflare context: nothing to hand off to.
-  }
-}

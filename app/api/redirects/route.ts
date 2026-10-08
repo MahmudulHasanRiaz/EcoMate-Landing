@@ -27,8 +27,7 @@ import {
   logServerError,
   ok,
 } from '@/lib/json';
-import { requireAdminRole } from '@/lib/authz';
-import { canWriteContent } from '@/lib/roles';
+import { ADMIN_ONLY_ROLES, requireRole } from '@/lib/authz';
 import { resetRedirectCache } from '@/lib/redirects';
 import { redirectCreate, redirectDelete, redirectUpdate } from '@/lib/validation';
 
@@ -89,9 +88,8 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const guard = await requireAdminRole(['superadmin', 'admin', 'editor']);
+  const guard = await requireRole(ADMIN_ONLY_ROLES);
   if (!guard.ok) return guard.response;
-  if (!canWriteContent(guard.role)) return fail('Editors cannot manage redirects', 403);
 
   try {
     const parsed = redirectCreate.safeParse(await req.json().catch(() => null));
@@ -121,9 +119,8 @@ export async function POST(req: Request) {
 }
 
 export async function PUT(req: Request) {
-  const guard = await requireAdminRole(['superadmin', 'admin', 'editor']);
+  const guard = await requireRole(ADMIN_ONLY_ROLES);
   if (!guard.ok) return guard.response;
-  if (!canWriteContent(guard.role)) return fail('Editors cannot manage redirects', 403);
 
   try {
     const parsed = redirectUpdate.safeParse(await req.json().catch(() => null));
@@ -153,9 +150,8 @@ export async function PUT(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const guard = await requireAdminRole(['superadmin', 'admin', 'editor']);
+  const guard = await requireRole(ADMIN_ONLY_ROLES);
   if (!guard.ok) return guard.response;
-  if (!canWriteContent(guard.role)) return fail('Editors cannot manage redirects', 403);
 
   try {
     const parsed = redirectDelete.safeParse(await req.json().catch(() => null));

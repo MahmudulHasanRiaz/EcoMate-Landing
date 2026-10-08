@@ -30,7 +30,7 @@
  * satisfy a deletion window legal has not agreed to would destroy business records. If legal
  * extends retention enforcement to them, that is a change to `PROTECTED_LEAD_STATUSES`.
  */
-import { and, eq, isNull, lt, notInArray } from 'drizzle-orm';
+import { and, eq, inArray, isNull, lt, notInArray } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { leadsTable, sessionsTable } from '@/db/schema';
 import { envString } from '@/lib/env';
@@ -121,7 +121,7 @@ export async function GET(req: Request): Promise<Response> {
     const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
     /**
-     * Anonymise leads older than the window.
+     * Anonymise leads older than the window, in chunks (M-17).
      *
      * `anonymized_at IS NULL` makes the job idempotent: a second run cannot re-stamp a row
      * that is already cleared, which also means `updated_at` keeps its real value rather than
@@ -129,27 +129,44 @@ export async function GET(req: Request): Promise<Response> {
      *
      * `status NOT IN ('Won','Qualified')` is the sales-ownership guard, applied in SQL so the
      * rule holds even if this function's logic is later refactored.
+     *
+     * Chunking: Postgres has no `UPDATE ... LIMIT`, so each chunk selects up to
+     * `RETENTION_BATCH_LIMIT` due ids and updates exactly those rows, looping until a
+     * chunk comes back short. An unbounded single `UPDATE ... RETURNING` over a large
+     * table risks blowing the 120s cron timeout and the Worker's subrequest/memory
+     * budget; chunks keep every iteration bounded.
      */
-    const expiredLeads = await getDb()
-      .update(leadsTable)
-      .set({
-        name: WITHHELD_NAME,
-        // `leads.phone` is NOT NULL, so "cleared" is `''`, not NULL.
-        phone: '',
-        email: '',
-        clientIp: '',
-        userAgent: '',
-        anonymizedAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          lt(leadsTable.createdAt, cutoff),
-          isNull(leadsTable.anonymizedAt),
-          notInArray(leadsTable.status, [...PROTECTED_LEAD_STATUSES]),
-        ),
-      )
-      .returning({ id: leadsTable.id });
+    const RETENTION_BATCH_LIMIT = 500;
+    let anonymizedTotal = 0;
+    for (;;) {
+      const due = await getDb()
+        .select({ id: leadsTable.id })
+        .from(leadsTable)
+        .where(
+          and(
+            lt(leadsTable.createdAt, cutoff),
+            isNull(leadsTable.anonymizedAt),
+            notInArray(leadsTable.status, [...PROTECTED_LEAD_STATUSES]),
+          ),
+        )
+        .limit(RETENTION_BATCH_LIMIT);
+      if (due.length === 0) break;
+      await getDb()
+        .update(leadsTable)
+        .set({
+          name: WITHHELD_NAME,
+          // `leads.phone` is NOT NULL, so "cleared" is `''`, not NULL.
+          phone: '',
+          email: '',
+          clientIp: '',
+          userAgent: '',
+          anonymizedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(inArray(leadsTable.id, due.map((row) => row.id)));
+      anonymizedTotal += due.length;
+      if (due.length < RETENTION_BATCH_LIMIT) break;
+    }
 
     /**
      * Delete expired Auth.js sessions.
@@ -172,7 +189,7 @@ export async function GET(req: Request): Promise<Response> {
         requestId: reqId,
         retentionDays: days,
         cutoff: cutoff.toISOString(),
-        anonymizedLeads: expiredLeads.length,
+        anonymizedLeads: anonymizedTotal,
         deletedSessions: deletedSessions.length,
         protectedStatuses: PROTECTED_LEAD_STATUSES,
       }),
@@ -183,7 +200,7 @@ export async function GET(req: Request): Promise<Response> {
         ok: true,
         requestId: reqId,
         retentionDays: days,
-        anonymizedLeads: expiredLeads.length,
+        anonymizedLeads: anonymizedTotal,
         deletedSessions: deletedSessions.length,
       },
       { status: 200, headers: { 'Cache-Control': 'no-store' } },

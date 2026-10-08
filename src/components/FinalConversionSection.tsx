@@ -137,8 +137,16 @@ export const FinalConversionSection: React.FC = () => {
       }
 
       // Browser half of the deduplicated conversion. The server sends the other half with
-      // the same event_id from the POST handler.
-      trackBrowserLead(eventId);
+      // the same event_id from the POST handler. H-1: the server tells us which event
+      // name to fire (`Lead` in instant mode, the configured instant name in validated
+      // mode) — the pair deduplicates on event_name + event_id.
+      const created: unknown = await response.json().catch(() => null);
+      const browserEventName =
+        typeof created === 'object' && created !== null
+        && typeof (created as { meta?: { eventName?: unknown } }).meta?.eventName === 'string'
+          ? (created as { meta: { eventName: string } }).meta.eventName
+          : 'Lead';
+      trackBrowserLead(eventId, browserEventName);
       setIsSubmitted(true);
     } catch (err: unknown) {
       setFormError(

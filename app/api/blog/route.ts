@@ -1,7 +1,7 @@
-import { desc, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { blogPostsTable } from '@/db/schema';
-import { requireAdminRole } from '@/lib/authz';
+import { CONTENT_EDITOR_ROLES, requireRole } from '@/lib/authz';
 import {
   errorMessage,
   fail,
@@ -18,7 +18,10 @@ import { recordRevision } from '@/lib/revisions';
 import { sanitizeHtml } from '@/lib/sanitize';
 import { blogPostCreate } from '@/lib/validation';
 
-/** Paginated (Task 16 §4). Public: this route is the index feed, not an admin surface. */
+/** Paginated (Task 16 §4). Public: this route is the index feed, not an admin surface.
+ * Only `status = 'published'` rows are served — drafts/scheduled/archived posts stay
+ * behind the admin-gated preview endpoint (`GET /api/admin/preview`), never on a
+ * public URL. Mirrors `lib/content.ts:getPublishedBlogPosts`. */
 export async function GET(req: Request) {
   try {
     const page = await paginate(
@@ -27,7 +30,7 @@ export async function GET(req: Request) {
         getDb()
           .select()
           .from(blogPostsTable)
-          .where(isNull(blogPostsTable.deletedAt))
+          .where(and(eq(blogPostsTable.status, 'published'), isNull(blogPostsTable.deletedAt)))
           // `published_at` desc, exactly as specified — but with `created_at` as the tiebreaker
           // so unscheduled drafts (NULL `published_at`) do not jump ahead of live posts the way
           // Postgres' default NULLS FIRST ordering would otherwise place them.
@@ -38,7 +41,7 @@ export async function GET(req: Request) {
         const [row] = await getDb()
           .select({ count: sql<number>`count(*)` })
           .from(blogPostsTable)
-          .where(isNull(blogPostsTable.deletedAt));
+          .where(and(eq(blogPostsTable.status, 'published'), isNull(blogPostsTable.deletedAt)));
         return { count: Number(row?.count ?? 0) };
       },
     );
@@ -52,7 +55,7 @@ export async function GET(req: Request) {
 // NEVER `.values(body)` — mass assignment on insert is the same hole as on update.
 export async function POST(req: Request) {
   // Decision 1: editors do blog posting, so blog CRUD is editor-allowed.
-  const guard = await requireAdminRole(['superadmin', 'admin', 'editor']);
+  const guard = await requireRole(CONTENT_EDITOR_ROLES);
   if (!guard.ok) return guard.response;
 
   try {

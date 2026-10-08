@@ -1,7 +1,7 @@
 import { desc, sql } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { integrationLogsTable } from '@/db/schema';
-import { requireAdminRole } from '@/lib/authz';
+import { ADMIN_ONLY_ROLES, requireRole } from '@/lib/authz';
 import { errorMessage, fail, failWithRequestId, logServerError, ok } from '@/lib/json';
 import { paginate } from '@/lib/paginate';
 import { requestId } from '@/lib/request';
@@ -11,7 +11,7 @@ export async function GET(req: Request) {
   const reqId = requestId(req);
   // CR-1: dispatch payloads carry lead PII (name, phone, email, UTM). Session-only
   // gating is not enough — this is an admin-only surface.
-  const guard = await requireAdminRole(['superadmin', 'admin']);
+  const guard = await requireRole(ADMIN_ONLY_ROLES);
   if (!guard.ok) return guard.response;
   try {
     const page = await paginate(

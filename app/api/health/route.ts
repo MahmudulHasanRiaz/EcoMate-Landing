@@ -1,5 +1,12 @@
-import { isPostgresConfigured } from '@/db/client';
-import { envString } from '@/lib/env';
+/**
+ * GET /api/health — cheap liveness probe (Decision 8).
+ *
+ * Deliberately dependency-free: no DB query, no R2/KV touch, not even a config
+ * read that could throw. Uptime monitors hit this at high frequency, so it must
+ * answer 200 in microseconds and can never fail for a reason that warrants a
+ * restart. Deep dependency checks live in `/api/ready`, which is throttled.
+ * Both endpoints stay PUBLIC — external monitors cannot authenticate.
+ */
 import { ok } from '@/lib/json';
 
 // `process.uptime()` does not exist on Workers, so uptime is measured against the
@@ -10,8 +17,6 @@ export async function GET() {
   return ok({
     status: 'healthy',
     uptime: (Date.now() - BOOT_AT) / 1000,
-    postgresConfigured: isPostgresConfigured(),
-    licensePortalConfigured: envString('LICENSE_PORTAL_API_BASE_URL') !== '',
     timestamp: new Date().toISOString(),
   });
 }

@@ -25,7 +25,9 @@ const base = {
 };
 
 export const caseStudyCreate = z.strictObject({
-  slug: base.slug,
+  // Optional: omitted when the admin leaves slug generation to the route, which derives
+  // it from the title (post-name permalink) and guarantees uniqueness.
+  slug: base.slug.optional(),
   title: base.title,
   client: base.client,
   businessType: base.businessType.optional(),

@@ -41,7 +41,6 @@ export interface LicensePortalResponse {
   success: boolean;
   trackingId?: string;
   message: string;
-  rawResponse?: unknown;
 }
 
 /** Thrown by `retryLead`/`dispatchLead` when the lead id does not exist — maps to 404. */
@@ -49,6 +48,14 @@ export class LeadNotFoundError extends Error {
   constructor(leadId: number) {
     super(`Lead #${leadId} not found`);
     this.name = 'LeadNotFoundError';
+  }
+}
+
+/** Thrown by `retryLead` when the lead is not in a retryable state — maps to 409. */
+export class LeadNotRetryableError extends Error {
+  constructor(leadId: number, status: string) {
+    super(`Lead #${leadId} license sync is '${status}', not Failed/Pending — refusing duplicate dispatch`);
+    this.name = 'LeadNotRetryableError';
   }
 }
 
@@ -98,6 +105,11 @@ class LicensePortalService {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${apiKey}`,
           'X-EcoMate-Source': 'Website-Public-Form',
+          // H-2: stable per lead, so a portal that honours idempotency keys collapses
+          // a retried POST into the original licence instead of minting a duplicate.
+          // Safe to reuse across attempts: `retryLead` refuses non-Failed/Pending rows,
+          // so this key is never attached to a second, distinct licence for one lead.
+          'Idempotency-Key': `ecomate-lead-${lead.id}`,
         },
         body: JSON.stringify(payload),
       });
@@ -126,11 +138,12 @@ class LicensePortalService {
         status: 'Success',
         errorMessage: '',
       });
+      // H-2: the portal body is recorded in `integration_logs`, never echoed to the
+      // caller — the route returns only success/trackingId/message.
       return {
         success: true,
         trackingId,
         message: 'Successfully dispatched to License Portal',
-        rawResponse,
       };
     } catch (err) {
       const errMessage = err instanceof Error ? err.message : 'Network error reaching License Portal API';
@@ -148,11 +161,16 @@ class LicensePortalService {
   async retryLead(leadId: number): Promise<LicensePortalResponse> {
     const db = getDb();
     const [lead] = await db
-      .select({ id: leadsTable.id })
+      .select({ id: leadsTable.id, licensePortalStatus: leadsTable.licensePortalStatus })
       .from(leadsTable)
       .where(eq(leadsTable.id, leadId))
       .limit(1);
     if (!lead) throw new LeadNotFoundError(leadId);
+    // H-2: refuse the retry unless the row is actually Failed/Pending — repeating the
+    // call against a Synced lead would mint a duplicate licence in the portal.
+    if (lead.licensePortalStatus !== 'Failed' && lead.licensePortalStatus !== 'Pending') {
+      throw new LeadNotRetryableError(leadId, lead.licensePortalStatus);
+    }
     return this.dispatchLead(leadId);
   }
 

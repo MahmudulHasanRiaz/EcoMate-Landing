@@ -15,4 +15,18 @@ export const settingsPatch = z.strictObject({
   isPricingVisible: z.boolean().optional(),
   seoTitle: z.string().max(70).optional(),
   seoDescription: z.string().max(200).optional(),
+  // Meta CAPI two-mode (H-1/Decision 14, admin-only surface): mode switch, the lead
+  // status that triggers the full event in validated mode ('' = unconfigured), and the
+  // lightweight submit-time event name (Meta custom-event charset).
+  metaCapiMode: z.enum(['instant', 'validated']).optional(),
+  metaLeadStatusTrigger: z
+    .union([
+      z.enum(['New', 'Contacted', 'Qualified', 'Demo Scheduled', 'Won', 'Lost']),
+      z.literal(''),
+    ])
+    .optional(),
+  metaInstantEventName: z
+    .string()
+    .regex(/^[A-Za-z0-9_]{1,40}$/)
+    .optional(),
 });

@@ -172,7 +172,21 @@ export const testimonialsTable = pgTable('testimonials', {
   logoUrl: text('logo_url').default(''),
   videoUrl: text('video_url').default(''),
   videoDuration: text('video_duration').default(''),
-  format: text('format').notNull().default('video_walkthrough'), // written, video_walkthrough, case_study
+  /**
+   * Where the video lives (H-19): 'youtube' embeds via the YouTube player,
+   * 'upload' plays the `video_url` directly in a `<video>` element. Public
+   * rendering branches on this — a wrong value must degrade to the text card,
+   * never to a broken embed.
+   */
+  videoProvider: text('video_provider').notNull().default('youtube'),
+  /**
+   * Image-testimonial photo (H-19). Distinct from `logo_url` (the company mark):
+   * this is the client/product photo the image card renders.
+   */
+  imageUrl: text('image_url').default(''),
+  /** Optional 1–5 client rating. NULL = not given (never 0 — 0 would read as a score). */
+  rating: integer('rating'),
+  format: text('format').notNull().default('text'), // video_short | video_standard | image | text
   metrics: jsonb('metrics').default([]), // [{ label, stat }]
   sortOrder: integer('sort_order').notNull().default(0),
   isPublished: boolean('is_published').notNull().default(true),

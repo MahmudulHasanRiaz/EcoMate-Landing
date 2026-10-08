@@ -390,7 +390,8 @@ async function main() {
           logoUrl: '',
           videoUrl: 'https://www.youtube.com/watch?v=sample-ecomate-1',
           videoDuration: '3:45 min',
-          format: 'video_walkthrough',
+          videoProvider: 'youtube',
+          format: 'video_standard',
           metrics: [
             { label: 'Avoidable Mispacks', stat: 'Zero' },
             { label: 'Daily Dispatch Speed', stat: '3.2x Faster' },
@@ -413,7 +414,8 @@ async function main() {
           logoUrl: '',
           videoUrl: 'https://www.youtube.com/watch?v=sample-ecomate-2',
           videoDuration: '2:50 min',
-          format: 'video_walkthrough',
+          videoProvider: 'youtube',
+          format: 'video_standard',
           metrics: [
             { label: 'Stock Discrepancy', stat: 'Eliminated' },
             { label: 'Cashier Checkout', stat: '18s / bill' },
@@ -436,7 +438,8 @@ async function main() {
           logoUrl: '',
           videoUrl: 'https://www.youtube.com/watch?v=sample-ecomate-3',
           videoDuration: '4:15 min',
-          format: 'video_walkthrough',
+          videoProvider: 'youtube',
+          format: 'video_standard',
           metrics: [
             { label: 'Monthly Recon Time', stat: 'From 3 days to 15m' },
             { label: 'COD Cash Accuracy', stat: '100% Tracked' },

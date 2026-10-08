@@ -16,6 +16,9 @@ import type {
 } from '../../types/api';
 import * as api from '../../services/api';
 import { fieldErrorsOf, type FieldErrors } from './fieldErrors';
+import { TestimonialForm } from './TestimonialForm';
+import { CaseStudyEditor } from './CaseStudyEditor';
+import { TestimonialCard } from '../TestimonialCard';
 import {
   LayoutDashboard,
   Users,
@@ -69,8 +72,8 @@ type AdminTab =
   | 'settings'
   | 'integrations';
 
-/** Inline validation message rendered against its input (Task 17 §5). */
-const FieldError: React.FC<{ id: string; message?: string }> = ({ id, message }) => {
+/** Inline validation message rendered against its input (Task 17 §5). Exported for the form islands. */
+export const FieldError: React.FC<{ id: string; message?: string }> = ({ id, message }) => {
   if (!message) return null;
   return (
     <p id={id} role="alert" className="mt-1 text-[11px] font-medium text-rose-700 dark:text-rose-300">
@@ -164,6 +167,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
     tags: ['ecommerce', 'operations'],
   });
 
+  // Testimonial + case-study CMS state (H-19/H-20). A null draft means the list view;
+  // a draft with no `id` is a create, with an `id` an edit.
+  const [testimonialDraft, setTestimonialDraft] = useState<Partial<Testimonial> | null>(null);
+  const [testimonialErrors, setTestimonialErrors] = useState<FieldErrors>({});
+  const [testimonialSaving, setTestimonialSaving] = useState(false);
+  const [caseStudyDraft, setCaseStudyDraft] = useState<Partial<CaseStudy> | null>(null);
+  const [caseStudyErrors, setCaseStudyErrors] = useState<FieldErrors>({});
+  const [caseStudySaving, setCaseStudySaving] = useState(false);
+
   // Load all data
   const loadData = async () => {
     setIsLoading(true);
@@ -188,8 +200,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
         // one shot rather than rendering a pager: an operator triaging leads needs the whole
         // working set on screen, and `MAX_LIMIT` (100) is the ceiling the server enforces anyway.
         api.getLeads({ limit: api.ADMIN_LIST_LIMIT }),
-        api.getTestimonials({ limit: api.ADMIN_LIST_LIMIT }),
-        api.getCaseStudies({ limit: api.ADMIN_LIST_LIMIT }),
+        // CMS lists read the admin paths (drafts included) — the public list endpoints
+        // serve published rows only and would hide fresh drafts from this console.
+        api.getAllTestimonials({ limit: api.ADMIN_LIST_LIMIT }),
+        api.getAllCaseStudies({ limit: api.ADMIN_LIST_LIMIT }),
         api.getBlogPosts({ limit: api.ADMIN_LIST_LIMIT }),
         api.getMediaAssets({ limit: api.ADMIN_LIST_LIMIT }),
         api.getIntegrationLogs({ limit: api.ADMIN_LIST_LIMIT }),
@@ -573,8 +587,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
     }
   };
 
-  const handleSaveBlogPost = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveBlogPost = async (e: React.FormEvent) => {    e.preventDefault();
     setBlogErrors({});
     try {
       if (editingPost.id) {
@@ -593,9 +606,74 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
     }
   };
 
+  // Testimonial + case-study CMS handlers (H-19/H-20). Lists refresh from the admin
+  // paths so a just-unpublished row stays visible as a draft instead of vanishing.
+  const handleSaveTestimonial = async (data: Partial<Testimonial>) => {
+    setTestimonialSaving(true);
+    setTestimonialErrors({});
+    try {
+      if (testimonialDraft?.id) {
+        await api.updateTestimonial(testimonialDraft.id, data);
+        showNotification('Testimonial updated successfully');
+      } else {
+        await api.createTestimonial(data);
+        showNotification('Testimonial created successfully');
+      }
+      setTestimonialDraft(null);
+      setTestimonials(await api.getAllTestimonials({ limit: api.ADMIN_LIST_LIMIT }));
+    } catch (err: unknown) {
+      setTestimonialErrors(fieldErrorsOf(err));
+      showNotification(`Error saving testimonial: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setTestimonialSaving(false);
+    }
+  };
+
+  const handleDeleteTestimonial = async (id: number) => {
+    if (!window.confirm('Delete this testimonial? It will no longer appear anywhere.')) return;
+    try {
+      await api.deleteTestimonial(id);
+      setTestimonials(await api.getAllTestimonials({ limit: api.ADMIN_LIST_LIMIT }));
+      showNotification('Testimonial deleted');
+    } catch (err: unknown) {
+      showNotification(`Error deleting testimonial: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
+  };
+
+  const handleSaveCaseStudy = async (data: Partial<CaseStudy>) => {
+    setCaseStudySaving(true);
+    setCaseStudyErrors({});
+    try {
+      if (caseStudyDraft?.id) {
+        await api.updateCaseStudy(caseStudyDraft.id, data);
+        showNotification('Case study updated successfully');
+      } else {
+        await api.createCaseStudy(data);
+        showNotification('Case study created successfully');
+      }
+      setCaseStudyDraft(null);
+      setCaseStudies(await api.getAllCaseStudies({ limit: api.ADMIN_LIST_LIMIT }));
+    } catch (err: unknown) {
+      setCaseStudyErrors(fieldErrorsOf(err));
+      showNotification(`Error saving case study: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setCaseStudySaving(false);
+    }
+  };
+
+  const handleDeleteCaseStudy = async (idOrSlug: number | string) => {
+    if (!window.confirm('Delete this case study? Its public page will 404.')) return;
+    try {
+      await api.deleteCaseStudy(idOrSlug);
+      setCaseStudies(await api.getAllCaseStudies({ limit: api.ADMIN_LIST_LIMIT }));
+      showNotification('Case study deleted');
+    } catch (err: unknown) {
+      showNotification(`Error deleting case study: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
+  };
+
   // Filtered Leads
-  const filteredLeads = leads.filter((l) => {
-    const matchesStatus = leadStatusFilter === 'All' || l.status === leadStatusFilter;
+  const filteredLeads = leads.filter((l) => {    const matchesStatus = leadStatusFilter === 'All' || l.status === leadStatusFilter;
     const matchesSearch =
       l.name.toLowerCase().includes(leadSearchQuery.toLowerCase()) ||
       l.phone.includes(leadSearchQuery) ||
@@ -1711,30 +1789,133 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
           {/* TAB 5: TESTIMONIALS & CASE STUDIES */}
           {activeTab === 'testimonials' && (
             <div className="space-y-6 max-w-6xl mx-auto">
-              <div>
-                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Proof & Case Studies CMS</h2>
-                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-0.5">
-                  Manage verifiable client testimonials, video interviews, and quantified ROI case studies.
-                </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Proof & Case Studies CMS</h2>
+                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-0.5">
+                    Manage verifiable client testimonials, video interviews, and quantified ROI case studies.
+                  </p>
+                </div>
+                {!testimonialDraft && (
+                  <button
+                    onClick={() => {
+                      setTestimonialDraft({ format: 'text', isPublished: false, sortOrder: 0 });
+                      setTestimonialErrors({});
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 text-white font-semibold text-xs shadow-xs hover:bg-indigo-700 transition-colors cursor-pointer"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>New Testimonial</span>
+                  </button>
+                )}
               </div>
+
+              {testimonialDraft && (
+                <TestimonialForm
+                  initial={testimonialDraft}
+                  errors={testimonialErrors}
+                  saving={testimonialSaving}
+                  onSubmit={handleSaveTestimonial}
+                  onCancel={() => setTestimonialDraft(null)}
+                />
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {testimonials.map((t) => (
-                  <div key={t.id} className="p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1B] flex flex-col justify-between shadow-xs">
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-bold text-slate-900 dark:text-white text-sm">{t.companyName}</span>
-                        <span className="text-[11px] font-mono text-indigo-700 dark:text-indigo-300">{t.videoDuration}</span>
-                      </div>
-                      <p className="text-xs text-slate-600 dark:text-slate-300">{t.clientName} · {t.clientRole}</p>
-                      <blockquote className="mt-3 text-xs text-slate-700 dark:text-slate-300 italic">
-                        "{t.quoteEn}"
-                      </blockquote>
+                  <div key={t.id} className="relative">
+                    {!t.isPublished && (
+                      <span className="absolute -top-2 left-4 z-10 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+                        Draft
+                      </span>
+                    )}
+                    <TestimonialCard data={t} locale="en" />
+                    <div className="mt-2 flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => {
+                          setTestimonialDraft({ ...t });
+                          setTestimonialErrors({});
+                        }}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-[11px] font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 cursor-pointer"
+                      >
+                        <Edit2 className="h-3 w-3" />
+                        <span>Edit</span>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteTestimonial(t.id)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-rose-200 dark:border-rose-900/40 text-[11px] font-semibold text-rose-700 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/30 cursor-pointer"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        <span>Delete</span>
+                      </button>
                     </div>
+                  </div>
+                ))}
+              </div>
 
-                    <div className="mt-4 pt-3 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-xs text-slate-600 dark:text-slate-300">
-                      <span className="text-emerald-700 dark:text-emerald-400 font-semibold">{t.metrics[0]?.stat} {t.metrics[0]?.label}</span>
-                      <span className="font-mono text-[11px]">{t.websiteUrl}</span>
+              <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-white/5">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Case Studies</h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
+                    Long-form proof pages. A blank slug is generated from the title.
+                  </p>
+                </div>
+                {!caseStudyDraft && (
+                  <button
+                    onClick={() => {
+                      setCaseStudyDraft({ isPublished: false });
+                      setCaseStudyErrors({});
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 text-white font-semibold text-xs shadow-xs hover:bg-indigo-700 transition-colors cursor-pointer"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>New Case Study</span>
+                  </button>
+                )}
+              </div>
+
+              {caseStudyDraft && (
+                <CaseStudyEditor
+                  initial={caseStudyDraft}
+                  errors={caseStudyErrors}
+                  saving={caseStudySaving}
+                  onSubmit={handleSaveCaseStudy}
+                  onCancel={() => setCaseStudyDraft(null)}
+                />
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {caseStudies.map((cs) => (
+                  <div key={cs.id} className="p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1B] flex flex-col justify-between shadow-xs">
+                    <div>
+                      <div className="flex items-center justify-between mb-2 gap-2">
+                        <span className="font-bold text-slate-900 dark:text-white text-sm">{cs.title}</span>
+                        {!cs.isPublished && (
+                          <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+                            Draft
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-600 dark:text-slate-300">{cs.client} · <span className="font-mono">/{cs.slug}</span></p>
+                      <p className="mt-2 text-xs text-slate-700 dark:text-slate-300 line-clamp-2">{cs.problemOverview}</p>
+                    </div>
+                    <div className="mt-4 pt-3 border-t border-slate-100 dark:border-white/5 flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => {
+                          setCaseStudyDraft({ ...cs });
+                          setCaseStudyErrors({});
+                        }}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-[11px] font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 cursor-pointer"
+                      >
+                        <Edit2 className="h-3 w-3" />
+                        <span>Edit</span>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteCaseStudy(cs.id)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-rose-200 dark:border-rose-900/40 text-[11px] font-semibold text-rose-700 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/30 cursor-pointer"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        <span>Delete</span>
+                      </button>
                     </div>
                   </div>
                 ))}

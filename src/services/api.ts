@@ -329,8 +329,68 @@ export async function getTestimonials(params?: PageParams): Promise<Testimonial[
   return fetchListData<Testimonial>('/testimonials', params);
 }
 
+/** Full CMS list (drafts included) — admin console only, editor-allowed. */
+export async function getAllTestimonials(params?: PageParams): Promise<Testimonial[]> {
+  return fetchListData<Testimonial>('/admin/testimonials', params);
+}
+
+/** Full CMS list (drafts included) — admin console only, editor-allowed. */
+export async function getAllCaseStudies(params?: PageParams): Promise<CaseStudy[]> {
+  return fetchListData<CaseStudy>('/admin/case-studies', params);
+}
+
 export async function getCaseStudies(params?: PageParams): Promise<CaseStudy[]> {
   return fetchListData<CaseStudy>('/case-studies', params);
+}
+
+export async function createTestimonial(data: Partial<Testimonial>): Promise<Testimonial> {
+  const res = await fetch(`${API_BASE}/testimonials`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) await throwApiError(res, 'Failed to create testimonial');
+  return res.json();
+}
+
+export async function updateTestimonial(id: number, data: Partial<Testimonial>): Promise<Testimonial> {
+  const res = await fetch(`${API_BASE}/testimonials/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) await throwApiError(res, 'Failed to update testimonial');
+  return res.json();
+}
+
+export async function deleteTestimonial(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/testimonials/${id}`, { method: 'DELETE' });
+  if (!res.ok) await throwApiError(res, 'Failed to delete testimonial');
+}
+
+export async function createCaseStudy(data: Partial<CaseStudy>): Promise<CaseStudy> {
+  const res = await fetch(`${API_BASE}/case-studies`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) await throwApiError(res, 'Failed to create case study');
+  return res.json();
+}
+
+export async function updateCaseStudy(idOrSlug: number | string, data: Partial<CaseStudy>): Promise<CaseStudy> {
+  const res = await fetch(`${API_BASE}/case-studies/${idOrSlug}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) await throwApiError(res, 'Failed to update case study');
+  return res.json();
+}
+
+export async function deleteCaseStudy(idOrSlug: number | string): Promise<void> {
+  const res = await fetch(`${API_BASE}/case-studies/${idOrSlug}`, { method: 'DELETE' });
+  if (!res.ok) await throwApiError(res, 'Failed to delete case study');
 }
 
 export async function getBlogPosts(params?: PageParams): Promise<BlogPost[]> {

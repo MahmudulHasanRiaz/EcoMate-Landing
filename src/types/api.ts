@@ -167,6 +167,12 @@ export interface Testimonial {
   logoUrl: string;
   videoUrl: string;
   videoDuration: string;
+  /** 'youtube' embeds the player; 'upload' plays videoUrl directly. */
+  videoProvider: 'youtube' | 'upload';
+  /** Image-testimonial photo (distinct from the company logoUrl). */
+  imageUrl: string;
+  /** 1–5 client rating; null when not given. */
+  rating: number | null;
   format: string;
   metrics: { label: string; stat: string }[];
   sortOrder: number;

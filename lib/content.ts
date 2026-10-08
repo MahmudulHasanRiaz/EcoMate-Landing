@@ -333,18 +333,34 @@ export async function getSocialLinks(): Promise<{ platform: string; url: string 
 /** Published testimonials, in display order. */
 export async function getTestimonials(): Promise<{
   clientName: string;
+  clientRole: string;
   companyName: string;
   quoteEn: string;
   quoteBn: string;
+  logoUrl: string | null;
+  videoUrl: string | null;
+  videoDuration: string | null;
+  videoProvider: string;
+  imageUrl: string | null;
+  rating: number | null;
+  format: string;
   metrics: unknown;
 }[] | null> {
   try {
     const rows = await withTimeout(getDb()
       .select({
         clientName: testimonialsTable.clientName,
+        clientRole: testimonialsTable.clientRole,
         companyName: testimonialsTable.companyName,
         quoteEn: testimonialsTable.quoteEn,
         quoteBn: testimonialsTable.quoteBn,
+        logoUrl: testimonialsTable.logoUrl,
+        videoUrl: testimonialsTable.videoUrl,
+        videoDuration: testimonialsTable.videoDuration,
+        videoProvider: testimonialsTable.videoProvider,
+        imageUrl: testimonialsTable.imageUrl,
+        rating: testimonialsTable.rating,
+        format: testimonialsTable.format,
         metrics: testimonialsTable.metrics,
       })
       .from(testimonialsTable)

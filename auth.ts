@@ -73,12 +73,16 @@ const IP_THROTTLE_MAX_FAILURES = 10;
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 /**
- * A real (600k-iteration) hash of a throwaway value. When the email does not exist we still
+ * A real (100k-iteration) hash of a throwaway value. When the email does not exist we still
  * run a full KDF against this, so "no such account" and "wrong password" cost the same
  * wall-clock time and cannot be told apart by timing.
+ *
+ * 100k is the Cloudflare Workers PBKDF2 maximum: anything higher throws inside `deriveBits`,
+ * which turned unknown-email logins into HTTP 500s while wrong-password logins failed
+ * cleanly — an account-enumeration oracle (CR-2).
  */
 const TIMING_EQUALIZER_HASH =
-  'pbkdf2$600000$bdcb30f6977c7a0fe8f6594f8b3d1ea4$9f098ba6626d4ab39e545883d885a9f2dcc365f4bbd4282feba8d9c4427c1bb3';
+  'pbkdf2$100000$e1ee633e0af52e7439844bdafe27ef48$5fd1d5be13566c4ad76727c560cd84a428a82d8a109dfb95d92408001599192b';
 
 const SECURE_COOKIE_PREFIX = process.env.NODE_ENV === 'production' ? '__Secure-' : '';
 

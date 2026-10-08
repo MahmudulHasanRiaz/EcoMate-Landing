@@ -9,6 +9,10 @@
  * Each row retries through `dispatchLeadIntegrations` (the same code as the
  * inline first attempt — never a duplicate path). A row whose lead reached a
  * terminal state meanwhile (`Sent`/`Synced`) is marked `Done` without re-sending.
+ *
+ * Overlapping runs cannot double-dispatch: rows are claimed atomically inside one
+ * transaction (`SELECT ... FOR UPDATE SKIP LOCKED` + lease update), so a second
+ * run starting while the first is still dispatching sees none of the claimed rows.
  */
 import { and, eq, inArray, lte } from 'drizzle-orm';
 import { getDb } from '@/db/client';
@@ -23,6 +27,14 @@ import {
 import { requestId } from '@/lib/request';
 
 const DRAIN_LIMIT = 20;
+
+/**
+ * Claim lease for a row taken by this run. Claimed rows are pushed out of the due
+ * window so an overlapping run cannot re-select them while we dispatch. If this
+ * run crashes before settling a row, the lease expires and the row becomes due
+ * again — never stuck, and never double-dispatched while a run is alive.
+ */
+const CLAIM_LEASE_MS = 5 * 60 * 1000;
 
 function secretMatches(candidate: string, expected: string): boolean {
   if (candidate === '' || expected === '') return false;
@@ -74,17 +86,39 @@ export async function GET(req: Request): Promise<Response> {
 
   try {
     const db = getDb();
-    const due = await db
-      .select()
-      .from(dispatchQueueTable)
-      .where(
-        and(
-          inArray(dispatchQueueTable.status, ['Pending', 'Retrying']),
-          lte(dispatchQueueTable.nextAttemptAt, new Date()),
-        ),
-      )
-      .orderBy(dispatchQueueTable.nextAttemptAt)
-      .limit(DRAIN_LIMIT);
+    // M-8 atomic claim: select + lease-update in ONE transaction. `SKIP LOCKED`
+    // skips rows an overlapping run already locked; the lease update moves claimed
+    // rows out of the due window, so a run starting mid-dispatch re-selects nothing
+    // we own. Check-then-act across two statements would let both runs dispatch it.
+    const due = await db.transaction(async (tx) => {
+      const rows = await tx
+        .select()
+        .from(dispatchQueueTable)
+        .where(
+          and(
+            inArray(dispatchQueueTable.status, ['Pending', 'Retrying']),
+            lte(dispatchQueueTable.nextAttemptAt, new Date()),
+          ),
+        )
+        .orderBy(dispatchQueueTable.nextAttemptAt)
+        .limit(DRAIN_LIMIT)
+        .for('update', { skipLocked: true });
+      if (rows.length === 0) return rows;
+      await tx
+        .update(dispatchQueueTable)
+        .set({
+          status: 'Retrying',
+          nextAttemptAt: new Date(Date.now() + CLAIM_LEASE_MS),
+          updatedAt: new Date(),
+        })
+        .where(
+          inArray(
+            dispatchQueueTable.id,
+            rows.map((row) => row.id),
+          ),
+        );
+      return rows;
+    });
 
     let succeeded = 0;
     let retried = 0;

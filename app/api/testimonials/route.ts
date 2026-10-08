@@ -1,11 +1,13 @@
-import { asc, isNull, sql } from 'drizzle-orm';
+import { and, asc, eq, isNull, sql } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { testimonialsTable } from '@/db/schema';
 import { errorMessage, fail, failWithRequestId, logServerError, ok } from '@/lib/json';
 import { paginate } from '@/lib/paginate';
 import { requestId } from '@/lib/request';
 
-/** Paginated (Task 16 §4). Public: the landing page's customer-proof section reads this. */
+/** Paginated (Task 16 §4). Public: the landing page's customer-proof section reads this.
+ * Only `isPublished` rows are served (M-4) — unpublished client quotes/names stay behind
+ * the admin-gated preview endpoint. Mirrors `lib/content.ts:getTestimonials`. */
 export async function GET(req: Request) {
   try {
     // Soft-deleted rows are gone from every public read: `is_published` controls
@@ -16,7 +18,7 @@ export async function GET(req: Request) {
         getDb()
           .select()
           .from(testimonialsTable)
-          .where(isNull(testimonialsTable.deletedAt))
+          .where(and(eq(testimonialsTable.isPublished, true), isNull(testimonialsTable.deletedAt)))
           // `id` tiebreaks ties in `sort_order` so a page boundary is stable between requests.
           .orderBy(asc(testimonialsTable.sortOrder), asc(testimonialsTable.id))
           .limit(limit)
@@ -25,7 +27,7 @@ export async function GET(req: Request) {
         const [row] = await getDb()
           .select({ count: sql<number>`count(*)` })
           .from(testimonialsTable)
-          .where(isNull(testimonialsTable.deletedAt));
+          .where(and(eq(testimonialsTable.isPublished, true), isNull(testimonialsTable.deletedAt)));
         return { count: Number(row?.count ?? 0) };
       },
     );

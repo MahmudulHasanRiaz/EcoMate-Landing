@@ -56,6 +56,9 @@ export async function GET(req: Request, { params }: RouteContext) {
       .from(landingContentTable)
       .where(and(
         eq(landingContentTable.sectionKey, sectionKey),
+        // Public read (M-3): only the published copy is served. Draft rows and staged
+        // draft revisions are visible exclusively through the admin-gated preview endpoint.
+        eq(landingContentTable.status, 'published'),
         isNull(landingContentTable.deletedAt),
         ...(locale ? [eq(landingContentTable.locale, locale)] : []),
       ))

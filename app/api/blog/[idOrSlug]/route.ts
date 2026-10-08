@@ -28,13 +28,21 @@ import { contentRestore } from '@/lib/validation/content';
  */
 
 // Next 16: `params` is a Promise in route handlers. Never destructure it synchronously.
+// Public read: only `status = 'published'` rows are served (M-2). Drafts/scheduled posts
+// are available exclusively through the admin-gated preview endpoint.
 export async function GET(_req: Request, { params }: { params: Promise<{ idOrSlug: string }> }) {
   try {
     const { idOrSlug } = await params;
     const [post] = await getDb()
       .select()
       .from(blogPostsTable)
-      .where(and(eq(blogPostsTable.slug, idOrSlug), isNull(blogPostsTable.deletedAt)))
+      .where(
+        and(
+          eq(blogPostsTable.slug, idOrSlug),
+          eq(blogPostsTable.status, 'published'),
+          isNull(blogPostsTable.deletedAt),
+        ),
+      )
       .limit(1);
     if (!post) return fail('Blog post not found', 404);
     return ok(post);

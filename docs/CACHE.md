@@ -7,7 +7,8 @@
 > static files worked. Every read in `lib/content.ts` is therefore uncached and
 > dynamic; `lib/revalidate.ts` functions are no-ops keeping their signatures.
 >
-> **Re-enable path** (only after proving on preview): provision an R2 bucket +
+> **Re-enable path** (prove on a throwaway worker first — the `preview`
+> environment was decommissioned, CR-3): provision an R2 bucket +
 > Durable-Object tag cache for opennext, confirm a page renders against it, then
 > restore `cacheComponents: true` + `partialPrefetching: true` in `next.config.ts`,
 > the `'use cache'` / `cacheTag` / `cacheLife` directives below, and the bodies in

@@ -78,10 +78,9 @@ class LeadRowMissingError extends Error {
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const reqId = requestId(req);
-  // Status changes are sales-pipeline writes, not content edits: an editor is read-only
-  // elsewhere too (`lib/roles.ts` → `canWriteContent`), and the same rule has to hold here or
-  // the weakest role could move a lead to `Won`.
-  const guard = await requireAdminRole(['superadmin', 'admin']);
+  // Status changes are sales-pipeline writes — and Decision 1 gives editors lead status
+  // updates — so this route is editor-allowed. Bulk export stays admin-only.
+  const guard = await requireAdminRole(['superadmin', 'admin', 'editor']);
   if (!guard.ok) return guard.response;
 
   try {

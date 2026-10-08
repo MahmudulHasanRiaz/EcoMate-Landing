@@ -18,7 +18,7 @@
  * before the multipart body is buffered so a huge upload cannot exhaust the isolate.
  */
 import { getCloudflareContext } from '@opennextjs/cloudflare';
-import { requireAdminRole } from '@/lib/authz';
+import { CONTENT_EDITOR_ROLES, requireRole } from '@/lib/authz';
 import { errorMessage, fail, logServerError, ok } from '@/lib/json';
 import { hitLimit } from '@/lib/rateLimit';
 import { mediaUploadMeta } from '@/lib/validation';
@@ -141,9 +141,9 @@ function resolveBucket(): R2Bucket | undefined {
 }
 
 export async function POST(req: Request) {
-  // Media writes are a content-authoring action; editors are read-only (`lib/roles.ts`).
-  // The proxy only proves a session exists — this is the authoritative role check.
-  const guard = await requireAdminRole(['superadmin', 'admin']);
+  // Media writes are a content-authoring action (Decision 1 — editors manage the media
+  // library). The proxy only proves a session exists — this is the authoritative role check.
+  const guard = await requireRole(CONTENT_EDITOR_ROLES);
   if (!guard.ok) return guard.response;
 
   try {

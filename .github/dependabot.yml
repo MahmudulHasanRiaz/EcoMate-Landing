@@ -1,6 +1,6 @@
 # Task 21 §2 — weekly dependency proposals for npm and GitHub Actions.
 # Updates arrive as PRs, which then run the full CI gate (typecheck, gitleaks,
-# audits, drift guard, build) plus the preview deploy before a human merges.
+# audits, drift guard, build) before a human merges.
 # Nothing auto-merges: a green bot plus a red-eyed reviewer is the policy.
 version: 2
 updates:

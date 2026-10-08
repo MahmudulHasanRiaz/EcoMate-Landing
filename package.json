@@ -11,7 +11,6 @@
     "build": "next build",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "deploy:preview": "opennextjs-cloudflare build && opennextjs-cloudflare deploy --env preview",
     "deploy:prod": "opennextjs-cloudflare build && opennextjs-cloudflare deploy --env production",
     "lint": "tsc --noEmit",
     "test": "vitest run",

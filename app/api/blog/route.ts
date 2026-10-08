@@ -51,7 +51,8 @@ export async function GET(req: Request) {
 
 // NEVER `.values(body)` — mass assignment on insert is the same hole as on update.
 export async function POST(req: Request) {
-  const guard = await requireAdminRole(['superadmin', 'admin']);
+  // Decision 1: editors do blog posting, so blog CRUD is editor-allowed.
+  const guard = await requireAdminRole(['superadmin', 'admin', 'editor']);
   if (!guard.ok) return guard.response;
 
   try {

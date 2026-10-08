@@ -1,11 +1,15 @@
 import { eq } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { pricingPlansTable } from '@/db/schema';
+import { ADMIN_ONLY_ROLES, requireRole } from '@/lib/authz';
 import { errorMessage, fail, logServerError, ok, parseId } from '@/lib/json';
 import { invalidateDomains } from '@/lib/revalidate';
 import { pricingPlanUpdate } from '@/lib/validation';
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  // H-4: pricing is site customization (Decision 1) — editors cannot edit plans.
+  const guard = await requireRole(ADMIN_ONLY_ROLES);
+  if (!guard.ok) return guard.response;
   try {
     const { id: rawId } = await params;
     const id = parseId(rawId);
@@ -38,6 +42,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
  * `pricing_plans.slug` stays reusable.
  */
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  // H-4: pricing is site customization (Decision 1) — editors cannot delete plans.
+  const guard = await requireRole(ADMIN_ONLY_ROLES);
+  if (!guard.ok) return guard.response;
   try {
     const { id: rawId } = await params;
     const id = parseId(rawId);

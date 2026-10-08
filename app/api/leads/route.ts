@@ -124,10 +124,9 @@ export async function GET(req: Request) {
   const reqId = requestId(req);
 
   // Role-gated, not merely session-gated. A lead row carries name, phone, email, client IP
-  // and user agent — personal data. The role model gives `editor` content access only, so an
-  // editor must not be able to page through every lead. This route was previously reachable by
-  // any signed-in role; the proxy only proves a session exists, not that it may see leads.
-  const guard = await requireAdminRole(['superadmin', 'admin']);
+  // and user agent — personal data. Decision 1 gives editors lead viewing + status updates,
+  // so the list is editor-allowed (bulk export stays admin-only).
+  const guard = await requireAdminRole(['superadmin', 'admin', 'editor']);
   if (!guard.ok) return guard.response;
 
   try {

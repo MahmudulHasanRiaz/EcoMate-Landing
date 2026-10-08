@@ -468,7 +468,13 @@ Event names to alert on: `api.error`, `readiness.failed`, `cron.retention.denied
 
 ---
 
-## 13. Environments: production vs preview (Task 21)
+## 13. Environments: production only (preview decommissioned — CR-3, 2026-10-08)
+
+> **The `preview` environment was removed, not fixed.** It shared the production
+> database, so `preview.yml` was deleted, the `preview` choice was removed from
+> `deploy.yml`, and `[env.preview]` was removed from `wrangler.toml`. The table
+> and checklists below are preserved for history; only the `[env.production]`
+> column is live. PRs are validated by CI + local E2E instead of a preview deploy.
 
 ⚠️ **PARTIALLY UNVERIFIED** — the `[env.*]` blocks are committed and `tsc` +
 both builds are green, but no `--env` deploy has ever run (binding ids are
@@ -600,7 +606,11 @@ invocation. If this regresses, CI fails on every PR — loud, not silent.
 
 ---
 
-## 15. Preview per PR + branch protection (Task 21)
+## 15. Preview per PR + branch protection (Task 21) — DECOMMISSIONED (CR-3, 2026-10-08)
+
+> `preview.yml` was deleted and `[env.preview]` removed: the preview worker shared
+> the production database. This section is preserved for history only. PR validation
+> is CI (typecheck, gitleaks, audits, drift guard, build) + local E2E.
 
 ### 15.1 `.github/workflows/preview.yml`
 
@@ -623,8 +633,9 @@ Protection is not a file; these are the exact settings to apply (Settings →
 Branches → Add rule for `main`, or the API below):
 
 - Require status checks, strict: `Lint & Build Validation`, `Migration drift
-  guard`, `Preview deploy + smoke` (the three `name:` values — rename a job and
-  the requirement silently stops matching).
+  guard` (the two remaining `name:` values — `Preview deploy + smoke` was removed
+  with preview decommissioning, CR-3; drop it from the branch rule or the rule
+  will wait forever on a check that never reports).
 - Require 1 approving review; require CODEOWNERS review (`.github/CODEOWNERS`
   covers `db/schema.ts`, `auth.ts`, `proxy.ts`, `wrangler.toml`, `.github/**`,
   plus `lib/securityHeaders.ts`, `lib/rateLimit.ts`).

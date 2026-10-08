@@ -1,13 +1,14 @@
 /**
  * /api/social-links — footer/contact social profiles.
  *
- * GET is public and ordered; POST/PUT/DELETE are admin mutations (proxy.ts gates mutating
- * methods). Every field is validated by a strict schema: the body never reaches
- * `.values()`/`.set()` whole.
+ * GET is public and ordered; POST/PUT/DELETE are admin-only mutations (Decision 1:
+ * footer links are a phishing-link vector, so editors cannot manage them). Every field
+ * is validated by a strict schema: the body never reaches `.values()`/`.set()` whole.
  */
 import { asc, eq } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { socialLinksTable } from '@/db/schema';
+import { ADMIN_ONLY_ROLES, requireRole } from '@/lib/authz';
 import {
   errorMessage,
   fail,
@@ -35,6 +36,9 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  // H-8: footer links are a phishing-link vector (Decision 1) — editors cannot manage them.
+  const guard = await requireRole(ADMIN_ONLY_ROLES);
+  if (!guard.ok) return guard.response;
   try {
     const parsed = socialLinkCreate.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
@@ -59,6 +63,9 @@ export async function POST(req: Request) {
 }
 
 export async function PUT(req: Request) {
+  // H-8: see POST — editors cannot manage social links.
+  const guard = await requireRole(ADMIN_ONLY_ROLES);
+  if (!guard.ok) return guard.response;
   try {
     const parsed = socialLinkUpdate.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
@@ -85,6 +92,9 @@ export async function PUT(req: Request) {
 }
 
 export async function DELETE(req: Request) {
+  // H-8: see POST — editors cannot manage social links.
+  const guard = await requireRole(ADMIN_ONLY_ROLES);
+  if (!guard.ok) return guard.response;
   try {
     const id = parseId(new URL(req.url).searchParams.get('id') ?? '');
     if (id === null) return fail('id query parameter is required', 400);

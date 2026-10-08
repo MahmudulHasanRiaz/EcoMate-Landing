@@ -112,7 +112,15 @@ export async function verifyPassword(password: string, stored: string): Promise<
   const expected = hexToBytes(hashHex);
   if (!salt || !expected || expected.length === 0) return false;
 
-  const actual = await deriveBits(password, salt, iterations, expected.length * 8);
+  // Defensive: the platform KDF can throw (Workers rejects >100k iterations, a FIPS build
+  // can reject the parameters outright). A throw here must never become a 500 that
+  // distinguishes "no such account" from "wrong password" — it is an ordinary mismatch.
+  let actual: Uint8Array;
+  try {
+    actual = await deriveBits(password, salt, iterations, expected.length * 8);
+  } catch {
+    return false;
+  }
   return timingSafeEqual(actual, expected);
 }
 

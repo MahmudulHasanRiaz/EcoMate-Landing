@@ -14,7 +14,6 @@ on:
         type: choice
         options:
           - production
-          - preview
       deployment_notes:
         description: 'Deployment reason / release notes'
         required: false
@@ -227,12 +226,10 @@ jobs:
 
       - name: Ensure R2 bucket exists (idempotent, never deletes)
         run: |
+          # Production-only (CR-3): the preview environment was decommissioned, so there
+          # is exactly one bucket. `ENV_NAME` is kept for the `--env` deploy flag below.
           ENV_NAME="${{ github.event.inputs.environment || 'production' }}"
-          if [ "$ENV_NAME" = "preview" ]; then
-            BUCKET="ecomate-media-preview"
-          else
-            BUCKET="ecomate-media-prod"
-          fi
+          BUCKET="ecomate-media-prod"
           if npx wrangler r2 bucket info "$BUCKET" >/dev/null 2>&1; then
             echo "R2 bucket '$BUCKET' already exists — skipping creation (idempotent)."
           else
@@ -256,14 +253,10 @@ jobs:
       # Uses only the existing DIRECT_URL + CLOUDFLARE_* secrets. Never echoes the URL.
       - name: Ensure Hyperdrive config (idempotent, synced to DIRECT_URL)
         run: |
+          # Production-only (CR-3): the preview environment was decommissioned.
           ENV_NAME="${{ github.event.inputs.environment || 'production' }}"
-          if [ "$ENV_NAME" = "preview" ]; then
-            HD_NAME="ecomate-db-preview"
-            PLACEHOLDER="PASTE_PREVIEW_HYPERDRIVE_ID"
-          else
-            HD_NAME="ecomate-db-prod"
-            PLACEHOLDER="PASTE_PROD_HYPERDRIVE_ID"
-          fi
+          HD_NAME="ecomate-db-prod"
+          PLACEHOLDER="PASTE_PROD_HYPERDRIVE_ID"
           if [ -z "${DIRECT_URL:-}" ]; then
             echo "::error::DIRECT_URL is empty — cannot create/sync Hyperdrive '$HD_NAME'. Set the GitHub Secret DIRECT_URL first."
             exit 1

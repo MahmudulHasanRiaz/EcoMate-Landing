@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { siteSettingsTable } from '@/db/schema';
+import { ADMIN_ONLY_ROLES, requireRole } from '@/lib/authz';
 import { errorMessage, fail, logServerError, ok } from '@/lib/json';
 import { invalidateDomains } from '@/lib/revalidate';
 import { settingsPatch } from '@/lib/validation';
@@ -17,6 +18,9 @@ export async function GET() {
 }
 
 export async function PUT(req: Request) {
+  // H-7: site settings are site customization (Decision 1) — editors cannot edit them.
+  const guard = await requireRole(ADMIN_ONLY_ROLES);
+  if (!guard.ok) return guard.response;
   try {
     // Declarative allowlist: unknown keys are rejected, not dropped — silent acceptance
     // is the mass-assignment hole. `parsed.data` carries only the validated fields.

@@ -23,7 +23,8 @@ import { requestId } from '@/lib/request';
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const reqId = requestId(req);
-  const guard = await requireAdminRole(['superadmin', 'admin']);
+  // Read-gated the same way as the lead list (Decision 1: editors view leads).
+  const guard = await requireAdminRole(['superadmin', 'admin', 'editor']);
   if (!guard.ok) return guard.response;
 
   try {

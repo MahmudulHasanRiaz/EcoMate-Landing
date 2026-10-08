@@ -83,15 +83,17 @@ RETENTION_DAYS = "180"
 # Environments (Task 21 §1). The top-level bindings above are LOCAL DEV ONLY.
 #
 # Why this exists: with a single flat config, one `deploy` without `--env`
-# silently repoints production at whatever the top level says. Named
-# environments make that impossible: a prod deploy must say `--env
-# production` (`npm run deploy:prod`), a PR preview must say `--env preview`
-# (`npm run deploy:preview`), and each carries its OWN Hyperdrive id, R2
-# bucket and KV namespace so preview traffic can never touch prod data.
+# silently repoints production at whatever the top level says. The named
+# `production` environment makes that impossible: a prod deploy must say `--env
+# production` (`npm run deploy:prod`) and carries its OWN Hyperdrive id and R2
+# bucket.
 #
-# Secrets are per-env and never in this file:
+# There is deliberately no `preview` environment (removed 2026-10-08, CR-3): the
+# old preview setup shared the production database, so it was decommissioned
+# rather than fixed. PRs are validated by CI + local E2E instead.
+#
+# Secrets are set for the production environment and never in this file:
 #   npx wrangler secret put AUTH_SECRET --env production
-#   npx wrangler secret put AUTH_SECRET --env preview
 # (repeat for TOTP_ENCRYPTION_KEY, SETUP_TOKEN, CRON_SECRET, META_CAPI_TOKEN,
 # TURNSTILE_SECRET_KEY, LICENSE_PORTAL_API_KEY, RESEND_API_KEY — see
 # docs/RUNBOOK.md §3 for the rotation matrix.)
@@ -137,34 +139,3 @@ enabled = true
 # No [env.production.triggers]: cron jobs run via .github/workflows/cron.yml
 # (HTTP calls with CRON_SECRET), not Cloudflare scheduled events — the Worker
 # exports no scheduled() handler, and triggers without one only produce errors.
-
-# --- preview (per-PR) ------------------------------------------------------
-[[env.preview.hyperdrive]]
-binding = "HYPERDRIVE"
-# Same CI injection as production (preview.yml step): ensures `ecomate-db-preview`,
-# syncs it to PREVIEW_DIRECT_URL, patches the id at deploy time. Placeholder stays.
-id = "PASTE_PREVIEW_HYPERDRIVE_ID"
-
-[[env.preview.r2_buckets]]
-binding = "R2_BUCKET"
-# Create with: npx wrangler r2 bucket create ecomate-media-preview
-bucket_name = "ecomate-media-preview"
-
-[env.preview.vars]
-# Replace with the real preview hostname once the preview worker has one
-# (workers.dev URL or preview.ecomate.app route) — see docs/RUNBOOK.md §15.
-NEXT_PUBLIC_SITE_URL = "https://preview.ecomate.app"
-NEXT_PUBLIC_DEFAULT_LOCALE = "en"
-NEXT_PUBLIC_META_PIXEL_ID = ""
-NEXT_PUBLIC_TURNSTILE_SITE_KEY = ""
-# R2_PUBLIC_ORIGIN: optional dedicated media CDN origin (e.g.
-# "https://media.dev.ecomate.bd" after `wrangler r2 bucket domain` + DNS).
-# Unset (default) = same-origin `/media/<key>` proxy, which needs no DNS.
-# R2_PUBLIC_ORIGIN = ""
-AUTH_TRUST_HOST = "true"
-RETENTION_DAYS = "180"
-
-# Deliberately NO [env.preview.triggers]: the retention sweep must not run
-# against the preview database (it would anonymise fixture leads and burn
-# pooled connections), and the publish scheduler must not publish preview
-# drafts. Preview gets traffic only, never crons.

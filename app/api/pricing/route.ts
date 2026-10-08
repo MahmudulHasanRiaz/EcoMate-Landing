@@ -1,6 +1,7 @@
 import { asc } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { pricingPlansTable, siteSettingsTable } from '@/db/schema';
+import { ADMIN_ONLY_ROLES, requireRole } from '@/lib/authz';
 import { errorMessage, fail, isUniqueViolation, logServerError, ok } from '@/lib/json';
 import { requestId } from '@/lib/request';
 import { assertSlugAvailable } from '@/lib/guard';
@@ -25,6 +26,9 @@ export async function GET(req: Request) {
 
 // NEVER `.values(body)` — mass assignment on insert is the same hole as on update.
 export async function POST(req: Request) {
+  // H-4: pricing is site customization (Decision 1) — editors cannot create plans.
+  const guard = await requireRole(ADMIN_ONLY_ROLES);
+  if (!guard.ok) return guard.response;
   try {
     const parsed = pricingPlanCreate.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {

@@ -16,7 +16,9 @@ import {
 
 export const EcosystemSection: React.FC = () => {
   const { content, locale } = useLanding();
-  const [activeNodeId, setActiveNodeId] = useState<string>(content.ecosystem.nodes[0].id);
+  // CR-5: the CMS can save an empty `nodes` array — `nodes[0].id` would throw.
+  // Null-safe init; the pillars grid + capabilities card render only when a node exists.
+  const [activeNodeId, setActiveNodeId] = useState<string | null>(content.ecosystem.nodes[0]?.id ?? null);
 
   const getIcon = (iconName: string) => {
     switch (iconName) {
@@ -37,7 +39,7 @@ export const EcosystemSection: React.FC = () => {
     }
   };
 
-  const activeNode = content.ecosystem.nodes.find((n) => n.id === activeNodeId) || content.ecosystem.nodes[0];
+  const activeNode = content.ecosystem.nodes.find((n) => n.id === activeNodeId) ?? content.ecosystem.nodes[0] ?? null;
 
   return (
     <section id="ecosystem" className="relative py-14 md:py-24 bg-[#EDEEF6] dark:bg-[#07080E] border-t border-[#DDE1F0] dark:border-transparent overflow-hidden transition-colors">
@@ -81,6 +83,8 @@ export const EcosystemSection: React.FC = () => {
           </div>
 
           {/* 6 Peripheral Pillars - single column at 360px, 2-col from 480px up */}
+          {activeNode ? (
+          <>
           <div className="grid grid-cols-1 min-[480px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
             {content.ecosystem.nodes.map((node) => {
               const isActive = activeNode.id === node.id;
@@ -156,6 +160,8 @@ export const EcosystemSection: React.FC = () => {
               </a>
             </div>
           </div>
+          </>
+          ) : null}
         </div>
       </div>
     </section>

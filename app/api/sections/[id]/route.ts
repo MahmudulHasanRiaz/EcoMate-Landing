@@ -1,12 +1,16 @@
 import { eq } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { landingSectionsTable } from '@/db/schema';
+import { ADMIN_ONLY_ROLES, requireRole } from '@/lib/authz';
 import { errorMessage, fail, logServerError, ok, parseId } from '@/lib/json';
 import { invalidateDomains } from '@/lib/revalidate';
 import { sectionUpdate } from '@/lib/validation';
 
 // Next 16: `params` is a Promise in route handlers. Never destructure it synchronously.
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  // H-6: landing sections are site customization (Decision 1) — editors cannot edit them.
+  const guard = await requireRole(ADMIN_ONLY_ROLES);
+  if (!guard.ok) return guard.response;
   try {
     const { id: rawId } = await params;
     const id = parseId(rawId);

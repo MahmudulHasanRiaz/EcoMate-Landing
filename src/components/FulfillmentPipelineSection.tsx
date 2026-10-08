@@ -14,9 +14,13 @@ import {
 
 export const FulfillmentPipelineSection: React.FC = () => {
   const { content, locale } = useLanding();
-  const [activeStepIndex, setActiveStepIndex] = useState<number>(2); // Default to Smart Packing
+  // CR-6: the CMS can save fewer than 3 pipeline steps — a hardcoded index 2 would leave
+  // `currentStep` undefined and crash the deep-dive card. Clamp the initial index into range.
+  const [activeStepIndex, setActiveStepIndex] = useState<number>(() =>
+    Math.min(2, Math.max(0, content.fulfillment.pipeline.length - 1)),
+  ); // Default to Smart Packing
 
-  const currentStep = content.fulfillment.pipeline[activeStepIndex];
+  const currentStep = content.fulfillment.pipeline[activeStepIndex] ?? null;
 
   return (
     <section id="fulfillment" className="relative py-14 md:py-24 border-t border-slate-200 dark:border-white/[0.06] bg-white dark:bg-[#07080E] overflow-hidden transition-colors">
@@ -144,6 +148,7 @@ export const FulfillmentPipelineSection: React.FC = () => {
           </div>
 
           {/* Active Step Deep-Dive System Card */}
+          {currentStep ? (
           <div className="mt-6 sm:mt-8 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0B0D19] p-5 sm:p-10 shadow-md dark:shadow-2xl relative overflow-hidden">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-center">
               {/* Left Column: Narrative description */}
@@ -226,6 +231,7 @@ export const FulfillmentPipelineSection: React.FC = () => {
               </div>
             </div>
           </div>
+          ) : null}
         </div>
       </div>
     </section>

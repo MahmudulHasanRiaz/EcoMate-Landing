@@ -28,6 +28,7 @@
 
 import { createContext, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { LandingContent, Locale, NavItem, Theme } from '@/src/types/landing';
+import type { PublicTestimonial } from '@/lib/content';
 import { landingContent } from '@/src/data/landingContent';
 import { assembleLandingContent, isPlainObject } from '@/lib/merge';
 
@@ -40,6 +41,8 @@ export interface ShellValue {
   menu: readonly NavItem[] | null;
   /** DB-managed `footer` menu for the seed locale, or `null` → hardcoded footer links. */
   footerMenu: readonly NavItem[] | null;
+  /** Published DB testimonials (2c), or `null` → the section renders static proof copy. */
+  testimonials: readonly PublicTestimonial[] | null;
   /** `site_settings.is_pricing_visible` at seed time; PricingSection renders hidden mode when false. */
   isPricingVisible: boolean;
   toggleLocale: () => void;
@@ -122,6 +125,7 @@ export function LocaleThemeProvider({
   initialContent,
   initialMenu,
   initialFooterMenu,
+  initialTestimonials,
   initialIsPricingVisible,
   children,
 }: {
@@ -129,6 +133,7 @@ export function LocaleThemeProvider({
   initialContent: LandingContent;
   initialMenu: readonly NavItem[] | null;
   initialFooterMenu: readonly NavItem[] | null;
+  initialTestimonials: readonly PublicTestimonial[] | null;
   initialIsPricingVisible: boolean;
   children: React.ReactNode;
 }) {
@@ -203,9 +208,10 @@ export function LocaleThemeProvider({
     }
   }, [theme]);
 
-  // `menu` / `footerMenu` flow straight from the seed props (no client state): a locale
-  // toggle keeps the seed locale's navigation, exactly as `LandingShell` did before the
-  // extraction — the header falls back to `content.header.nav` when the table is empty.
+  // `menu` / `footerMenu` / `testimonials` flow straight from the seed props (no client
+  // state): a locale toggle keeps the seed locale's navigation, exactly as `LandingShell`
+  // did before the extraction — the header falls back to `content.header.nav` when the
+  // table is empty, and the proof section falls back to static copy with no testimonials.
   const value = useMemo<ShellValue>(
     () => ({
       locale,
@@ -213,11 +219,12 @@ export function LocaleThemeProvider({
       content,
       menu: initialMenu,
       footerMenu: initialFooterMenu,
+      testimonials: initialTestimonials,
       isPricingVisible,
       toggleLocale,
       toggleTheme,
     }),
-    [locale, theme, content, initialMenu, initialFooterMenu, isPricingVisible, toggleLocale, toggleTheme],
+    [locale, theme, content, initialMenu, initialFooterMenu, initialTestimonials, isPricingVisible, toggleLocale, toggleTheme],
   );
 
   return <ShellContext.Provider value={value}>{children}</ShellContext.Provider>;

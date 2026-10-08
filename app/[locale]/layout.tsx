@@ -23,7 +23,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { LocaleThemeProvider } from '@/components/shell/LocaleThemeProvider';
-import { getLandingContent, getMenu, getPricingPlans } from '@/lib/content';
+import { getLandingContent, getMenu, getPricingPlans, getTestimonials } from '@/lib/content';
 import { assembleLandingContent } from '@/lib/merge';
 import { LOCALES, isLocale } from '@/lib/locales';
 import { localeAlternates } from '@/lib/seo';
@@ -69,6 +69,8 @@ export default async function LocaleLayout({
   const mainMenu = await timed(getMenu('main', locale), `layout:menu-main:${locale}`, 10000, { locale });
   const footerMenu = await timed(getMenu('footer', locale), `layout:menu-footer:${locale}`, 10000, { locale });
   const pricing = await timed(getPricingPlans(), `layout:pricing:${locale}`, 10000, { locale });
+  // 2c: published DB testimonials seed the proof section (null → static fallback copy).
+  const testimonials = await timed(getTestimonials(), 'layout:testimonials', 10000, { locale });
 
   return (
     <LocaleThemeProvider
@@ -76,6 +78,7 @@ export default async function LocaleLayout({
       initialContent={assembleLandingContent(locale, sections)}
       initialMenu={mainMenu}
       initialFooterMenu={footerMenu}
+      initialTestimonials={testimonials}
       initialIsPricingVisible={pricing?.isPricingVisible ?? true}
     >
       {children}

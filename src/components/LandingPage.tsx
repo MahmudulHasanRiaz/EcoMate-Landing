@@ -17,7 +17,7 @@
  * complete page. Nothing here can blank a section.
  */
 import { LocaleThemeProvider } from '@/components/shell/LocaleThemeProvider';
-import { getLandingContent, getMenu, getPricingPlans } from '@/lib/content';
+import { getLandingContent, getMenu, getPricingPlans, getTestimonials } from '@/lib/content';
 import { assembleLandingContent } from '@/lib/merge';
 import type { Locale } from '@/src/types/landing';
 import { LandingShell } from './LandingShell';
@@ -35,6 +35,8 @@ export async function LandingPage({ locale }: { locale: Locale }) {
   const mainMenu = await getMenu('main', locale);
   const footerMenu = await getMenu('footer', locale);
   const pricing = await getPricingPlans();
+  // 2c: published DB testimonials seed the proof section (null → static fallback copy).
+  const testimonials = await getTestimonials();
 
   return (
     <LocaleThemeProvider
@@ -42,6 +44,7 @@ export async function LandingPage({ locale }: { locale: Locale }) {
       initialContent={assembleLandingContent(locale, sections)}
       initialMenu={mainMenu}
       initialFooterMenu={footerMenu}
+      initialTestimonials={testimonials}
       initialIsPricingVisible={pricing?.isPricingVisible ?? true}
     >
       <LandingShell />

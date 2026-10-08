@@ -330,8 +330,9 @@ export async function getSocialLinks(): Promise<{ platform: string; url: string 
   }
 }
 
-/** Published testimonials, in display order. */
-export async function getTestimonials(): Promise<{
+/** One published testimonial for public rendering (2c: seeded into the landing shell). */
+export interface PublicTestimonial {
+  id: number;
   clientName: string;
   clientRole: string;
   companyName: string;
@@ -345,10 +346,14 @@ export async function getTestimonials(): Promise<{
   rating: number | null;
   format: string;
   metrics: unknown;
-}[] | null> {
+}
+
+/** Published testimonials, in display order. */
+export async function getTestimonials(): Promise<PublicTestimonial[] | null> {
   try {
     const rows = await withTimeout(getDb()
       .select({
+        id: testimonialsTable.id,
         clientName: testimonialsTable.clientName,
         clientRole: testimonialsTable.clientRole,
         companyName: testimonialsTable.companyName,

@@ -2,16 +2,17 @@
 #
 # The Worker exports no `scheduled()` handler, so `[triggers]` in wrangler.toml only
 # produced "Handler does not export a scheduled() function" errors while the jobs
-# themselves never ran. These three jobs are plain HTTP routes guarded by CRON_SECRET,
+# themselves never ran. These jobs are plain HTTP routes guarded by CRON_SECRET,
 # so GitHub's scheduler calls them directly — same auth, same code path, with a
 # visible run history per tick instead of silent dashboard errors.
 #
-# - retention: daily 03:17 UTC (off the :00 stampede), lead-PII anonymisation.
-# - publish: every 15 min, scheduled blog posts going live on time.
-# - dispatch-drain: every 15 min alongside publish, retrying failed lead dispatches
-#   with backoff (a drain that never runs is how failed dispatches go stale).
+# - retention: daily 03:17 UTC ONLY (off the :00 stampede), lead-PII anonymisation.
+#   It must NOT run on the 15-minute tick (H-10: it used to run ~96x/day).
+# - publish + dispatch-drain: every 15 minutes ONLY — scheduled blog posts going live
+#   on time, plus retrying failed lead dispatches with backoff (a drain that never
+#   runs is how failed dispatches go stale).
 #
-# Manual trigger only otherwise: workflow_dispatch for on-demand runs.
+# Manual trigger only otherwise: workflow_dispatch for on-demand runs (fires all routes).
 # Required secret: CRON_SECRET (same value the Worker holds — mismatch is a 401,
 # which is the correct fail-closed direction). SITE_URL override lets staging
 # target a non-production host if ever needed.
@@ -31,27 +32,56 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  fire:
-    name: Fire scheduled endpoints
+  retention:
+    name: Daily retention sweep
+    # H-10: the daily tick runs ONLY retention. The 15-minute tick must not
+    # anonymise leads 96x/day. Manual dispatches run everything.
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '17 3 * * *'
     runs-on: ubuntu-latest
     steps:
-      - name: Call retention + publish + dispatch-drain
+      - name: Call retention
         run: |
           BASE="https://ecomate.bd"
           if [ -z "${CRON_SECRET:-}" ]; then
             echo "::error::CRON_SECRET is not set — refusing to call authenticated cron endpoints without it."
             exit 1
           fi
-          for route in api/cron/retention api/cron/publish api/cron/dispatch-drain; do
+          code=$(curl -s -o /tmp/cron-out.json -w "%{http_code}" --max-time 120 \
+            -H "x-cron-secret: $CRON_SECRET" "$BASE/api/cron/retention")
+          echo "GET api/cron/retention -> HTTP $code"
+          head -c 300 /tmp/cron-out.json; echo
+          case "$code" in
+            200|201|204) ;;
+            *) echo "::error::api/cron/retention returned HTTP $code (expected 2xx). See body above."; exit 1 ;;
+          esac
+          echo "Retention endpoint acknowledged."
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+
+  frequent:
+    name: Publish + dispatch-drain (every 15 min)
+    # H-10: the frequent tick runs ONLY publish + dispatch-drain, never retention.
+    # Manual dispatches run everything.
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '*/15 * * * *'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call publish + dispatch-drain
+        run: |
+          BASE="https://ecomate.bd"
+          if [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error::CRON_SECRET is not set — refusing to call authenticated cron endpoints without it."
+            exit 1
+          fi
+          for route in api/cron/publish api/cron/dispatch-drain; do
             code=$(curl -s -o /tmp/cron-out.json -w "%{http_code}" --max-time 120 \
               -H "x-cron-secret: $CRON_SECRET" "$BASE/$route")
-            echo "POST $route -> HTTP $code"
+            echo "GET $route -> HTTP $code"
             head -c 300 /tmp/cron-out.json; echo
             case "$code" in
               200|201|204) ;;
               *) echo "::error::$route returned HTTP $code (expected 2xx). See body above."; exit 1 ;;
             esac
           done
-          echo "All scheduled endpoints acknowledged."
+          echo "Frequent endpoints acknowledged."
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}

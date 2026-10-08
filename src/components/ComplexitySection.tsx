@@ -5,7 +5,9 @@ import { AlertCircle, ArrowRight, CheckCircle2, ShieldAlert, Sparkles, TrendingD
 
 export const ComplexitySection: React.FC = () => {
   const { content, locale } = useLanding();
-  const [selectedProblem, setSelectedProblem] = useState<ProblemItem>(content.complexity.problems[0]);
+  // CR-4: the CMS can save an empty `problems` array — `problems[0]` would be undefined
+  // and the deep-dive card below would throw. Null-safe init + conditional render.
+  const [selectedProblem, setSelectedProblem] = useState<ProblemItem | null>(content.complexity.problems[0] ?? null);
 
   return (
     <section id="growth-complexity" className="relative py-14 md:py-24 border-t border-slate-200 dark:border-white/[0.06] bg-slate-50 dark:bg-[#080910] transition-colors">
@@ -138,7 +140,7 @@ export const ComplexitySection: React.FC = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2">
               {content.complexity.problems.map((problem) => {
-                const isSelected = selectedProblem.id === problem.id;
+                const isSelected = selectedProblem?.id === problem.id;
                 return (
                   <button
                     key={problem.id}
@@ -169,6 +171,7 @@ export const ComplexitySection: React.FC = () => {
           </div>
 
           {/* Right Column: Deep Dive Comparison Card (col-span-7) */}
+          {selectedProblem ? (
           <div className="lg:col-span-7 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1A] p-5 sm:p-8 shadow-md dark:shadow-2xl relative overflow-hidden">
             {/* Ambient inner card glow */}
             <div className="pointer-events-none absolute -top-20 -right-20 w-80 h-80 bg-indigo-600/5 dark:bg-indigo-600/10 rounded-full blur-3xl" />
@@ -237,6 +240,7 @@ export const ComplexitySection: React.FC = () => {
               </a>
             </div>
           </div>
+          ) : null}
         </div>
       </div>
     </section>

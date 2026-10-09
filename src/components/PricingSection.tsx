@@ -53,7 +53,7 @@ export const PricingSection: React.FC = () => {
                 >
                   <span>{content.pricing.visiblePricing.annualToggle}</span>
                   <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-400 text-slate-950 font-bold">
-                    -20%
+                    {content.pricing.visiblePricing.labels.annualBadgeShort}
                   </span>
                 </button>
               </div>
@@ -76,7 +76,7 @@ export const PricingSection: React.FC = () => {
                   >
                     {isPopular && (
                       <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md">
-                        Recommended for Scaling Brands
+                        {content.pricing.visiblePricing.labels.popularBadge}
                       </div>
                     )}
 
@@ -95,21 +95,21 @@ export const PricingSection: React.FC = () => {
                         <span className="text-4xl sm:text-5xl font-extrabold text-slate-900 dark:text-white font-mono-numbers">
                           {formatMoney(price, locale)}
                         </span>
-                        <span className="text-xs text-slate-600 dark:text-slate-300 font-mono">/ month</span>
+                        <span className="text-xs text-slate-600 dark:text-slate-300 font-mono">{content.pricing.visiblePricing.labels.perMonth}</span>
                       </div>
 
                       {/* Volume & Scale Limits */}
                       <div className="space-y-2 text-xs text-slate-700 dark:text-slate-300 mb-6 p-3.5 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200/80 dark:border-white/[0.04]">
                         <div className="flex justify-between">
-                          <span className="text-slate-500 dark:text-slate-400">Order Volume:</span>
+                          <span className="text-slate-500 dark:text-slate-400">{content.pricing.visiblePricing.labels.volumeLabel}</span>
                           <span className="font-bold text-slate-900 dark:text-white font-mono">{plan.orderVolume}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-slate-500 dark:text-slate-400">Staff Access:</span>
+                          <span className="text-slate-500 dark:text-slate-400">{content.pricing.visiblePricing.labels.staffLabel}</span>
                           <span className="font-bold text-slate-900 dark:text-white font-mono">{plan.usersIncluded}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-slate-500 dark:text-slate-400">Showroom POS:</span>
+                          <span className="text-slate-500 dark:text-slate-400">{content.pricing.visiblePricing.labels.posLabel}</span>
                           <span className="font-bold text-slate-900 dark:text-white font-mono">{plan.showroomsIncluded}</span>
                         </div>
                       </div>
@@ -117,7 +117,7 @@ export const PricingSection: React.FC = () => {
                       {/* Included Feature List */}
                       <div className="space-y-3 text-xs mb-8">
                         <span className="text-slate-600 dark:text-slate-300 font-bold uppercase text-[10px] tracking-wider block">
-                          Included Capabilities
+                          {content.pricing.visiblePricing.labels.capabilitiesTitle}
                         </span>
                         {plan.features.map((feat, idx) => (
                           <div key={idx} className="flex items-start gap-2.5">
@@ -152,7 +152,7 @@ export const PricingSection: React.FC = () => {
           <div className="rounded-3xl border border-indigo-200 dark:border-indigo-500/30 bg-gradient-to-b from-indigo-50/70 to-white dark:from-[#111327] dark:to-[#0C0E1B] p-8 sm:p-12 shadow-xl shadow-indigo-100/50 max-w-4xl mx-auto">
             <div className="max-w-2xl">
               <span className="text-xs font-mono uppercase tracking-wider text-indigo-700 dark:text-indigo-300 font-bold">
-                Custom Architecture Consultation
+                {content.pricing.hiddenPricing.consultEyebrow}
               </span>
               <h3 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mt-2 leading-tight">
                 {content.pricing.hiddenPricing.heading}

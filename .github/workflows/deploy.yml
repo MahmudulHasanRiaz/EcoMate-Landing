@@ -224,22 +224,42 @@ jobs:
         env:
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
 
-      - name: Ensure R2 bucket exists (idempotent, never deletes)
+      - name: Ensure R2 buckets exist + media custom domain (idempotent)
         run: |
           # Production-only (CR-3): the preview environment was decommissioned, so there
-          # is exactly one bucket. `ENV_NAME` is kept for the `--env` deploy flag below.
+          # is exactly one media bucket and one incremental-cache bucket. `ENV_NAME` is
+          # kept for the `--env` deploy flag below.
           ENV_NAME="${{ github.event.inputs.environment || 'production' }}"
-          BUCKET="ecomate-media-prod"
-          if npx wrangler r2 bucket info "$BUCKET" >/dev/null 2>&1; then
-            echo "R2 bucket '$BUCKET' already exists — skipping creation (idempotent)."
+          ensure_bucket() {
+            if npx wrangler r2 bucket info "$1" >/dev/null 2>&1; then
+              echo "R2 bucket '$1' already exists — skipping creation (idempotent)."
+            else
+              echo "R2 bucket '$1' not found — creating it now..."
+              npx wrangler r2 bucket create "$1"
+              echo "R2 bucket '$1' created."
+            fi
+          }
+          ensure_bucket "ecomate-media-prod"
+          # Phase 3a Item 16: the OpenNext incremental cache (`NEXT_INC_CACHE_R2_BUCKET`).
+          # Without this bucket page renders fail the way 2026-10-07 did (Dummy cache).
+          ensure_bucket "ecomate-inc-cache-prod"
+          # Decision 13 / M-18: the media custom domain is bound BY this workflow, not by
+          # hand. Needs DNS for the hostname first (Cloudflare dashboard → domain → DNS →
+          # CNAME media → the bucket) and the zone id as GitHub Secret CLOUDFLARE_ZONE_ID.
+          # Warn-and-continue when the zone is unset: delivery falls back to the
+          # same-origin `/media/<key>` proxy, so a missing domain must not fail deploys.
+          if npx wrangler r2 bucket domain list ecomate-media-prod 2>/dev/null | grep -q "media.ecomate.bd"; then
+            echo "Custom domain media.ecomate.bd already attached."
+          elif [ -z "${CLOUDFLARE_ZONE_ID:-}" ]; then
+            echo "::warning::CLOUDFLARE_ZONE_ID is not set — skipping media.ecomate.bd attach (one-time dashboard/DNS setup, see RUNBOOK §7). Delivery uses the same-origin /media proxy meanwhile."
           else
-            echo "R2 bucket '$BUCKET' not found — creating it now..."
-            npx wrangler r2 bucket create "$BUCKET"
-            echo "R2 bucket '$BUCKET' created."
+            npx wrangler r2 bucket domain add ecomate-media-prod --domain media.ecomate.bd --zone-id "$CLOUDFLARE_ZONE_ID"
+            echo "Custom domain media.ecomate.bd attached."
           fi
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
 
       # Idempotent Hyperdrive ensure + sync. Hyperdrive is a TUNNEL to your Postgres
       # (Supabase now, any Postgres later) — not a Cloudflare database; your data never
@@ -375,6 +395,13 @@ jobs:
           put_secret LICENSE_PORTAL_API_KEY "$LICENSE_PORTAL_API_KEY"
           put_secret RESEND_API_KEY "$RESEND_API_KEY"
           put_secret CRON_SECRET "$CRON_SECRET"
+          # Phase 3b Item 17 — presigned direct-to-R2 uploads: the S3 API key pair is
+          # secret; account id + bucket name are plain config (appear in hostnames).
+          # All unset = sign endpoint 503s, admin uploader falls back to legacy route.
+          put_secret R2_ACCESS_KEY_ID "$R2_ACCESS_KEY_ID"
+          put_secret R2_SECRET_ACCESS_KEY "$R2_SECRET_ACCESS_KEY"
+          put_config R2_ACCOUNT_ID "$R2_ACCOUNT_ID"
+          put_config R2_BUCKET_NAME "$R2_BUCKET_NAME"
           # Decision 7 — plain (non-secret) config values, same push mechanism so the
           # single source of truth stays GitHub Secrets. Unset is valid and silent:
           # NOTIFY_* unset = lead-notification emails stay in log-only mode;
@@ -396,6 +423,10 @@ jobs:
           LICENSE_PORTAL_API_KEY: ${{ secrets.LICENSE_PORTAL_API_KEY }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
           NOTIFY_FROM_EMAIL: ${{ secrets.NOTIFY_FROM_EMAIL }}
           NOTIFY_TO_EMAIL: ${{ secrets.NOTIFY_TO_EMAIL }}
           LICENSE_PORTAL_API_BASE_URL: ${{ secrets.LICENSE_PORTAL_API_BASE_URL }}

@@ -20,11 +20,17 @@ export function ok(data: unknown, status = 200): Response {
  * the client — `errorMessage()` carries only the message; the full error goes
  * to `logServerError` with the same id.
  */
-export function fail(message: string, status = 500, details?: unknown, requestId?: string | null): Response {
+export function fail(
+  message: string,
+  status = 500,
+  details?: unknown,
+  requestId?: string | null,
+  headers?: HeadersInit,
+): Response {
   const body: Record<string, unknown> =
     details === undefined ? { error: message } : { error: message, details };
   body.requestId = requestId ?? null;
-  return Response.json(body, { status });
+  return Response.json(body, { status, headers });
 }
 
 /** `catch` binds `unknown` under strict mode — never widen it to `any`. */
@@ -85,7 +91,11 @@ const LOG_ONCE_TTL_MS = 5 * 60 * 1000;
 const LOG_ONCE_MAX_KEYS = 200;
 
 export function logOnce(level: 'warn' | 'error', key: string, ...args: unknown[]): void {
-  const now = Date.now();
+  // performance.now(), not Date.now(): this runs inside `'use cache'` failure paths
+  // (`lib/content.ts` catch blocks), and an on-demand prerender that hits a DB error
+  // would otherwise bail out on the "unstable value" — turning a degradable fallback
+  // into a 500. Monotonic clock is all a relative dedup window needs.
+  const now = performance.now();
   const last = loggedKeys.get(key);
   if (last !== undefined && now - last < LOG_ONCE_TTL_MS) return;
   if (loggedKeys.size >= LOG_ONCE_MAX_KEYS) loggedKeys.clear();

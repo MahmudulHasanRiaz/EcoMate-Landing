@@ -5,6 +5,9 @@ import { formatMoney, formatNumber } from '@/lib/format';
 
 export const LossPreventionSection: React.FC = () => {
   const { content, locale } = useLanding();
+  const calc = content.lossPrevention.calculator;
+  const scenarios = content.lossPrevention.scenarios;
+  const narratives = content.lossPrevention.narratives;
   const [dailyOrders, setDailyOrders] = useState<number>(350);
 
   // Economic calculations grounded in Bangladesh e-commerce unit economics:
@@ -40,7 +43,7 @@ export const LossPreventionSection: React.FC = () => {
               {locale === 'en' ? 'Pre-Dispatch Courier Intelligence in Action' : 'ডিসপ্যাচের আগে কুরিয়ার হিস্ট্রি বিশ্লেষণ'}
             </span>
             <span className="text-[10px] sm:text-[11px] font-mono text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/10 px-2.5 py-0.5 rounded-full border border-indigo-200 dark:border-indigo-500/20 font-semibold">
-              ● Cross-Courier Aggregate Telemetry (Steadfast + Pathao)
+              {scenarios.telemetryBadge}
             </span>
           </div>
 
@@ -48,32 +51,32 @@ export const LossPreventionSection: React.FC = () => {
             {/* Scenario A: Genuine Customer */}
             <div className="p-4 rounded-xl border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-2xs">
               <div className="flex items-center justify-between mb-2">
-                <span className="font-mono text-[11px] font-bold text-emerald-800 dark:text-emerald-300">SCENARIO A: GENUINE BUYER</span>
+                <span className="font-mono text-[11px] font-bold text-emerald-800 dark:text-emerald-300">{scenarios.aTitle}</span>
                 <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300">
-                  96% DELIVERY SCORE
+                  {scenarios.aScore}
                 </span>
               </div>
-              <p className="font-semibold text-slate-900 dark:text-white">Customer: Tanvir Hasan (Dhanmondi, Dhaka)</p>
+              <p className="font-semibold text-slate-900 dark:text-white">{scenarios.aCustomer}</p>
               <div className="mt-2 space-y-1 text-[11px] text-slate-600 dark:text-slate-300 font-mono">
-                <p>• Historical parcels ordered: 25</p>
-                <p>• Successfully accepted & paid: 24 (1 returned due to delay)</p>
-                <p className="text-emerald-700 dark:text-emerald-400 font-bold">• EcoMate Decision: AUTO-APPROVE FOR IMMEDIATE PACKING</p>
+                <p>{scenarios.aLine1}</p>
+                <p>{scenarios.aLine2}</p>
+                <p className="text-emerald-700 dark:text-emerald-400 font-bold">{scenarios.aDecision}</p>
               </div>
             </div>
 
             {/* Scenario B: Serial Returner */}
             <div className="p-4 rounded-xl border border-rose-200 dark:border-rose-500/30 bg-rose-50/50 dark:bg-rose-950/20 shadow-2xs">
               <div className="flex items-center justify-between mb-2">
-                <span className="font-mono text-[11px] font-bold text-rose-800 dark:text-rose-300">SCENARIO B: SERIAL CANCELLER</span>
+                <span className="font-mono text-[11px] font-bold text-rose-800 dark:text-rose-300">{scenarios.bTitle}</span>
                 <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300">
-                  24% DELIVERY SCORE
+                  {scenarios.bScore}
                 </span>
               </div>
-              <p className="font-semibold text-slate-900 dark:text-white">Customer: Unverified Caller (Sylhet Sadar)</p>
+              <p className="font-semibold text-slate-900 dark:text-white">{scenarios.bCustomer}</p>
               <div className="mt-2 space-y-1 text-[11px] text-slate-600 dark:text-slate-300 font-mono">
-                <p>• Historical parcels ordered: 17 across Bangladesh</p>
-                <p>• Rejected at doorstep / unreachable: 13 parcels</p>
-                <p className="text-rose-700 dark:text-rose-400 font-bold">• EcoMate Decision: REQUIRE ৳ 150 ADVANCE DELIVERY CHARGE</p>
+                <p>{scenarios.bLine1}</p>
+                <p>{scenarios.bLine2}</p>
+                <p className="text-rose-700 dark:text-rose-400 font-bold">{scenarios.bDecision}</p>
               </div>
             </div>
           </div>
@@ -87,7 +90,7 @@ export const LossPreventionSection: React.FC = () => {
               <div className="flex items-center justify-between mb-3.5">
                 <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-rose-700 dark:text-rose-300 flex items-center gap-1.5">
                   <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-rose-700 dark:text-rose-400" />
-                  <span>The Preventable Packing Leak</span>
+                  <span>{narratives.leakEyebrow}</span>
                 </span>
                 <span className="font-mono text-[11px] sm:text-xs text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-500/10 px-2.5 py-0.5 sm:py-1 rounded-full border border-rose-200 dark:border-rose-500/20 font-semibold">
                   {content.lossPrevention.packingStory.mistakeCost}
@@ -99,11 +102,11 @@ export const LossPreventionSection: React.FC = () => {
               </h3>
 
               <div className="p-3 sm:p-3.5 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/[0.04] mb-3.5 text-xs text-slate-700 dark:text-slate-300 space-y-1">
-                <p className="text-slate-600 dark:text-slate-300 font-medium text-[11px]">The Chain Reaction of a Wrong Size Dispatch:</p>
-                <p className="text-rose-700 dark:text-rose-300">1. Wrong SKU packed (Size 41 instead of 42)</p>
-                <p className="text-rose-700 dark:text-rose-300">2. Customer rejects parcel at doorstep</p>
-                <p className="text-rose-700 dark:text-rose-300">3. Merchant pays forward + return delivery fees</p>
-                <p className="text-rose-700 dark:text-rose-300">4. Capital blocked for 10-14 days while parcel returns</p>
+                <p className="text-slate-600 dark:text-slate-300 font-medium text-[11px]">{narratives.chainTitle}</p>
+                <p className="text-rose-700 dark:text-rose-300">{narratives.chain1}</p>
+                <p className="text-rose-700 dark:text-rose-300">{narratives.chain2}</p>
+                <p className="text-rose-700 dark:text-rose-300">{narratives.chain3}</p>
+                <p className="text-rose-700 dark:text-rose-300">{narratives.chain4}</p>
               </div>
 
               <h4 className="text-xs sm:text-sm font-semibold text-emerald-700 dark:text-emerald-300 mt-3 flex items-center gap-1.5">
@@ -116,7 +119,7 @@ export const LossPreventionSection: React.FC = () => {
             </div>
 
             <div className="mt-5 pt-3.5 border-t border-slate-100 dark:border-white/[0.06] text-xs text-slate-600 dark:text-slate-300 font-medium">
-              Outcome: Zero wrong shipments reach the courier truck.
+              {narratives.outcome1}
             </div>
           </div>
 
@@ -126,7 +129,7 @@ export const LossPreventionSection: React.FC = () => {
               <div className="flex items-center justify-between mb-3.5">
                 <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-rose-700 dark:text-rose-300 flex items-center gap-1.5">
                   <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-rose-700 dark:text-rose-400" />
-                  <span>The Serial Returner Drain</span>
+                  <span>{narratives.drainEyebrow}</span>
                 </span>
                 <span className="font-mono text-[11px] sm:text-xs text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-500/10 px-2.5 py-0.5 sm:py-1 rounded-full border border-rose-200 dark:border-rose-500/20 font-semibold">
                   {content.lossPrevention.fraudStory.fakeOrderCost}
@@ -138,11 +141,11 @@ export const LossPreventionSection: React.FC = () => {
               </h3>
 
               <div className="p-3 sm:p-3.5 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/[0.04] mb-3.5 text-xs text-slate-700 dark:text-slate-300 space-y-1">
-                <p className="text-slate-600 dark:text-slate-300 font-medium text-[11px]">The Cost of Blind Dispatch:</p>
-                <p className="text-rose-700 dark:text-rose-300">1. Impulsive buyer places COD order without intent</p>
-                <p className="text-rose-700 dark:text-rose-300">2. Dispatched blindly without delivery history check</p>
-                <p className="text-rose-700 dark:text-rose-300">3. Customer phone switched off upon delivery attempt</p>
-                <p className="text-rose-700 dark:text-rose-300">4. Merchant absorbs full courier return cost with zero sale</p>
+                <p className="text-slate-600 dark:text-slate-300 font-medium text-[11px]">{narratives.costTitle}</p>
+                <p className="text-rose-700 dark:text-rose-300">{narratives.cost1}</p>
+                <p className="text-rose-700 dark:text-rose-300">{narratives.cost2}</p>
+                <p className="text-rose-700 dark:text-rose-300">{narratives.cost3}</p>
+                <p className="text-rose-700 dark:text-rose-300">{narratives.cost4}</p>
               </div>
 
               <h4 className="text-xs sm:text-sm font-semibold text-emerald-700 dark:text-emerald-300 mt-3 flex items-center gap-1.5">
@@ -155,7 +158,7 @@ export const LossPreventionSection: React.FC = () => {
             </div>
 
             <div className="mt-5 pt-3.5 border-t border-slate-100 dark:border-white/[0.06] text-xs text-slate-600 dark:text-slate-300 font-medium">
-              Outcome: Mandatory advance delivery charge on serial cancelers.
+              {narratives.outcome2}
             </div>
           </div>
         </div>
@@ -169,15 +172,15 @@ export const LossPreventionSection: React.FC = () => {
               </div>
               <div>
                 <h3 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
-                  {content.lossPrevention.calculator.title}
+                  {calc.title}
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-0.5">
-                  See how much capital your business can protect with barcode verification and courier intelligence.
+                  {calc.intro}
                 </p>
               </div>
             </div>
             <span className="text-xs font-mono text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-500/10 px-3 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-500/20 self-start md:self-auto font-semibold">
-              Live ROI Estimator
+              {calc.roiBadge}
             </span>
           </div>
 
@@ -186,9 +189,9 @@ export const LossPreventionSection: React.FC = () => {
             <div className="lg:col-span-6 space-y-6">
               <div>
                 <div className="flex justify-between items-center text-sm font-semibold text-slate-900 dark:text-white mb-2">
-                  <span>{content.lossPrevention.calculator.ordersPerDayLabel}</span>
+                  <span>{calc.ordersPerDayLabel}</span>
                   <span className="font-mono text-indigo-700 dark:text-indigo-400 font-bold text-lg">
-                    {formatNumber(dailyOrders, locale)} orders / day
+                    {formatNumber(dailyOrders, locale)} {calc.ordersUnit}
                   </span>
                 </div>
                 <input
@@ -202,25 +205,25 @@ export const LossPreventionSection: React.FC = () => {
                   aria-label="Daily order volume"
                 />
                 <div className="flex justify-between text-[11px] text-slate-600 font-mono mt-1.5 font-medium dark:text-slate-300">
-                  <span>50 orders</span>
-                  <span>500 orders</span>
-                  <span>1,000 orders</span>
-                  <span>2,000+ orders</span>
+                  <span>{calc.scaleMin}</span>
+                  <span>{calc.scaleMid}</span>
+                  <span>{calc.scaleHigh}</span>
+                  <span>{calc.scaleMax}</span>
                 </div>
               </div>
 
               <div className="p-4 rounded-xl bg-white dark:bg-black/40 border border-slate-200 dark:border-white/[0.06] text-xs text-slate-700 dark:text-slate-300 space-y-2 shadow-xs">
                 <div className="flex justify-between">
-                  <span>Monthly Dispatched Volume:</span>
-                  <span className="font-mono text-slate-900 dark:text-white font-bold">{formatNumber(monthlyOrders, locale)} orders / mo</span>
+                  <span>{calc.monthlyVolumeLabel}</span>
+                  <span className="font-mono text-slate-900 dark:text-white font-bold">{formatNumber(monthlyOrders, locale)} {calc.monthlyVolumeUnit}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Avoidable Packing & Fake Returns without System:</span>
-                  <span className="font-mono text-rose-700 dark:text-rose-400 font-bold">{formatNumber(preventableMistakesWithoutSystem, locale)} parcels</span>
+                  <span>{calc.avoidableLabel}</span>
+                  <span className="font-mono text-rose-700 dark:text-rose-400 font-bold">{formatNumber(preventableMistakesWithoutSystem, locale)} {calc.avoidableUnit}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Average Loss per Preventable Mistake:</span>
-                  <span className="font-mono text-slate-600 dark:text-slate-300 font-medium">{formatMoney(420, locale)} (Courier + transit + overhead)</span>
+                  <span>{calc.avgLossLabel}</span>
+                  <span className="font-mono text-slate-600 dark:text-slate-300 font-medium">{formatMoney(420, locale)} {calc.avgLossNote}</span>
                 </div>
               </div>
             </div>
@@ -229,26 +232,26 @@ export const LossPreventionSection: React.FC = () => {
             <div className="lg:col-span-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="rounded-xl border border-rose-200 dark:border-rose-500/20 bg-rose-50 dark:bg-rose-950/20 p-5 shadow-xs">
                 <span className="text-xs text-rose-800 dark:text-rose-300 uppercase tracking-wider font-bold">
-                  {content.lossPrevention.calculator.estimatedLossLabel}
+                  {calc.estimatedLossLabel}
                 </span>
                 <p className="mt-2 text-2xl sm:text-3xl font-bold text-rose-700 dark:text-rose-400 font-mono-numbers">
                   {formatMoney(estimatedMonthlyLoss, locale)}
                 </p>
                 <p className="mt-1 text-xs text-rose-700 dark:text-rose-300/80">
-                  Drained in wasted courier bills and return overhead every month.
+                  {calc.lossNote}
                 </p>
               </div>
 
               <div className="rounded-xl border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-950/30 p-5 shadow-md shadow-emerald-100/50 dark:shadow-[0_0_30px_rgba(16,185,129,0.15)]">
                 <span className="text-xs text-emerald-800 dark:text-emerald-300 uppercase tracking-wider font-bold flex items-center gap-1.5">
                   <TrendingUp className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
-                  <span>{content.lossPrevention.calculator.savedWithEcoMateLabel}</span>
+                  <span>{calc.savedWithEcoMateLabel}</span>
                 </span>
                 <p className="mt-2 text-2xl sm:text-3xl font-bold text-emerald-700 dark:text-emerald-400 font-mono-numbers">
                   {formatMoney(estimatedSavings, locale)}
                 </p>
                 <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-300/80">
-                  Protected straight to your net operating profit every single month.
+                  {calc.savedNote}
                 </p>
               </div>
             </div>
@@ -258,10 +261,10 @@ export const LossPreventionSection: React.FC = () => {
           <div className="mt-8 pt-6 border-t border-indigo-200/60 dark:border-white/[0.08] flex flex-col sm:flex-row items-center justify-between gap-4 bg-white/70 dark:bg-black/30 p-4 sm:p-5 rounded-xl border border-indigo-100 dark:border-white/[0.04]">
             <div className="text-center sm:text-left">
               <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
-                {locale === 'en' ? 'Stop bleeding delivery margins this week.' : 'এই সপ্তাহ থেকেই কুরিয়ার লস ও ভুল ডেলিভারির টাকা বাঁচান।'}
+                {calc.stripTitle}
               </p>
               <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5">
-                {locale === 'en' ? 'Walk through your exact numbers with an operations specialist.' : 'আপনার বর্তমান পার্সেল ভলিউম অনুযায়ী ফ্রি আরওআই (ROI) অডিট করান।'}
+                {calc.stripSub}
               </p>
             </div>
 
@@ -270,7 +273,7 @@ export const LossPreventionSection: React.FC = () => {
                 href="#lead-form"
                 className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-full text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition-colors cursor-pointer"
               >
-                <span>{locale === 'en' ? 'Book a Free Audit' : 'ফ্রি আরওআই অডিট বুক করুন'}</span>
+                <span>{calc.stripCta}</span>
                 <ArrowRight className="h-3.5 w-3.5" />
               </a>
               <a

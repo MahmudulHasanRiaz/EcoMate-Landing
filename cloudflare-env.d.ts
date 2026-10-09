@@ -32,6 +32,7 @@ declare global {
     ): Promise<unknown>;
     get(
       key: string,
+      options?: { range?: { offset?: number; length?: number } | { offset?: number; suffix?: number } },
     ): Promise<{
       arrayBuffer(): Promise<ArrayBuffer>;
       /** Present on the real Workers runtime; the media proxy streams it. */
@@ -89,8 +90,6 @@ declare global {
      * `AUTH_SECRET` is used as a domain-separated fallback when this is unset.
      */
     TOTP_ENCRYPTION_KEY?: string;
-    GEMINI_API_KEY?: string;
-    SENTRY_DSN?: string;
     RESEND_API_KEY?: string;
     /** From address for lead notification email (Resend adapter, `lib/notifyResend.ts`). */
     NOTIFY_FROM_EMAIL?: string;
@@ -98,6 +97,17 @@ declare global {
     NOTIFY_TO_EMAIL?: string;
     /** Guards `/api/cron/*`. Cloudflare's cron binding does not add it — see the route. */
     CRON_SECRET?: string;
+    /**
+     * R2 S3-API account id for presigned direct uploads (Phase 3b Item 17). Secret or
+     * var — not sensitive the way a key is (it appears in the presigned hostname).
+     */
+    R2_ACCOUNT_ID?: string;
+    /** R2 bucket NAME for presigned URLs (the binding carries bytes, not its own name). */
+    R2_BUCKET_NAME?: string;
+    /** R2 S3 API access key id for presigned direct uploads (secret). */
+    R2_ACCESS_KEY_ID?: string;
+    /** R2 S3 API secret access key for presigned direct uploads (secret). */
+    R2_SECRET_ACCESS_KEY?: string;
     /**
      * Lead PII retention window in days (Task 16 §6). A `[vars]` value, not a secret: it is a
      * policy number, and reading it from the environment (rather than hardcoding 180) is what

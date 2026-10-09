@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_LIMIT, MAX_LIMIT, paginate, parsePage } from '@/lib/paginate';
 
-const BASE = 'https://ecomate.app/api/leads';
+const BASE = 'https://ecomate.bd/api/leads';
 
 describe('pagination parsing (lib/paginate.ts)', () => {
   it('defaults to 20/0 when no params are given', () => {

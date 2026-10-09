@@ -16,6 +16,11 @@ import { mediaCreate } from '@/lib/validation';
 
 /** Paginated (Task 16 §4): the media library is a growing list, not a fixed set. */
 export async function GET(req: Request) {
+  // Decision 9: the asset inventory (internal keys, unpublished drafts) is
+  // editor-and-up — the public never lists it (delivery stays on `/media/<key>`).
+  const guard = await requireRole(CONTENT_EDITOR_ROLES);
+  if (!guard.ok) return guard.response;
+
   try {
     const page = await paginate(
       req.url,

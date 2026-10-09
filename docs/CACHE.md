@@ -1,19 +1,19 @@
-# Cache map — DISABLED 2026-10-07 (Cache Components off)
+# Cache map — ENABLED 2026-10-08 (Phase 3a Item 16)
 
-> **Status: caching is off.** `cacheComponents` was removed from `next.config.ts`
-> because opennext on Workers has no incremental-cache backend configured, so it
-> falls back to a "Dummy" cache whose `.set()` **throws** (`"Dummy" cache does not
-> cache anything`) inside page renders — every page 500'd or hung while APIs and
-> static files worked. Every read in `lib/content.ts` is therefore uncached and
-> dynamic; `lib/revalidate.ts` functions are no-ops keeping their signatures.
+> **Status: caching is on.** `cacheComponents: true` + `partialPrefetching: true` in
+> `next.config.ts`, backend = R2 incremental cache (`NEXT_INC_CACHE_R2_BUCKET`) + DO
+> sharded tag cache (`NEXT_TAG_CACHE_DO_SHARDED`) — see `open-next.config.ts` and
+> `wrangler.toml` (buckets `ecomate-inc-cache` / `ecomate-inc-cache-prod`, created once
+> per environment with `npx wrangler r2 bucket create <name>`).
 >
-> **Re-enable path** (prove on a throwaway worker first — the `preview`
-> environment was decommissioned, CR-3): provision an R2 bucket +
-> Durable-Object tag cache for opennext, confirm a page renders against it, then
-> restore `cacheComponents: true` + `partialPrefetching: true` in `next.config.ts`,
-> the `'use cache'` / `cacheTag` / `cacheLife` directives below, and the bodies in
-> `lib/revalidate.ts`. The tag table below is preserved verbatim as the design to
-> restore — it was verified correct, only the backend was missing.
+> Restored 2026-10-08 from the Task 22 verified design below (off since 2026-10-07 for
+> the missing backend): `'use cache'` / `cacheTag` / `cacheLife` in `lib/content.ts`,
+> real `updateTag` / `revalidateTag` bodies in `lib/revalidate.ts`. Phase 2 closed the
+> two "no writer" gaps — testimonial + case-study write endpoints invalidate their tags.
+>
+> **Operator note:** a fresh Cloudflare account still needs the R2 buckets created
+> (deploy does not create the inc-cache bucket; see DEPLOYMENT.md). Without the bucket,
+> page renders fail the way 2026-10-07 did — Dummy cache `.set()` throws.
 
 Original design (preserved for re-enabling) — one caching boundary:
 **`lib/content.ts`** was the only module containing `'use cache'`.
@@ -32,9 +32,9 @@ contract: move it into `lib/content.ts`.
 | `blog` + `blog:${slug}` | `getBlogPost(slug)` (body) | same three writers as the index — one `blog` tag covers index, body and sitemap together so they can never drift | same as index | **long: `3600 / 86400 / 604800`** (1h / 1d / 7d — a single document changes rarely; the index stays short) |
 | `pricing` | `getPricingPlans()` (plans + `is_pricing_visible` toggle read together so they cannot drift) | `POST /api/pricing`, `PATCH`/`DELETE /api/pricing/[id]`, `POST /api/pricing/toggle-mode`, `PUT /api/settings` | `updateTag` via `invalidateDomains('pricing')` | `300 / 3600 / 86400` |
 | `social` | `getSocialLinks()` | `POST`/`PUT`/`DELETE /api/social-links` | `updateTag` via `invalidateDomains('social')` | `300 / 3600 / 86400` |
-| `testimonials` | `getTestimonials()` | ⚠️ **no writer** — `app/api/testimonials/route.ts` is GET-only; no mutation calls `invalidateDomains('testimonials')` (see concern 1) | — | `300 / 3600 / 86400` |
-| `casestudies` | `getCaseStudies()` (index, sitemap) | ⚠️ **no writer** — `app/api/case-studies/route.ts` is GET-only (see concern 1) | — | `300 / 3600 / 86400` |
-| `casestudies` + `casestudies:${slug}` | `getCaseStudy(slug)` (body) | ⚠️ **no writer** (same gap) | — | **long: `3600 / 86400 / 604800`** |
+| `testimonials` | `getTestimonials()` | `POST /api/testimonials`, `PATCH`/`DELETE /api/testimonials/[id]` (Phase 2b H-19 closed the "no writer" gap) | `updateTag` via `invalidateDomains('testimonials')` | `300 / 3600 / 86400` |
+| `casestudies` | `getCaseStudies()` (index, sitemap) | `POST /api/case-studies`, `PATCH`/`DELETE /api/case-studies/[idOrSlug]` (Phase 2b H-20 closed the gap) | `updateTag` via `invalidateDomains('casestudies', locale, slug)` | `300 / 3600 / 86400` |
+| `casestudies` + `casestudies:${slug}` | `getCaseStudy(slug)` (body) | same writers as the index | same as index | **long: `3600 / 86400 / 604800`** |
 
 Failure path (all readers): on DB error the function logs server-side, calls
 `cacheLife({ stale: 30, revalidate: 60, expire: 300 })` and returns `null`; the page

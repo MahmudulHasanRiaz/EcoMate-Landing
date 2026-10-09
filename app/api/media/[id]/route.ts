@@ -1,10 +1,12 @@
 import { and, eq, gte, isNull, ne, or } from 'drizzle-orm';
-import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { getDb } from '@/db/client';
 import { mediaAssetsTable } from '@/db/schema';
 import { CONTENT_EDITOR_ROLES, requireRole } from '@/lib/authz';
-import { errorMessage, fail, logServerError, ok, parseId } from '@/lib/json';
+import { errorMessage, fail, isUniqueViolation, logServerError, ok, parseId } from '@/lib/json';
 import { assertMediaNotInUse } from '@/lib/guard';
+import { resolveBucket } from '@/lib/media';
+import { requestId } from '@/lib/request';
+import { mediaUpdate } from '@/lib/validation';
 
 /** Soft-deleted rows younger than this still count as references to their R2 key. */
 const REFERENCE_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
@@ -85,10 +87,46 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   }
 }
 
-function resolveBucket(): R2Bucket | undefined {
+/**
+ * PATCH /api/media/[id] — edit library metadata (Phase 3b Item 17).
+ *
+ * Title / alt text / category / URL only: the R2 `key` is the immutable object
+ * identity (renaming it would orphan the stored bytes), so `key` writes are refused
+ * even though the shared `mediaUpdate` schema permits the field elsewhere.
+ */
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const guard = await requireRole(CONTENT_EDITOR_ROLES);
+  if (!guard.ok) return guard.response;
+
   try {
-    return getCloudflareContext().env.R2_BUCKET;
-  } catch {
-    return undefined;
+    const { id: rawId } = await params;
+    const id = parseId(rawId);
+    if (id === null) return fail('Invalid media id', 400, undefined, requestId(req));
+
+    const parsed = mediaUpdate.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) {
+      return fail('Validation failed', 400, { issues: parsed.error.issues }, requestId(req));
+    }
+    // NEVER spread the body: explicit fields only, and `key` is never writable here.
+    const patch: { title?: string; altText?: string; category?: string; url?: string } = {};
+    if (parsed.data.title !== undefined) patch.title = parsed.data.title.trim();
+    if (parsed.data.altText !== undefined) patch.altText = parsed.data.altText.trim();
+    if (parsed.data.category !== undefined) patch.category = parsed.data.category;
+    if (parsed.data.url !== undefined) patch.url = parsed.data.url;
+    if (Object.keys(patch).length === 0) {
+      return fail('Nothing to update', 400, undefined, requestId(req));
+    }
+
+    const [updated] = await getDb()
+      .update(mediaAssetsTable)
+      .set(patch)
+      .where(and(eq(mediaAssetsTable.id, id), isNull(mediaAssetsTable.deletedAt)))
+      .returning();
+    if (!updated) return fail('Media asset not found', 404, undefined, requestId(req));
+    return ok(updated);
+  } catch (e) {
+    logServerError('PATCH /api/media/[id]', e, requestId(req));
+    if (isUniqueViolation(e)) return fail('A media asset with that URL already exists', 409, undefined, requestId(req));
+    return fail(errorMessage(e), 500, undefined, requestId(req));
   }
 }

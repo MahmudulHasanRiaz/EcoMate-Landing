@@ -2,7 +2,7 @@ export { settingsPatch } from './settings';
 export { pricingPlanCreate, pricingPlanUpdate } from './pricing';
 export { leadCreate, leadUpdate, normalisePhone } from './lead';
 export { blogPostCreate, blogPostUpdate } from './blog';
-export { mediaCreate, mediaUpdate, mediaUploadMeta, MEDIA_CATEGORIES } from './media';
+export { mediaCreate, mediaUpdate, mediaUploadMeta, mediaSignRequest, mediaConfirmRequest, MEDIA_CATEGORIES } from './media';
 export { contentUpsert, contentRestore } from './content';
 export { sectionUpdate } from './sections';
 export { socialLinkCreate, socialLinkUpdate, SOCIAL_PLATFORMS } from './socialLinks';

@@ -3,7 +3,7 @@ import type { CaseStudy } from '../types/landing';
 import { useLanding } from '@/components/shell/useLanding';
 import { CaseStudyVideoModal } from './CaseStudyVideoModal';
 import { TestimonialCard } from './TestimonialCard';
-import { ShieldCheck, Play, Globe, Building2, CheckCircle2, ArrowRight } from 'lucide-react';
+import { ShieldCheck, Play, Globe, Building2 } from 'lucide-react';
 
 export const CustomerProofSection: React.FC = () => {
   const { content, locale, testimonials } = useLanding();
@@ -11,6 +11,7 @@ export const CustomerProofSection: React.FC = () => {
 
   const featuredStudy = content.proof.caseStudies[0];
   const supportingStudies = content.proof.caseStudies.slice(1);
+  const chrome = content.proof.chrome;
   // 2c: published DB testimonials render below the static proof copy when seeded.
   // Null-safe (CR-4/5/6 lesson): a malformed row is dropped, never rendered — and an
   // empty/null seed keeps the exact static render below, so the page never blanks
@@ -47,7 +48,7 @@ export const CustomerProofSection: React.FC = () => {
                 <div className="lg:col-span-7 space-y-4">
                   <div className="flex flex-wrap items-center gap-3">
                     <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-indigo-600 text-white">
-                      Featured Merchant Story
+                      {chrome.featuredBadge}
                     </span>
                     <span className="text-xs text-slate-600 dark:text-slate-300 font-medium">
                       {featuredStudy.category} · {featuredStudy.location}
@@ -59,7 +60,8 @@ export const CustomerProofSection: React.FC = () => {
                   </h3>
 
                   <div className="relative pl-6 border-l-2 border-indigo-400 dark:border-indigo-500/60 my-2">
-                    <span className="absolute -left-2.5 -top-2 text-3xl font-serif text-indigo-400 dark:text-indigo-500 select-none">“</span>
+                    {/* L-57: decorative quote glyph hidden from assistive tech. */}
+                    <span aria-hidden="true" className="absolute -left-2.5 -top-2 text-3xl font-serif text-indigo-400 dark:text-indigo-500 select-none">“</span>
                     <blockquote className="text-base sm:text-lg text-slate-800 dark:text-slate-200 italic font-serif leading-relaxed">
                       {featuredStudy.quote}
                     </blockquote>
@@ -70,7 +72,7 @@ export const CustomerProofSection: React.FC = () => {
                       {featuredStudy.founderName}
                     </p>
                     <p className="text-xs text-slate-600 dark:text-slate-300">
-                      {featuredStudy.role}, {featuredStudy.businessName} · Operating since 2021
+                      {featuredStudy.role}, {featuredStudy.businessName}{chrome.operatingSince}
                     </p>
                   </div>
 
@@ -80,14 +82,14 @@ export const CustomerProofSection: React.FC = () => {
                       className="inline-flex items-center gap-2 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 text-xs font-semibold shadow-xs transition-colors cursor-pointer"
                     >
                       <Play className="h-3.5 w-3.5" />
-                      <span>Watch Founder Interview ({featuredStudy.videoDuration})</span>
+                      <span>{chrome.watchInterview} ({featuredStudy.videoDuration})</span>
                     </button>
                   </div>
                 </div>
 
                 <div className="lg:col-span-5 rounded-xl border border-slate-200/80 dark:border-white/10 bg-white/90 dark:bg-black/50 p-5 space-y-4 shadow-2xs">
                   <span className="text-xs font-mono uppercase tracking-wider text-slate-600 font-semibold block dark:text-slate-300">
-                    Illustrative Metrics (Demo Data)
+                    {chrome.metricsTitle}
                   </span>
                   <div className="grid grid-cols-3 gap-2 text-center">
                     {featuredStudy.metrics.map((m, idx) => (
@@ -101,7 +103,7 @@ export const CustomerProofSection: React.FC = () => {
                   </div>
 
                   <div className="pt-2 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between text-xs">
-                    <span className="text-slate-500 dark:text-slate-400">Live Website:</span>
+                    <span className="text-slate-500 dark:text-slate-400">{chrome.liveWebsite}</span>
                     <a
                       href={`https://${featuredStudy.website}`}
                       target="_blank"
@@ -142,7 +144,7 @@ export const CustomerProofSection: React.FC = () => {
                       rel="noreferrer"
                       className="text-xs text-indigo-700 dark:text-indigo-300 hover:text-indigo-800 font-mono inline-flex items-center gap-1 font-semibold"
                     >
-                      <span>Visit</span>
+                      <span>{chrome.visitLabel}</span>
                       <Globe className="h-3 w-3" />
                     </a>
                   </div>
@@ -176,7 +178,7 @@ export const CustomerProofSection: React.FC = () => {
                     className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-700 dark:text-indigo-300 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors cursor-pointer"
                   >
                     <Play className="h-3 w-3" />
-                    <span>Watch Case Study ({study.videoDuration})</span>
+                    <span>{chrome.watchCaseStudy} ({study.videoDuration})</span>
                   </button>
                 </div>
               </div>

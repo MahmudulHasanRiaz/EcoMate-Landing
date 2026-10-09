@@ -22,8 +22,8 @@ import {
 import { notifyNewLead } from '@/lib/notify';
 import { paginate, parsePage } from '@/lib/paginate';
 import { clientIp as clientIpOf, requestId } from '@/lib/request';
-import { hitLimit } from '@/lib/rateLimit';
-import { isLocalE2eBypass, verifyTurnstile } from '@/lib/turnstile';
+import { hitLimit, retryAfterSec } from '@/lib/rateLimit';
+import { isLocalE2eBypass, recordTurnstileOutcome, verifyTurnstile } from '@/lib/turnstile';
 import { leadCreate } from '@/lib/validation';
 
 // Registers the Resend adapter on import. No call site changes when it becomes active.
@@ -37,17 +37,17 @@ import '@/lib/notifyResend';
  */
 const DEDUPE_WINDOW_DAYS = 90;
 
-// Per-isolate best effort, deliberately kept as the *backstop* behind the KV limiter
-// (Task 14 §1) and the WAF rule (Task 8): a Worker has no shared memory across the fleet,
-// so this map only covers one isolate's lifetime — but it also covers the case where KV is
-// not bound (local dev) or a KV call fails open.
+// Per-isolate best effort, deliberately kept as the *backstop* in front of the DB
+// limiter (Phase 3b Item 18) and Turnstile: a Worker has no shared memory across the
+// fleet, so this map only covers one isolate's lifetime — but it also covers the case
+// where the database is unreachable and `hitLimit` fails open.
 const WINDOW_MS = 600_000;
 const MAX_PER_WINDOW = 8;
 const hits = new Map<string, { count: number; expiresAt: number }>();
 
-/** Distributed window: 5 lead submissions per 10 minutes per source IP. */
-const KV_LIMIT_MAX = 5;
-const KV_LIMIT_WINDOW_SEC = 600;
+/** Distributed window: 5 lead submissions per 10 minutes per source IP (Postgres). */
+const DB_LIMIT_MAX = 5;
+const DB_LIMIT_WINDOW_SEC = 600;
 
 /** Version identifier stored on every consented lead (Task 13 §5, Task 20 §5). */
 const PRIVACY_POLICY_VERSION = 'privacy-v1';
@@ -194,7 +194,15 @@ export async function POST(req: Request) {
     const now = Date.now();
     const rec = hits.get(ip);
     if (rec && rec.expiresAt > now && rec.count >= MAX_PER_WINDOW) {
-      return fail('Too many requests. Please try again in a few minutes or call us directly.', 429, undefined, reqId);
+      // Item 18: 429s carry Retry-After so well-behaved clients back off precisely.
+      const retryAfter = Math.max(1, Math.ceil((rec.expiresAt - now) / 1000));
+      return fail(
+        'Too many requests. Please try again in a few minutes or call us directly.',
+        429,
+        undefined,
+        reqId,
+        { 'Retry-After': String(retryAfter) },
+      );
     }
     hits.set(
       ip,
@@ -208,11 +216,18 @@ export async function POST(req: Request) {
       for (const [key, value] of hits) if (value.expiresAt <= now) hits.delete(key);
     }
 
-    // Fleet-wide sliding window (Task 14 §1). Runs after the per-isolate backstop so a
-    // burst inside one isolate is rejected without a KV round-trip, and before any body
-    // parsing so an abusive caller never reaches Turnstile or the database.
-    if (await hitLimit(`lead:${ip}`, KV_LIMIT_MAX, KV_LIMIT_WINDOW_SEC)) {
-      return fail('Too many requests. Please try again in a few minutes or call us directly.', 429, undefined, reqId);
+    // Fleet-wide sliding window (Phase 3b Item 18, Postgres). Runs after the
+    // per-isolate backstop so a burst inside one isolate is rejected without a DB
+    // round-trip, and before any body parsing so an abusive caller never reaches
+    // Turnstile or the database writes.
+    if (await hitLimit(`lead:${ip}`, DB_LIMIT_MAX, DB_LIMIT_WINDOW_SEC)) {
+      return fail(
+        'Too many requests. Please try again in a few minutes or call us directly.',
+        429,
+        undefined,
+        reqId,
+        { 'Retry-After': String(retryAfterSec(DB_LIMIT_WINDOW_SEC)) },
+      );
     }
 
     const parsed = leadCreate.safeParse(await req.json().catch(() => null));
@@ -244,8 +259,13 @@ export async function POST(req: Request) {
         : await verifyTurnstile(rawToken, ip);
     if (!turnstile.ok) {
       console.warn(`[leads] turnstile rejected a submission: ${turnstile.reason}`);
+      // M-13: rejections feed the monitoring aggregate (fail-closed outcomes are signal).
+      keepAlive(recordTurnstileOutcome('rejected'));
       return fail('Human verification failed. Please refresh the page and try again.', 400, undefined, reqId);
     }
+    // M-13: every verification outcome feeds the daily aggregate — including skips, so
+    // a silently-off protection shows up on the admin monitor instead of hiding.
+    keepAlive(recordTurnstileOutcome(turnstile.skipped ? 'skipped' : 'verified'));
 
     const source = parsed.data.source ?? 'landing_page_lead_form';
     // Task 20 §5: tracking consent gates Meta CAPI end to end. Contact consent

@@ -4,6 +4,7 @@ import { BarChart3, TrendingUp, DollarSign, CheckCircle2, ArrowUpRight } from 'l
 
 export const ExecutiveAnalyticsSection: React.FC = () => {
   const { content } = useLanding();
+  const panels = content.analytics.panels;
   return (
     <section id="analytics" className="relative py-14 md:py-24 border-t border-slate-200 dark:border-white/[0.06] bg-white dark:bg-[#07080E] transition-colors">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -43,7 +44,7 @@ export const ExecutiveAnalyticsSection: React.FC = () => {
               {metric.trend && (
                 <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-slate-200/80 dark:border-white/[0.06] flex items-center justify-between text-[11px] sm:text-xs">
                   <span className="text-emerald-700 dark:text-emerald-400 font-bold">{metric.trend}</span>
-                  <span className="text-[10px] text-slate-600 uppercase font-mono font-medium hidden sm:inline dark:text-slate-300">Verified Metric</span>
+                  <span className="text-[10px] text-slate-600 uppercase font-mono font-medium hidden sm:inline dark:text-slate-300">{panels.verifiedBadge}</span>
                 </div>
               )}
             </div>
@@ -55,35 +56,35 @@ export const ExecutiveAnalyticsSection: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-center">
             <div className="lg:col-span-7 space-y-3 sm:space-y-4">
               <span className="text-[10px] sm:text-xs font-mono text-indigo-700 dark:text-indigo-300 uppercase tracking-wider font-semibold">
-                Decomposed Revenue Attribution
+                {panels.attrEyebrow}
               </span>
               <h3 className="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white">
-                Gross Inflow vs Net Realized Cash.
+                {panels.attrTitle}
               </h3>
               <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                Most platforms display vanity order values without factoring in cancelled packages, rejected deliveries, or return shipping penalties. EcoMate calculates your true bottom-line margin only after courier settlements are finalized.
+                {panels.attrBody}
               </p>
 
               <div className="space-y-2 pt-1 text-xs">
                 <div className="flex justify-between items-center text-slate-700 dark:text-slate-300 font-medium">
-                  <span>WooCommerce Online Channel (Delivered)</span>
-                  <span className="font-mono text-slate-900 dark:text-white font-bold">58% of Total Volume</span>
+                  <span>{panels.channelWoo}</span>
+                  <span className="font-mono text-slate-900 dark:text-white font-bold">{panels.channelWooVol}</span>
                 </div>
                 <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-1.5 sm:h-2">
                   <div className="bg-indigo-600 h-1.5 sm:h-2 rounded-full" style={{ width: '58%' }} />
                 </div>
 
                 <div className="flex justify-between items-center text-slate-700 dark:text-slate-300 font-medium pt-1.5">
-                  <span>Gulshan Flagship Showroom POS</span>
-                  <span className="font-mono text-slate-900 dark:text-white font-bold">28% of Total Volume</span>
+                  <span>{panels.channelGulshan}</span>
+                  <span className="font-mono text-slate-900 dark:text-white font-bold">{panels.channelGulshanVol}</span>
                 </div>
                 <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-1.5 sm:h-2">
                   <div className="bg-purple-600 h-1.5 sm:h-2 rounded-full" style={{ width: '28%' }} />
                 </div>
 
                 <div className="flex justify-between items-center text-slate-700 dark:text-slate-300 font-medium pt-1.5">
-                  <span>Dhanmondi Retail Outlet POS</span>
-                  <span className="font-mono text-slate-900 dark:text-white font-bold">14% of Total Volume</span>
+                  <span>{panels.channelDhanmondi}</span>
+                  <span className="font-mono text-slate-900 dark:text-white font-bold">{panels.channelDhanmondiVol}</span>
                 </div>
                 <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-1.5 sm:h-2">
                   <div className="bg-emerald-600 h-1.5 sm:h-2 rounded-full" style={{ width: '14%' }} />
@@ -93,27 +94,27 @@ export const ExecutiveAnalyticsSection: React.FC = () => {
 
             <div className="lg:col-span-5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-black/40 p-4 sm:p-5 space-y-2.5 text-xs shadow-2xs">
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/[0.06] pb-2 text-slate-500 dark:text-slate-400">
-                <span className="font-bold text-slate-900 dark:text-white">Courier Performance Matrix</span>
-                <span className="font-mono text-[10px] sm:text-[11px]">30-Day Cohort</span>
+                <span className="font-bold text-slate-900 dark:text-white">{panels.matrixTitle}</span>
+                <span className="font-mono text-[10px] sm:text-[11px]">{panels.matrixCohort}</span>
               </div>
 
               <div className="space-y-2">
                 <div className="flex justify-between items-center p-2 rounded bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-transparent">
                   <span className="font-semibold text-slate-900 dark:text-slate-200">Steadfast Courier</span>
-                  <span className="font-mono text-emerald-700 dark:text-emerald-400 font-bold">92.6% Success (1.8d avg)</span>
+                  <span className="font-mono text-emerald-700 dark:text-emerald-400 font-bold">{panels.courierStat1}</span>
                 </div>
                 <div className="flex justify-between items-center p-2 rounded bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-transparent">
                   <span className="font-semibold text-slate-900 dark:text-slate-200">Pathao Logistics</span>
-                  <span className="font-mono text-emerald-700 dark:text-emerald-400 font-bold">91.2% Success (1.6d avg)</span>
+                  <span className="font-mono text-emerald-700 dark:text-emerald-400 font-bold">{panels.courierStat2}</span>
                 </div>
                 <div className="flex justify-between items-center p-2 rounded bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-transparent">
                   <span className="font-semibold text-slate-900 dark:text-slate-200">RedX Delivery</span>
-                  <span className="font-mono text-emerald-700 dark:text-emerald-400 font-bold">89.4% Success (2.2d avg)</span>
+                  <span className="font-mono text-emerald-700 dark:text-emerald-400 font-bold">{panels.courierStat3}</span>
                 </div>
               </div>
 
               <p className="text-[10px] sm:text-[11px] text-slate-600 dark:text-slate-300 pt-1.5 font-medium">
-                Real-time delivery score auto-routes shipments to the fastest performing courier in each district.
+                {panels.matrixNote}
               </p>
             </div>
           </div>

@@ -437,6 +437,81 @@ export async function createMediaAsset(asset: Partial<MediaAsset>): Promise<Medi
   return res.json();
 }
 
+/** Presigned direct-to-R2 upload (Phase 3b Item 17): sign → PUT → confirm. */
+export interface MediaSignResponse {
+  key: string;
+  uploadUrl: string;
+  contentType: string;
+  expiresIn: number;
+}
+
+export async function signMediaUpload(input: {
+  filename: string;
+  contentType: string;
+  size: number;
+  title?: string;
+  altText?: string;
+  category?: string;
+}): Promise<MediaSignResponse> {
+  const res = await fetch(`${API_BASE}/media/sign`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) await throwApiError(res, 'Failed to prepare upload');
+  return res.json();
+}
+
+export async function confirmMediaUpload(input: {
+  key: string;
+  title: string;
+  altText: string;
+  category?: string;
+}): Promise<MediaAsset> {
+  const res = await fetch(`${API_BASE}/media/confirm`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) await throwApiError(res, 'Failed to confirm upload');
+  return res.json();
+}
+
+/** Legacy multipart upload (bytes via Worker) — fallback when presign is unconfigured. */
+export async function legacyUploadMedia(file: File, meta?: { title?: string; altText?: string; category?: string }): Promise<MediaAsset> {
+  const form = new FormData();
+  form.append('file', file);
+  if (meta?.title) form.append('title', meta.title);
+  if (meta?.altText) form.append('altText', meta.altText);
+  if (meta?.category) form.append('category', meta.category);
+  const upload = await fetch(`${API_BASE}/media/upload`, { method: 'POST', body: form });
+  if (!upload.ok) await throwApiError(upload, 'Upload failed');
+  const { key, url } = (await upload.json()) as { key: string; url: string };
+  return createMediaAsset({
+    key,
+    title: meta?.title ?? file.name,
+    url,
+    altText: meta?.altText ?? meta?.title ?? file.name,
+    category: meta?.category ?? 'general',
+  });
+}
+
+export async function updateMediaAsset(id: number, patch: Partial<MediaAsset>): Promise<MediaAsset> {
+  const res = await fetch(`${API_BASE}/media/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) await throwApiError(res, 'Failed to update media asset');
+  return res.json();
+}
+
+export async function deleteMediaAsset(id: number): Promise<{ success: boolean; r2Deleted: boolean }> {
+  const res = await fetch(`${API_BASE}/media/${id}`, { method: 'DELETE' });
+  if (!res.ok) await throwApiError(res, 'Failed to delete media asset');
+  return res.json();
+}
+
 export async function getIntegrationLogs(params?: PageParams): Promise<IntegrationLog[]> {
   return fetchListData<IntegrationLog>('/integrations/logs', params);
 }

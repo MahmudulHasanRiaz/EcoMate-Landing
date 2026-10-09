@@ -33,7 +33,13 @@ export type CloudflareEnvKey =
   | 'NOTIFY_FROM_EMAIL'
   | 'NOTIFY_TO_EMAIL'
   | 'CRON_SECRET'
-  | 'RETENTION_DAYS';
+  | 'RETENTION_DAYS'
+  // Phase 3b Item 17: presigned direct-to-R2 uploads (account id + S3 API keys).
+  // Secrets or vars — `envString` reads both; documented in DEPLOYMENT.md.
+  | 'R2_ACCOUNT_ID'
+  | 'R2_BUCKET_NAME'
+  | 'R2_ACCESS_KEY_ID'
+  | 'R2_SECRET_ACCESS_KEY';
 
 /**
  * Resolve a string binding/secret or return `''`.

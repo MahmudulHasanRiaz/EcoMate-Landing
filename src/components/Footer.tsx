@@ -6,17 +6,13 @@ import { Globe, PhoneCall, Mail, MapPin, ArrowUpRight } from 'lucide-react';
 
 export const Footer: React.FC = () => {
   const { content, locale, footerMenu: menu, toggleLocale: onToggleLocale } = useLanding();
-  // The hardcoded defaults. Declared as data rather than inline JSX so the same array can be
-  // the fallback *and* the comparison baseline for what a menu would replace.
-  const DEFAULT_PLATFORM_LINKS: readonly NavItem[] = [
-    { label: 'Central Architecture', href: '#ecosystem' },
-    { label: 'Multi-Store & Showrooms', href: '#multi-channel' },
-    { label: 'Fulfillment Pipeline', href: '#fulfillment' },
-    { label: 'Loss Prevention', href: '#loss-prevention' },
-    { label: 'Commercial Plans', href: '#pricing' },
-  ];
+  // M-44/M-45: the hardcoded English defaults are gone — the fallback is per-locale
+  // content, and a present-but-empty DB menu falls back the same way.
+  const DEFAULT_PLATFORM_LINKS: readonly NavItem[] = content.footer.defaultPlatformLinks;
 
-  const platformLinks: readonly NavItem[] = menu ?? DEFAULT_PLATFORM_LINKS;
+  // M-45: a present-but-empty DB menu (`[]`) means "no links" to `??` — treat it as
+  // "no menu configured" and fall back to the hardcoded links instead of blanking nav.
+  const platformLinks: readonly NavItem[] = menu !== null && menu.length > 0 ? menu : DEFAULT_PLATFORM_LINKS;
   return (
     <footer className="border-t border-slate-200 dark:border-white/[0.08] bg-slate-100 dark:bg-[#05060A] text-slate-600 dark:text-slate-300 text-xs pt-14 pb-28 md:pb-14 transition-colors">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -54,37 +50,19 @@ export const Footer: React.FC = () => {
             </ul>
           </div>
 
-          {/* Capabilities */}
+          {/* Capabilities (M-44): per-locale anchors from content — no dead `#tour`. */}
           <div className="space-y-3">
             <h4 className="font-bold text-slate-900 dark:text-slate-200 uppercase text-[11px] tracking-wider">
               {content.footer.operationsTitle}
             </h4>
             <ul className="space-y-2 text-xs">
-              <li>
-                <a href="#tour" className="hover:text-slate-900 dark:hover:text-white transition-colors dark:text-slate-300">
-                  Smart Packing Workspace
-                </a>
-              </li>
-              <li>
-                <a href="#pos-showrooms" className="hover:text-slate-900 dark:hover:text-white transition-colors dark:text-slate-300">
-                  Showroom Cloud POS
-                </a>
-              </li>
-              <li>
-                <a href="#tour" className="hover:text-slate-900 dark:hover:text-white transition-colors dark:text-slate-300">
-                  Courier Reconciliation
-                </a>
-              </li>
-              <li>
-                <a href="#inventory-finance" className="hover:text-slate-900 dark:hover:text-white transition-colors dark:text-slate-300">
-                  Double-Entry Ledger
-                </a>
-              </li>
-              <li>
-                <a href="#marketing" className="hover:text-slate-900 dark:hover:text-white transition-colors dark:text-slate-300">
-                  Server-Side Meta CAPI
-                </a>
-              </li>
+              {content.footer.capabilities.map((item) => (
+                <li key={item.href}>
+                  <a href={item.href} className="hover:text-slate-900 dark:hover:text-white transition-colors dark:text-slate-300">
+                    {item.label}
+                  </a>
+                </li>
+              ))}
             </ul>
           </div>
 
@@ -96,7 +74,9 @@ export const Footer: React.FC = () => {
             <ul className="space-y-2 text-xs">
               <li className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
                 <PhoneCall className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
-                <a href={`tel:${content.footer.phone}`} className="hover:text-slate-900 dark:hover:text-white font-mono-numbers font-medium dark:text-slate-300">
+                {/* L-44: `tel:` URIs must not contain literal spaces — some dialers
+                    misparse `tel:+880 1894-…`. The visible label keeps its spacing. */}
+                <a href={`tel:${content.footer.phone.replace(/\s+/g, '')}`} className="hover:text-slate-900 dark:hover:text-white font-mono-numbers font-medium dark:text-slate-300">
                   {content.footer.phone}
                 </a>
               </li>
@@ -120,10 +100,9 @@ export const Footer: React.FC = () => {
           <div className="flex items-center gap-5">
             {/* Legal pages (Task 20 §6): locale-routed in both languages. Sub-pages
                 always use the explicit `/{locale}` prefix — `/privacy` is not a route. */}
-            <a href={`/${locale}/privacy`} className="hover:text-slate-800 dark:hover:text-slate-400 transition-colors">Privacy Policy</a>
-            <a href={`/${locale}/terms`} className="hover:text-slate-800 dark:hover:text-slate-400 transition-colors">Terms of Service</a>
-            <a href="#" className="hover:text-slate-800 dark:hover:text-slate-400 transition-colors">Security & RBAC</a>
-            <a href="#" className="hover:text-slate-800 dark:hover:text-slate-400 transition-colors">System Status</a>
+            {/* M-44: legal labels are content, not hardcoded English. */}
+            <a href={`/${locale}/privacy`} className="hover:text-slate-800 dark:hover:text-slate-400 transition-colors">{content.footer.privacyLabel}</a>
+            <a href={`/${locale}/terms`} className="hover:text-slate-800 dark:hover:text-slate-400 transition-colors">{content.footer.termsLabel}</a>
           </div>
         </div>
       </div>

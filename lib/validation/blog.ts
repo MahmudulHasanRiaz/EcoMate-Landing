@@ -23,7 +23,9 @@ const base = {
 
 export const blogPostCreate = z.strictObject({
   title: base.title,
-  slug: base.slug,
+  // Optional: omitted when the admin leaves slug generation to the route, which derives
+  // it from the title (post-name permalink, §1.5) + numeric suffix on collision.
+  slug: base.slug.optional(),
   content: z.string().min(1).max(100_000),
   excerpt: base.excerpt.optional(),
   author: base.author.optional(),

@@ -17,14 +17,16 @@ export async function timed<T>(
   thresholdMs = 10_000,
   extra?: Record<string, unknown>,
 ): Promise<T> {
-  // Next 16 forbids Date.now() during prerender ("unstable value" build error).
-  // Timing is a runtime diagnostic anyway — at build time, pass through untouched.
-  if (process.env.NEXT_PHASE === 'phase-production-build') return promise;
-  const start = Date.now();
+  // Next 16 forbids Date.now() during prerender ("unstable value" build error) — and
+  // that includes the on-demand prerender of an unenumerated slug at request time, where
+  // NEXT_PHASE no longer reads 'phase-production-build'. Timing is a runtime diagnostic
+  // anyway, so it uses performance.now(), the timing API Next sanctions for telemetry:
+  // monotonic, available in Node/Workers/browsers, never flagged as unstable.
+  const start = performance.now();
   try {
     return await promise;
   } finally {
-    const elapsed = Date.now() - start;
+    const elapsed = performance.now() - start;
     if (elapsed >= thresholdMs) {
       console.warn(
         JSON.stringify({

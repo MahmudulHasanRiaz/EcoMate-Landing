@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useLanding } from '@/components/shell/useLanding';
-import { HelpCircle, ChevronDown, MessageCircle, PhoneCall, ArrowRight } from 'lucide-react';
+import { HelpCircle, ChevronDown, MessageCircle, PhoneCall } from 'lucide-react';
 
 export const FaqSection: React.FC = () => {
   const { content, locale } = useLanding();
@@ -44,6 +44,7 @@ export const FaqSection: React.FC = () => {
                   onClick={() => toggleAccordion(idx)}
                   className="w-full text-left p-4 sm:p-6 flex items-center justify-between gap-4 cursor-pointer"
                   aria-expanded={isOpen}
+                  aria-controls={`faq-panel-${idx}`}
                 >
                   <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-snug">
                     {item.question}
@@ -60,7 +61,11 @@ export const FaqSection: React.FC = () => {
                 </button>
 
                 {isOpen && (
-                  <div className="px-4 pb-4 sm:px-6 sm:pb-6 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed border-t border-indigo-100 dark:border-white/[0.04] pt-3 animate-in fade-in duration-200">
+                  <div
+                    id={`faq-panel-${idx}`}
+                    role="region"
+                    className="px-4 pb-4 sm:px-6 sm:pb-6 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed border-t border-indigo-100 dark:border-white/[0.04] pt-3"
+                  >
                     <p>{item.answer}</p>
                   </div>
                 )}
@@ -88,14 +93,14 @@ export const FaqSection: React.FC = () => {
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs transition-colors cursor-pointer"
             >
               <MessageCircle className="h-3.5 w-3.5" />
-              <span>{locale === 'en' ? 'Ask on WhatsApp' : 'হোয়াটসঅ্যাপে প্রশ্ন করুন'}</span>
+              <span>{content.faq.whatsappCta}</span>
             </a>
             <a
               href="tel:+8801894828290"
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold border border-slate-300 dark:border-white/15 bg-white dark:bg-white/5 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
             >
               <PhoneCall className="h-3.5 w-3.5" />
-              <span className="font-mono-numbers">Call Sales</span>
+              <span className="font-mono-numbers">{content.faq.salesCall}</span>
             </a>
           </div>
         </div>

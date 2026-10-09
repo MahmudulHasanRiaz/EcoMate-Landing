@@ -49,9 +49,9 @@ async function main() {
         tagline: 'Your Entire E-commerce Operation, Managed From One Place',
         defaultLocale: 'en',
         supportPhone: '+880 1894-828290',
-        supportEmail: 'hello@ecomate.app',
+        supportEmail: 'hello@ecomate.bd',
         whatsappNumber: '8801894828290',
-        messengerUrl: 'https://m.me/ecomate.app',
+        messengerUrl: 'https://m.me/ecomate.bd',
         address: 'Tejgaon I/A, Dhaka 1208, Bangladesh',
         isPricingVisible: true,
       });
@@ -648,7 +648,7 @@ This eliminates end-of-day phone calls between warehouse managers and showroom c
             },
             {
               heading: 'Contact and deletion requests',
-              body: 'Reach us anytime: WhatsApp +880 1894-828290, phone +880 1894-828290, email hello@ecomate.app, address Tejgaon I/A, Dhaka 1208. Write in to view, correct or delete your data — we verify and act.',
+              body: 'Reach us anytime: WhatsApp +880 1894-828290, phone +880 1894-828290, email hello@ecomate.bd, address Tejgaon I/A, Dhaka 1208. Write in to view, correct or delete your data — we verify and act.',
             },
           ],
         },
@@ -676,7 +676,7 @@ This eliminates end-of-day phone calls between warehouse managers and showroom c
             },
             {
               heading: 'যোগাযোগ ও ডেটা মুছে ফেলা',
-              body: 'যেকোনো অনুরোধে: WhatsApp +880 1894-828290, ফোন +880 1894-828290, ইমেইল hello@ecomate.app, ঠিকানা Tejgaon I/A, Dhaka 1208। আপনার তথ্য দেখতে, সংশোধন বা মুছে ফেলতে লিখুন — আমরা যাচাই করে ব্যবস্থা নেব।',
+              body: 'যেকোনো অনুরোধে: WhatsApp +880 1894-828290, ফোন +880 1894-828290, ইমেইল hello@ecomate.bd, ঠিকানা Tejgaon I/A, Dhaka 1208। আপনার তথ্য দেখতে, সংশোধন বা মুছে ফেলতে লিখুন — আমরা যাচাই করে ব্যবস্থা নেব।',
             },
           ],
         },
@@ -704,7 +704,7 @@ This eliminates end-of-day phone calls between warehouse managers and showroom c
             },
             {
               heading: 'Contact',
-              body: 'Questions or disputes: WhatsApp +880 1894-828290, phone +880 1894-828290, email hello@ecomate.app.',
+              body: 'Questions or disputes: WhatsApp +880 1894-828290, phone +880 1894-828290, email hello@ecomate.bd.',
             },
           ],
         },
@@ -732,7 +732,7 @@ This eliminates end-of-day phone calls between warehouse managers and showroom c
             },
             {
               heading: 'যোগাযোগ',
-              body: 'প্রশ্ন বা বিরোধে: WhatsApp +880 1894-828290, ফোন +880 1894-828290, ইমেইল hello@ecomate.app।',
+              body: 'প্রশ্ন বা বিরোধে: WhatsApp +880 1894-828290, ফোন +880 1894-828290, ইমেইল hello@ecomate.bd।',
             },
           ],
         },

@@ -22,9 +22,9 @@ export const siteSettingsTable = pgTable('site_settings', {
   faviconUrl: text('favicon_url').default(''),
   defaultLocale: text('default_locale').notNull().default('en'),
   supportPhone: text('support_phone').notNull().default('+880 1894-828290'),
-  supportEmail: text('support_email').notNull().default('hello@ecomate.app'),
+  supportEmail: text('support_email').notNull().default('hello@ecomate.bd'),
   whatsappNumber: text('whatsapp_number').notNull().default('8801894828290'),
-  messengerUrl: text('messenger_url').notNull().default('https://m.me/ecomate.app'),
+  messengerUrl: text('messenger_url').notNull().default('https://m.me/ecomate.bd'),
   address: text('address').notNull().default('Tejgaon I/A, Dhaka 1208, Bangladesh'),
   isPricingVisible: boolean('is_pricing_visible').notNull().default(true),
   // --- Meta CAPI two-mode config (H-1/Decision 14, admin-configurable) -----------------
@@ -268,12 +268,18 @@ export const mediaAssetsTable = pgTable('media_assets', {
   url: text('url').notNull(),
   altText: text('alt_text').default(''),
   category: text('category').notNull().default('general'), // logo, hero, product_ui, customer_logo, og_image
+  // Phase 3b Item 17: server-verified at confirm time (sniffed mime, R2 object size)
+  // so the library can show, sort and filter without trusting client claims.
+  mimeType: text('mime_type').default(''),
+  sizeBytes: integer('size_bytes').default(0),
+  uploadedBy: integer('uploaded_by').references(() => adminUsersTable.id, { onDelete: 'set null' }),
   deletedAt: timestamp('deleted_at'), // soft delete: the R2 object is only purged when unreferenced
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (t) => [
   // Media library is listed newest-first and filtered on `deleted_at`; without this the
   // paginated read sorts before it slices.
   index('media_assets_created_at_idx').on(t.createdAt),
+  index('media_assets_category_idx').on(t.category),
 ]);
 
 // 9. Integration Logs Table (Authoritative audit log of License Portal dispatches)
@@ -569,3 +575,40 @@ export const contentRevisionsTable = pgTable('content_revisions', {
   check('content_revisions_status_valid', sql`${t.status} IN ('draft', 'published')`),
   check('content_revisions_version_positive', sql`${t.version} >= 1`),
 ]);
+
+// 21. Rate-limit counters (Phase 3b Item 18, Decision 2: no KV, no new CF services).
+//
+// Distributed sliding-window limiting on Postgres (via Hyperdrive): one row per
+// `(key, window-size)` bucket, incremented with a single atomic upsert. The window
+// bucket is part of the KEY (`lead:<ip>:w600`), so an expired window is simply never
+// read again — `window_start` exists for the opportunistic sweep, not for reads.
+// Key cardinality is bounded by caller count (source IPs / actor ids); rows older
+// than a day are swept lazily by `hitLimit` itself (1% of calls).
+//
+// timestamptz (not naive timestamp): the bucket instant must compare identically in
+// every session timezone (Phase 3a publish-cron lesson — naive columns phantom-shift
+// by hours across sessions).
+export const rateLimitCountersTable = pgTable('rate_limit_counters', {
+  key: text('key').primaryKey(),
+  windowStart: timestamp('window_start', { withTimezone: true, mode: 'date' }).notNull(),
+  count: integer('count').notNull().default(1),
+  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).defaultNow().notNull(),
+}, (t) => [
+  index('rate_limit_counters_updated_idx').on(t.updatedAt),
+]);
+
+// 22. Turnstile daily outcomes (Phase 3b Item 19, Decision 3: hybrid fail policy).
+//
+// Sustained-skip monitoring (M-13): every verification outcome lands here as a daily
+// aggregate — `verified` (passed), `rejected` (fail-closed: bad token), `skipped`
+// (fail-open: missing config / network / siteverify config-fault, LOUDLY logged).
+// `GET /api/admin/turnstile` surfaces the trailing 30 days with an alert flag when
+// skips dominate (bot protection silently off). One row per day: bounded by time,
+// never by traffic.
+export const turnstileDailyStatsTable = pgTable('turnstile_daily_stats', {
+  day: text('day').primaryKey(),
+  verified: integer('verified').notNull().default(0),
+  rejected: integer('rejected').notNull().default(0),
+  skipped: integer('skipped').notNull().default(0),
+  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).defaultNow().notNull(),
+});

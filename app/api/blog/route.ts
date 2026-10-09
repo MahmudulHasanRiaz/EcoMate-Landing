@@ -16,6 +16,7 @@ import { requestId } from '@/lib/request';
 import { invalidateDomains } from '@/lib/revalidate';
 import { recordRevision } from '@/lib/revisions';
 import { sanitizeHtml } from '@/lib/sanitize';
+import { slugify, slugWithSuffix } from '@/lib/slug';
 import { blogPostCreate } from '@/lib/validation';
 
 /** Paginated (Task 16 §4). Public: this route is the index feed, not an admin surface.
@@ -52,6 +53,32 @@ export async function GET(req: Request) {
   }
 }
 
+/**
+ * Derive a unique slug from the title (post-name permalink, §1.5): the admin may
+ * supply one explicitly, otherwise `slugify(title)` + numeric suffix on collision.
+ * An explicitly supplied slug that is taken returns null (the route answers 409)
+ * rather than silently publishing under a renamed URL. Returns null when no free
+ * slug is found within the attempt budget.
+ */
+export async function resolveBlogSlug(
+  title: string,
+  preferred: string | undefined,
+): Promise<string | null> {
+  const wanted = (preferred ?? '').trim();
+  if (wanted !== '') {
+    const guard = await assertSlugAvailable('blog_posts', wanted);
+    return guard.ok ? wanted : null;
+  }
+  const base = slugify(title).slice(0, 50).replace(/-+$/g, '') || 'post';
+  for (let attempt = 1; attempt <= 50; attempt++) {
+    const candidate = slugWithSuffix(base, attempt);
+    if (!/^[a-z0-9-]{2,60}$/.test(candidate)) continue;
+    const free = await assertSlugAvailable('blog_posts', candidate);
+    if (free.ok) return candidate;
+  }
+  return null;
+}
+
 // NEVER `.values(body)` — mass assignment on insert is the same hole as on update.
 export async function POST(req: Request) {
   // Decision 1: editors do blog posting, so blog CRUD is editor-allowed.
@@ -65,8 +92,19 @@ export async function POST(req: Request) {
     if (!parsed.success) {
       return fail('Validation failed', 400, { issues: parsed.error.issues });
     }
-    const slugGuard = await assertSlugAvailable('blog_posts', parsed.data.slug);
-    if (!slugGuard.ok) return fail(slugGuard.reason, 409);
+    // Post-name permalink (§1.5): the admin may supply a slug explicitly, otherwise it
+    // derives from the title + numeric suffix on collision. An explicitly supplied slug
+    // that is taken is still a 409 — silent renaming would publish under a URL the
+    // admin never approved.
+    const slug = await resolveBlogSlug(parsed.data.title, parsed.data.slug);
+    if (!slug) {
+      return fail(
+        (parsed.data.slug ?? '').trim() !== ''
+          ? 'A live post with that slug already exists'
+          : 'Could not derive a unique slug for this title',
+        409,
+      );
+    }
     const { ogImageUrl: _ogImage, publishedAt, ...rest } = parsed.data;
     void _ogImage;
     // The insert and its revision commit together (Task 19 §2): a post without a v1
@@ -75,7 +113,7 @@ export async function POST(req: Request) {
       const [row] = await tx
         .insert(blogPostsTable)
         .values({
-          slug: rest.slug,
+          slug,
           title: rest.title,
           excerpt: rest.excerpt ?? '',
           // Sanitized after validation: the length bound already held on the raw input,

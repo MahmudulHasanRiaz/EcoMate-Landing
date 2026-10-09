@@ -62,9 +62,9 @@ Non-negotiable on a 16 GB machine, per `AGENTS.md`:
 ### 1.4 Verifying a deploy landed
 
 ```bash
-curl -sS https://ecomate.app/api/health | jq        # liveness: bindings exist
+curl -sS https://ecomate.bd/api/health | jq        # liveness: cheap 200, no probes
 curl -sS -o /dev/null -w '%{http_code}\n' \
-  https://ecomate.app/api/ready                    # 200 ready, 503 not ready
+  https://ecomate.bd/api/ready                    # 200 ready, 503 not ready
 npx wrangler deployments list                      # version ids, needed for rollback
 ```
 
@@ -154,6 +154,8 @@ unset ones) — deletion stays a manual `wrangler secret delete <NAME> --env pro
 | `TURNSTILE_SECRET_KEY` | `verifyTurnstile` fails — check `lib/turnstile.ts` for the failure direction; if it fails **closed**, the public lead form stops accepting submissions. |
 | `LICENSE_PORTAL_API_KEY` | Dispatches fail with `licensePortalStatus = 'Failed'`; the lead row is still authoritative. Retry from the admin. |
 | `RESEND_API_KEY` | Lead notifications revert to the `Log` provider: `integration_logs` rows go to `Pending` and no email is sent. Visible on `/api/ready` as `notificationProvider: "log_only"`. |
+| `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | Presigned direct uploads stop (`POST /api/media/sign` 503s); the admin uploader falls back to the legacy multipart route automatically. Library reads unaffected. |
+| `R2_ACCOUNT_ID` / `R2_BUCKET_NAME` | Same fallback as above (plain config, pushed by CI). |
 | `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` | CI-only (GitHub secrets, not Worker secrets). Rotation invalidates in-flight deploys. |
 
 ✅ **VERIFIED** — the `AUTH_SECRET` → `TOTP_ENCRYPTION_KEY` coupling is read directly from
@@ -169,16 +171,30 @@ Suggested order if several are compromised: set `TOTP_ENCRYPTION_KEY` first, the
 
 ### 4.1 Lead retention
 
+## 4. Scheduled jobs (via `.github/workflows/cron.yml` — NOT Worker triggers)
+
+> The Worker exports no `scheduled()` handler, so there are no `[triggers]` in
+> `wrangler.toml`. All three jobs fire as HTTP calls from Actions with `CRON_SECRET`.
+> The TOML block below is history, kept to show intent (daily 03:17 UTC, off the :00
+> stampede):
+
 ```toml
-[triggers]
-crons = ["17 3 * * *"]   # 03:17 UTC daily — deliberately off the :00 stampede
+# REMOVED — see .github/workflows/cron.yml (retention daily 03:17 UTC;
+# publish + dispatch-drain every 15 min).
 ```
+
+### 4.1 Lead retention
 
 Route: `GET /api/cron/retention`. Window: `RETENTION_DAYS` (default 180, set in `[vars]`).
 
-It: anonymises leads older than the window (`name` → `Withheld`; `phone`/`email`/`clientIp`/
-`userAgent` → `''`; sets `anonymized_at`), and deletes expired Auth.js `sessions` rows (indexed
-on `expires`).
+It anonymises leads older than the window (Phase 3b Item 27 — the sweep is complete):
+lead PII (`name` → `Withheld`; `phone`/`email`/`note`/`internal_notes`/`fbp`/`fbc`/
+`event_id`/`client_ip`/`user_agent`/`license_portal_error` → `''`; `anonymized_at` set),
+plus `lead_activities.note`, `dispatch_queue.payload` + `last_error`, and
+`integration_logs` payload/response (reduced to a `{leadId}`/`{externalId}` linkage
+stub). Consent records (`consent_given/at/text`, `tracking_consent`) are KEPT as the
+legal proof of lawful contact. It also deletes expired Auth.js `sessions` rows
+(indexed on `expires`).
 
 It **never** anonymises a lead whose status is `Won` or `Qualified`. Those are live commercial
 records the sales team owns; extending enforcement to them is a legal decision, not an
@@ -208,7 +224,7 @@ inventory to build against, and the order to build it in.
 
 | # | Rule | Scope | Rationale |
 | --- | --- | --- | --- |
-| 1 | Rate limit `POST /api/leads` — 5 req / 10 min / IP | Zone | First layer, ahead of the Worker. `app/api/leads` also has a KV limiter and a per-isolate backstop, but this is the one that costs the attacker nothing. |
+| 1 | Rate limit `POST /api/leads` — 5 req / 10 min / IP | Zone | First layer, ahead of the Worker. `app/api/leads` also has a Postgres sliding-window limiter and a per-isolate backstop, but this is the one that costs the attacker nothing. |
 | 2 | Rate limit `POST /api/auth/*` — 10 req / 5 min / IP | Zone | Credential stuffing. Per-account lockout exists in `auth.ts`; this is the per-IP layer above it. |
 | 3 | Bot fight mode + JS detections | Zone | Cheap before Turnstile, which only guards the lead form. |
 | 4 | Managed rules, sensitivity medium | Zone | OWASP core. **Start at medium and watch the false-positive rate before going high** — a high-sensitivity CSP rule on a marketing site blocks real visitors, and that outage is more expensive than the attack it prevents. |
@@ -224,7 +240,9 @@ Already enforced **in code**, independent of the WAF:
 - `lib/securityHeaders.ts`: HSTS, `nosniff`, frame-deny, referrer policy, permissions policy
   and a CSP applied to every response that flows through the proxy. ✅ **VERIFIED** — this
   replaced a documented incident; see §9.
-- Turnstile on the lead form; KV rate limiting on auth and lead endpoints.
+- Turnstile on the lead form (hybrid fail policy — fail-closed on bad verdicts,
+  fail-open with loud alerting on config/network faults; sustained skips surface on
+  `GET /api/admin/turnstile`); Postgres rate limiting on auth and lead endpoints.
 
 ---
 
@@ -278,6 +296,21 @@ not survive PgBouncer in transaction mode.
 
 ## 7. R2 restore and PITR
 
+### 7.0 Presigned uploads: bucket CORS + orphan lifecycle (Phase 3b Item 17)
+
+Direct-to-R2 uploads (`POST /api/media/sign` → browser PUT) need bucket CORS allowing
+`PUT` from the site origin, or every browser PUT fails preflight:
+
+```json
+[{ "AllowedOrigins": ["https://ecomate.bd"], "AllowedMethods": ["PUT"], "AllowedHeaders": ["content-type"], "MaxAgeSeconds": 3600 }]
+```
+
+(Dashboard → R2 → bucket → Settings → CORS, or `wrangler r2 bucket cors`.)
+A PUT that is never confirmed (`POST /api/media/confirm`) leaves an object with no
+library row — invisible but billable. Set an Object Lifecycle rule expiring
+unconfirmed-looking prefixes, or sweep periodically; the confirm path deletes
+sniff-rejected objects itself, so only *abandoned* PUTs accumulate here.
+
 ### 7.1 R2 (media bucket `ecomate-media`)
 
 ⚠️ **UNVERIFIED** — no restore has been performed.
@@ -303,7 +336,7 @@ npx wrangler r2 bucket copy ecomate-media ecomate-media-restore
 npx wrangler r2 object copy ecomate-media-restore/<key> ecomate-media/<key>
 
 # 3. Rebind the custom domain if the bucket name changed, then verify:
-curl -sSI https://media.ecomate.app/<key>
+curl -sSI https://media.ecomate.bd/<key>
 ```
 
 Also in the dashboard: **Object Lifecycle** rules for incomplete multipart uploads. Without them
@@ -483,30 +516,40 @@ test; expect it to fail until §13.2 is done.
 
 ### 13.1 Binding map
 
-| Binding | Dev (top-level) | `[env.preview]` | `[env.production]` |
-| --- | --- | --- | --- |
-| Hyperdrive (`HYPERDRIVE`) | placeholder (local emulation only) | `PASTE_PREVIEW_HYPERDRIVE_ID` → CI-injected `ecomate-db-preview` id | `PASTE_PROD_HYPERDRIVE_ID` → CI-injected `ecomate-db-prod` id |
-| R2 (`R2_BUCKET`) | `ecomate-media` | `ecomate-media-preview` | `ecomate-media-prod` |
-| KV (`RATE_LIMIT_KV`) | — removed by decision — | — | — |
-| Site URL | `https://dev.ecomate.bd` | `https://preview.ecomate.app` (replace with the real hostname) | `https://dev.ecomate.bd` |
-| Crons | yes (top-level) | **none — deliberate** (§13.3) | yes (`[env.production.triggers]`) |
-| Workers Logs | — | — | `observability.enabled = true` |
+| Binding | Dev (top-level) | `[env.production]` |
+| --- | --- | --- |
+| Hyperdrive (`HYPERDRIVE`) | placeholder (local emulation only) | `PASTE_PROD_HYPERDRIVE_ID` → CI-injected `ecomate-db-prod` id |
+| R2 (`R2_BUCKET`) | `ecomate-media` | `ecomate-media-prod` |
+| R2 inc-cache (`NEXT_INC_CACHE_R2_BUCKET`) | `ecomate-inc-cache` | `ecomate-inc-cache-prod` |
+| DO tag cache (`NEXT_TAG_CACHE_DO_SHARDED`) | `DOShardedTagCache` + v1 migration | same (per-env binding) |
+| KV (`RATE_LIMIT_KV`) | — removed by decision (Postgres counters instead) — | — |
+| Site URL | `https://dev.ecomate.bd` | `https://ecomate.bd` |
+| Media domain | — | `media.ecomate.bd` (bound BY deploy.yml) |
+| Crons | none — all jobs fire via `.github/workflows/cron.yml` (HTTP + `CRON_SECRET`) | none (same) |
+| Workers Logs | — | `observability.enabled = true` |
 
-### 13.2 Creating the preview/prod resources (operator checklist)
+> Preview columns were removed 2026-10-08 (CR-3 decommission): no `preview.yml`,
+> no `[env.preview]`, no `PREVIEW_*` secrets. PRs validate via CI + local E2E.
+
+### 13.2 Creating the production resources (operator checklist)
 
 Run once per resource; each command prints the id to paste over the matching
 `PASTE_*` placeholder in `wrangler.toml`:
 
 ```bash
-# Hyperdrive + R2 are CI-managed (deploy.yml / preview.yml ensure steps): nothing
+# Hyperdrive + R2 are CI-managed (deploy.yml ensure steps): nothing
 # below needs to run by hand unless CI is unavailable. Manual equivalents:
 npx wrangler hyperdrive create ecomate-db-prod --connection-string="$DIRECT_URL"
-npx wrangler hyperdrive create ecomate-db-preview --connection-string="$PREVIEW_DIRECT_URL"
 npx wrangler r2 bucket create ecomate-media-prod
-npx wrangler r2 bucket create ecomate-media-preview
-npx wrangler r2 bucket domain ecomate-media-prod --custom-domain media.ecomate.app
-# No KV commands: KV was removed by decision (WAF + in-memory backstop instead).
+npx wrangler r2 bucket create ecomate-inc-cache-prod
+# Media custom domain (deploy attaches it when CLOUDFLARE_ZONE_ID is set; manual form):
+npx wrangler r2 bucket domain add ecomate-media-prod --domain media.ecomate.bd --zone-id "$CLOUDFLARE_ZONE_ID"
+# No KV commands: rate limiting is Postgres-backed by decision (Phase 3b Item 18).
 ```
+
+> Preview resource commands (`ecomate-db-preview`, `ecomate-media-preview`,
+> `PREVIEW_DIRECT_URL`) were removed 2026-10-08 — the preview environment was
+> decommissioned (CR-3), not fixed. Do not recreate them.
 
 Preview needs its OWN Supabase project/branch (`PREVIEW_REF`): sharing the
 prod database with a different Hyperdrive id is not isolation, it is a label.
@@ -514,32 +557,30 @@ prod database with a different Hyperdrive id is not isolation, it is a label.
 ### 13.3 Deploying per environment
 
 ```bash
-npm run deploy:preview   # build + deploy --env preview
 npm run deploy:prod      # build + deploy --env production
 ```
 
 The bare `npm run deploy` and any `wrangler deploy` without `--env` use the
 top-level **dev** bindings and must never be used for a real release. `deploy.yml`
-passes `--env` from its `environment` input for the same reason. Preview runs
-**no crons**: the retention sweep would anonymise fixture leads and the
-publish scheduler could publish preview drafts — traffic only, never timers.
+passes `--env production` for the same reason. Cron jobs never run as Worker
+triggers (the Worker exports no `scheduled()` handler) — they fire from
+`.github/workflows/cron.yml` (HTTP + `CRON_SECRET`).
 
-### 13.4 Per-environment secrets
+### 13.4 Worker secrets (pushed by deploy.yml — single source of truth = GitHub Secrets)
 
-Every secret exists twice (prod + preview), set independently — a preview
-`AUTH_SECRET` equal to prod's would let a preview session-cookie bug become a
-prod session forgery:
+CI pushes every value on each deploy (skip-if-unset, never wipe); nothing needs
+dashboard setup by hand:
 
-```bash
-npx wrangler secret put AUTH_SECRET --env production
-npx wrangler secret put AUTH_SECRET --env preview
-# repeat for: TOTP_ENCRYPTION_KEY, SETUP_TOKEN, CRON_SECRET, META_CAPI_TOKEN,
-# TURNSTILE_SECRET_KEY, LICENSE_PORTAL_API_KEY, RESEND_API_KEY
-```
+Secrets: `AUTH_SECRET`, `SETUP_TOKEN`, `TOTP_ENCRYPTION_KEY`, `META_CAPI_TOKEN`,
+`META_TEST_EVENT_CODE`, `TURNSTILE_SECRET_KEY`, `LICENSE_PORTAL_API_KEY`,
+`RESEND_API_KEY`, `CRON_SECRET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`.
+Plain config: `NOTIFY_FROM_EMAIL`, `NOTIFY_TO_EMAIL`, `LICENSE_PORTAL_API_BASE_URL`,
+`R2_ACCOUNT_ID`, `R2_BUCKET_NAME`. Manual equivalent (one value):
+`npx wrangler secret put CRON_SECRET --env production`.
 
 ### 13.4.1 Plain config values pushed by deploy.yml (Decision 7)
 
-Three non-secret values are pushed by the deploy workflow's "Push Worker secrets"
+Five non-secret values are pushed by the deploy workflow's "Push Worker secrets"
 step (`put_config` — same `wrangler secret put` mechanism, so the single source of
 truth stays GitHub Secrets) and documented here:
 
@@ -548,6 +589,8 @@ truth stays GitHub Secrets) and documented here:
 | `NOTIFY_FROM_EMAIL` | Resend sender for new-lead sales notifications (`lib/notifyResend.ts`) | unset = notifications stay in log-only mode (`isNotificationProviderConfigured()` false) |
 | `NOTIFY_TO_EMAIL` | Resend recipient (sales inbox) for new-lead notifications | unset = same log-only mode as above; both must be set with `RESEND_API_KEY` |
 | `LICENSE_PORTAL_API_BASE_URL` | Future license-portal base URL (`lib/licensePortal.ts`); e.g. `https://license.ecomate.bd` | unset = portal dispatches queue locally as `Pending` — never a failure |
+| `R2_ACCOUNT_ID` | R2 account id for presigned direct uploads (Phase 3b Item 17) | unset = sign endpoint 503s, admin uploader uses legacy route |
+| `R2_BUCKET_NAME` | R2 bucket name for presigned URLs (`ecomate-media-prod`) | unset = same fallback as above |
 
 Set them once as GitHub Secrets and redeploy; an unset value keeps whatever the
 Worker already has (the step never wipes). `.env.example` carries local/dev skeletons only.
@@ -660,7 +703,7 @@ Branches → Add rule for `main`, or the API below):
 ```bash
 OWNER=ecomate ORG…; REPO=EcoMate-Landing  # fill in
 gh api repos/$OWNER/$REPO/branches/main/protection -X PUT \
-  -F required_status_checks='{"strict":true,"contexts":["Lint & Build Validation","Migration drift guard","Preview deploy + smoke"]}' \
+  -F required_status_checks='{"strict":true,"contexts":["Lint & Build Validation","Migration drift guard"]}' \
   -F enforce_admins=true \
   -F required_pull_request_reviews='{"required_approving_review_count":1,"require_code_owner_reviews":true,"dismiss_stale_reviews":true}' \
   -F restrictions=null \
@@ -693,8 +736,9 @@ any that supports keyword matching); interval **60s**, timeout 10s, retries 2:
 
 | # | Name | Target | Healthy | Alert when |
 | --- | --- | --- | --- | --- |
-| 1 | `ecomate-prod-liveness` | `GET https://ecomate.app/api/health` | 200 + body contains `"status":"ok"` | 2 consecutive failures |
-| 2 | `ecomate-prod-readiness` | `GET https://ecomate.app/api/ready` | 200 | **any non-200** (503 = DB unreachable, §10) |
+| 1 | `ecomate-prod-liveness` | `GET https://ecomate.bd/api/health` | 200 + body contains `"status":"healthy"` | 2 consecutive failures |
+| 2 | `ecomate-prod-readiness` | `GET https://ecomate.bd/api/ready` | 200 | **any non-200** (503 = DB unreachable, §10) |
+| 3 | `ecomate-turnstile-skip` | `GET https://ecomate.bd/api/admin/turnstile` (authed check or log query) | `alert: false` | `alert: true` = trailing-7d skip share > 50% — bot protection silently off (Phase 3b Item 19) |
 
 Alert targets (fill in): on-call phone/SMS + `#ecomate-incidents` channel +
 incident-commander mailbox. Monitor 2 pages; monitor 1 notifies (liveness

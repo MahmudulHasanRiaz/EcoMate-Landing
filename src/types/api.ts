@@ -222,6 +222,10 @@ export interface MediaAsset {
   url: string;
   altText: string;
   category: string;
+  /** Server-verified at confirm time (Phase 3b Item 17); absent on legacy rows. */
+  mimeType?: string | null;
+  sizeBytes?: number | null;
+  createdAt?: string;
 }
 
 export interface IntegrationLog {

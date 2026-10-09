@@ -60,7 +60,8 @@ export const metadata: Metadata = {
   // share-card meta the prototype shipped.
   openGraph: {
     type: 'website',
-    url: SITE_URL,
+    // L-36: byte-identical with the canonical `/` (which resolves to SITE_URL + '/').
+    url: `${SITE_URL}/`,
     siteName: SITE_NAME,
     locale: 'en_US',
     alternateLocale: ['bn_BD'],
@@ -85,9 +86,17 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // H-15: `lang` is `en` here — the root layout is shared by both locales and reading
+  // the locale per request (headers) would force every route dynamic, killing the §8
+  // static strategy (Decision 4 outranks). `/bn` correctness comes from three
+  // static-safe layers: the `content-language` meta + per-locale OG locale emitted by
+  // `app/[locale]/layout.tsx` (SSR, per-path), and the client `document.lang` sync in
+  // `LocaleThemeProvider` (post-hydration). `suppressHydrationWarning` absorbs the
+  // resulting `lang` mismatch without console noise.
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={`scroll-smooth ${sans.variable} ${serif.variable} ${bangla.variable} ${mono.variable}`}
     >
       <body className="bg-[#F2F3F9] text-slate-900 antialiased selection:bg-indigo-600 selection:text-white dark:bg-[#07080E] dark:text-slate-100">

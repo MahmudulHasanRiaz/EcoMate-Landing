@@ -157,7 +157,7 @@ export function AdminUsersPanel({ role, currentUserId }: AdminUsersPanelProps) {
             required
             value={newEmail}
             onChange={(event) => setNewEmail(event.target.value)}
-            placeholder="operator@ecomate.app"
+            placeholder="operator@ecomate.bd"
             className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-indigo-400 dark:border-white/10 dark:bg-black/30"
           />
           <input

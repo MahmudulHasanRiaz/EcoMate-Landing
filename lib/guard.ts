@@ -68,7 +68,9 @@ export interface MediaUseResult {
 export async function assertMediaNotInUse(key: string): Promise<MediaUseResult> {
   if (key.trim() === '') return { ok: true };
   const db = getDb();
-  const pattern = `%${key}%`;
+  // L-11: `%`, `_` and `\` are LIKE metacharacters — a key containing them would
+  // false-positive (or false-negative) every lookup. Escape first, match literally.
+  const pattern = `%${key.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
   const referencing: string[] = [];
 
   const [blog] = await db

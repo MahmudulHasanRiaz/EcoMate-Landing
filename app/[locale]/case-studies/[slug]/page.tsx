@@ -10,10 +10,10 @@
  * columns, not markup, so there is nothing to sanitise and nothing for `BlogContent` to do.
  */
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-import { getCaseStudies, getCaseStudy } from '@/lib/content';
+import { getCaseStudies, getCaseStudy, getCaseStudySlugById } from '@/lib/content';
 import { formatDate } from '@/lib/format';
 import { LOCALES, isLocale } from '@/lib/locales';
 import { PRERENDER_PROBE_SLUG } from '@/lib/prerender-probe';
@@ -22,14 +22,23 @@ import {
   articleJsonLd,
   breadcrumbJsonLd,
   localeAlternates,
+  localeHomePath,
   localeUrl,
   ogImageUrl,
+  ogLocale,
   serializeJsonLd,
 } from '@/lib/seo';
 
 interface CaseStudyPageProps {
   params: Promise<{ locale: string; slug: string }>;
 }
+
+/**
+ * Phase 3a caching note: same measured trade as the blog page (see it) — stays
+ * prerendered, `instant = false` documents intent, missing slugs are `noindex` and
+ * cache under the short failure profile.
+ */
+export const instant = false;
 
 const CRUMBS = {
   en: { home: 'Home' },
@@ -74,7 +83,7 @@ export async function generateMetadata({ params }: CaseStudyPageProps): Promise<
       url: localeUrl(locale, path),
       title,
       description,
-      locale,
+      locale: ogLocale(locale),
       modifiedTime: study.lastModified,
       ...(image ? { images: [{ url: image }] } : {}),
     },
@@ -95,11 +104,19 @@ export default async function CaseStudyPage({ params }: CaseStudyPageProps) {
   if (slug === PRERENDER_PROBE_SLUG) notFound();
 
   const study = await getCaseStudy(slug);
+  // Post-name permalink (§1.5): numeric segments that match no slug are legacy ID URLs.
+  if (!study && /^\d+$/.test(slug)) {
+    const canonical = await getCaseStudySlugById(Number(slug));
+    // `as never`: `typedRoutes` cannot prove a computed dynamic route — the slug is
+    // dynamic, so literals are impossible. Built by `localeUrl`, internal by construction.
+    if (canonical) permanentRedirect(localeUrl(locale, `case-studies/${canonical}`) as never);
+  }
   if (!study) notFound();
 
   // Same literal-vs-computed-route tradeoff as the blog page: `typedRoutes` cannot prove a
   // computed dynamic path, so the home link is written out.
-  const homeHref = locale === 'bn' ? '/bn' : '/';
+  // L-41: one helper, not a re-typed ternary — flipping DEFAULT_LOCALE must not misroute.
+  const homeHref = localeHomePath(locale);
   const crumbs = CRUMBS[locale];
   const image = ogImageUrl(study.featuredImageUrl);
   const url = localeUrl(locale, `case-studies/${study.slug}`);

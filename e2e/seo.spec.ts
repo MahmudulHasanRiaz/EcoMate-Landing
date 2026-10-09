@@ -21,7 +21,7 @@ test.describe('seo', () => {
     expect(xml).not.toContain('why-ecommerce-businesses-lose-money-on-courier-returns');
     // Static entries: canonical English home, Bangla home, explicit /en alias.
     // Origin-agnostic: the sitemap correctly uses the configured SITE_URL, which is
-    // localhost in E2E and ecomate.app in production. Assert paths, not origin.
+    // localhost in E2E and ecomate.bd in production. Assert paths, not origin.
     expect(xml).toMatch(/<loc>https?:\/\/[^<]+\/<\/loc>/);
     expect(xml).toContain('/bn</loc>');
     expect(xml).toContain('/en</loc>');

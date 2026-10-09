@@ -30,9 +30,15 @@
  * satisfy a deletion window legal has not agreed to would destroy business records. If legal
  * extends retention enforcement to them, that is a change to `PROTECTED_LEAD_STATUSES`.
  */
-import { and, eq, inArray, isNull, lt, notInArray } from 'drizzle-orm';
+import { and, eq, inArray, isNull, like, lt, notInArray, or, sql } from 'drizzle-orm';
 import { getDb } from '@/db/client';
-import { leadsTable, sessionsTable } from '@/db/schema';
+import {
+  dispatchQueueTable,
+  integrationLogsTable,
+  leadActivitiesTable,
+  leadsTable,
+  sessionsTable,
+} from '@/db/schema';
 import { envString } from '@/lib/env';
 import { logServerError } from '@/lib/json';
 import { PROTECTED_LEAD_STATUSES } from '@/lib/leads';
@@ -121,7 +127,9 @@ export async function GET(req: Request): Promise<Response> {
     const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
     /**
-     * Anonymise leads older than the window, in chunks (M-17).
+     * Anonymise leads older than the window, in chunks (M-17) — Phase 3b Item 27
+     * completes the sweep (M-9): the lead row AND every related row that quotes its
+     * PII, per chunk, in chunk-sized statements.
      *
      * `anonymized_at IS NULL` makes the job idempotent: a second run cannot re-stamp a row
      * that is already cleared, which also means `updated_at` keeps its real value rather than
@@ -129,6 +137,21 @@ export async function GET(req: Request): Promise<Response> {
      *
      * `status NOT IN ('Won','Qualified')` is the sales-ownership guard, applied in SQL so the
      * rule holds even if this function's logic is later refactored.
+     *
+     * What is blanked, and what is deliberately kept:
+     * - `leads`: name/phone/email/note/internal_notes/fbp/fbc/event_id/client_ip/
+     *   user_agent/license_portal_error cleared; `assigned_to` text reset (may hold a
+     *   name). KEPT: consent_given/at/text + tracking_consent (the legal proof of
+     *   lawful contact), statuses, utm/source/volume (non-PII analytics), anonymized_at.
+     * - `lead_activities`: `note` cleared (timeline rows often quote the lead's words);
+     *   lead/actor/status links kept so the timeline shape survives.
+     * - `dispatch_queue`: `payload` (full lead JSON) → `{}`, `last_error` cleared
+     *   (may echo PII); kind/attempts/status kept for audit.
+     * - `integration_logs`: LicensePortal rows (`externalId: ECOMATE-WEB-<id>`, full PII
+     *   payload) and MetaCAPI/Notify rows (`leadId`, event ids, `leadName`) reduce to a
+     *   linkage stub (`{externalId}` / `{leadId}`) + empty response — the audit join
+     *   survives, the PII does not. Matched by id extraction, never by age: a recent
+     *   retry log for an old lead must still be swept.
      *
      * Chunking: Postgres has no `UPDATE ... LIMIT`, so each chunk selects up to
      * `RETENTION_BATCH_LIMIT` due ids and updates exactly those rows, looping until a
@@ -138,6 +161,9 @@ export async function GET(req: Request): Promise<Response> {
      */
     const RETENTION_BATCH_LIMIT = 500;
     let anonymizedTotal = 0;
+    let sweptActivities = 0;
+    let sweptQueue = 0;
+    let sweptLogs = 0;
     for (;;) {
       const due = await getDb()
         .select({ id: leadsTable.id })
@@ -151,6 +177,7 @@ export async function GET(req: Request): Promise<Response> {
         )
         .limit(RETENTION_BATCH_LIMIT);
       if (due.length === 0) break;
+      const ids = due.map((row) => row.id);
       await getDb()
         .update(leadsTable)
         .set({
@@ -158,12 +185,67 @@ export async function GET(req: Request): Promise<Response> {
           // `leads.phone` is NOT NULL, so "cleared" is `''`, not NULL.
           phone: '',
           email: '',
+          note: '',
+          internalNotes: '',
+          assignedTo: 'Unassigned',
+          licensePortalError: '',
+          fbp: '',
+          fbc: '',
+          eventId: '',
           clientIp: '',
           userAgent: '',
           anonymizedAt: new Date(),
           updatedAt: new Date(),
         })
-        .where(inArray(leadsTable.id, due.map((row) => row.id)));
+        .where(inArray(leadsTable.id, ids));
+
+      sweptActivities += (
+        await getDb()
+          .update(leadActivitiesTable)
+          .set({ note: '' })
+          .where(inArray(leadActivitiesTable.leadId, ids))
+          .returning({ id: leadActivitiesTable.id })
+      ).length;
+
+      sweptQueue += (
+        await getDb()
+          .update(dispatchQueueTable)
+          .set({ payload: {}, lastError: '' })
+          .where(inArray(dispatchQueueTable.leadId, ids))
+          .returning({ id: dispatchQueueTable.id })
+      ).length;
+
+      // integration_logs has no lead FK: LicensePortal rows link via
+      // `payload.externalId = 'ECOMATE-WEB-<id>'`, MetaCAPI/Notify rows via
+      // `payload.leadId`. Both reduce to a linkage stub (audit join survives).
+      const portalSwept = await getDb()
+        .update(integrationLogsTable)
+        .set({
+          payload: sql`jsonb_build_object('externalId', ${integrationLogsTable.payload}->>'externalId')`,
+          response: {},
+        })
+        .where(
+          and(
+            eq(integrationLogsTable.serviceName, 'LicensePortal'),
+            sql`substring(${integrationLogsTable.payload}->>'externalId' from 'ECOMATE-WEB-([0-9]+)')::int = ANY(${ids})`,
+          ),
+        )
+        .returning({ id: integrationLogsTable.id });
+      const metaSwept = await getDb()
+        .update(integrationLogsTable)
+        .set({
+          payload: sql`jsonb_build_object('leadId', (${integrationLogsTable.payload}->>'leadId')::int)`,
+          response: {},
+        })
+        .where(
+          and(
+            or(eq(integrationLogsTable.serviceName, 'MetaCAPI'), like(integrationLogsTable.serviceName, 'Notify:%')),
+            sql`(${integrationLogsTable.payload}->>'leadId')::int = ANY(${ids})`,
+          ),
+        )
+        .returning({ id: integrationLogsTable.id });
+      sweptLogs += portalSwept.length + metaSwept.length;
+
       anonymizedTotal += due.length;
       if (due.length < RETENTION_BATCH_LIMIT) break;
     }
@@ -190,6 +272,9 @@ export async function GET(req: Request): Promise<Response> {
         retentionDays: days,
         cutoff: cutoff.toISOString(),
         anonymizedLeads: anonymizedTotal,
+        sweptActivities,
+        sweptQueueRows: sweptQueue,
+        sweptLogRows: sweptLogs,
         deletedSessions: deletedSessions.length,
         protectedStatuses: PROTECTED_LEAD_STATUSES,
       }),
@@ -201,6 +286,9 @@ export async function GET(req: Request): Promise<Response> {
         requestId: reqId,
         retentionDays: days,
         anonymizedLeads: anonymizedTotal,
+        sweptActivities,
+        sweptQueueRows: sweptQueue,
+        sweptLogRows: sweptLogs,
         deletedSessions: deletedSessions.length,
       },
       { status: 200, headers: { 'Cache-Control': 'no-store' } },

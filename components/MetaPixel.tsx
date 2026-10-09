@@ -17,8 +17,9 @@
  * `next/script` with an explicit `id` is required under the App Router: an inline script
  * without an id cannot be deduplicated across renders or navigations.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Script from 'next/script';
+import { usePathname } from 'next/navigation';
 import { getConsentChoice, type ConsentChoice } from '@/lib/consent';
 
 declare global {
@@ -29,7 +30,12 @@ declare global {
 
 export function MetaPixel() {
   const id = process.env.NEXT_PUBLIC_META_PIXEL_ID;
+  const pathname = usePathname();
   const [consented, setConsented] = useState(false);
+  // M-28: the inline snippet fires PageView on first mount; client-side navigations
+  // re-fire it here. The ref skips the mount (already fired) so the landing view is
+  // not double-counted.
+  const mountedPath = useRef<string | null>(null);
 
   useEffect(() => {
     setConsented(getConsentChoice() === 'accepted');
@@ -40,6 +46,21 @@ export function MetaPixel() {
     window.addEventListener('ecomate-consent-changed', onChange);
     return () => window.removeEventListener('ecomate-consent-changed', onChange);
   }, []);
+
+  useEffect(() => {
+    if (!id || !consented || pathname === null) return;
+    if (mountedPath.current === null) {
+      mountedPath.current = pathname;
+      return;
+    }
+    if (mountedPath.current === pathname) return;
+    mountedPath.current = pathname;
+    try {
+      if (getConsentChoice() === 'accepted') window.fbq?.('track', 'PageView');
+    } catch {
+      // An ad-blocked pixel must never break navigation.
+    }
+  }, [id, consented, pathname]);
 
   if (!id || !consented) return null;
   return (

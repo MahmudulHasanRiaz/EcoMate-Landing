@@ -43,7 +43,7 @@ Robots policy and crawl directives: https://ecomate.bd/robots.txt
 
 ## Contact
 
-- Sales: hello@ecomate.app
+- Sales: hello@ecomate.bd
 - Phone: +880 1894-828290
 - Office: Tejgaon I/A, Dhaka 1208, Bangladesh
 

@@ -14,11 +14,12 @@ import { localeHomePath, localeRoutePrefix, SITE_URL } from '@/lib/seo';
  * function degrades again on top of that. An unseeded or unreachable database still yields a
  * valid sitemap containing the static pages.
  *
- * ## Last-modified
- *
- * `lastmod` is only emitted for rows that carry a real timestamp (`published_at`/`updated_at`
- * for posts, `created_at` for case studies). A sitemap that claims a `lastmod` it invented is
- * worse than one that omits the field: crawlers trust it to decide what to re-fetch.
+  * ## Last-modified
+  *
+  * `lastmod` is only emitted for rows that carry a real timestamp — the mapped
+  * `lastModified` field each reader derives (`published_at`/`updated_at` for posts,
+  * `created_at` for case studies). A sitemap that claims a `lastmod` it invented is
+  * worse than one that omits the field: crawlers trust it to decide what to re-fetch.
  *
  * ## Blog slugs in both locales
  *

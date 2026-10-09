@@ -8,12 +8,19 @@ const exposeTestingApi = process.env.EXPOSE_TESTING_API === '1';
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  // Cache Components + Partial Prefetching are OFF (2026-10-07): with no incremental-cache
-  // backend configured, opennext falls back to a "Dummy" cache whose `.set()` THROWS
-  // ("Dummy cache does not cache anything") inside page renders on Workers — every page
-  // 500'd or hung while APIs and static files worked. Dynamic render per request until
-  // the cache backend exists; re-enable per docs/CACHE.md (needs R2/DO tag-cache bindings
-  // proven on preview first, then flip this flag and restore the directives).
+  // Phase 3a (Item 16 / §8.6): Cache Components + Partial Prefetching are ON.
+  // Backend: R2 incremental cache (`NEXT_INC_CACHE_R2_BUCKET`) + DO sharded tag
+  // cache (`NEXT_TAG_CACHE_DO_SHARDED`) — see open-next.config.ts + wrangler.toml.
+  // Public content prerenders static with tag-based on-demand invalidation
+  // (docs/CACHE.md); admin/API stay dynamic. Build requires DIRECT_URL (CI passes
+  // it) because prerendered `'use cache'` reads have no Hyperdrive binding.
+  cacheComponents: true,
+  // Task 24: Partial Prefetching (Next >= 16.3). Default links warm the shared
+  // App Shell (provider + `[locale]` layout); `prefetch={true}` additionally
+  // resolves cached URL-specific content. No per-route `prefetch = 'partial'`
+  // exports remain — the audit found zero `prefetch={true}` links, so there
+  // was nothing to adopt incrementally and the flag lands directly.
+  partialPrefetching: true,
   experimental: {
     exposeTestingApiInProductionBuild: exposeTestingApi,
   },
@@ -25,9 +32,9 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'ecomate.bd' },
       { protocol: 'https', hostname: 'dev.ecomate.bd' },
       // Reserved for a future dedicated R2 custom domain (`R2_PUBLIC_ORIGIN`).
-      // `media.ecomate.app` does not resolve today; kept so already-stored absolute
-      // URLs do not throw at render time if they ever do.
-      { protocol: 'https', hostname: 'media.ecomate.app' },
+      // `media.ecomate.bd` after `wrangler r2 bucket domain` + DNS; already-stored
+      // absolute URLs keep rendering through the same-origin proxy meanwhile.
+      { protocol: 'https', hostname: 'media.ecomate.bd' },
     ],
   },
   /**

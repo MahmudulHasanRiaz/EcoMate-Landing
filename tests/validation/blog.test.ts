@@ -9,7 +9,7 @@ const valid = {
   author: 'EcoMate Engineering Team',
   category: 'Operations & Fulfillment',
   tags: ['courier', 'cod'],
-  featuredImageUrl: 'https://media.ecomate.app/media/2026/01/cod.png',
+  featuredImageUrl: 'https://media.ecomate.bd/media/2026/01/cod.png',
   readTime: '5 min read',
   status: 'published',
   seoTitle: 'COD reconciliation',
@@ -40,9 +40,10 @@ describe('blogPostCreate', () => {
     expect(blogPostCreate.safeParse({ ...valid, publishedAt: 'tomorrow' }).success).toBe(false);
   });
 
-  it('requires title, slug and content', () => {
+  it('requires title and content; slug is optional (route derives it from the title)', () => {
     expect(blogPostCreate.safeParse({ title: 't', slug: 'ok-slug' }).success).toBe(false);
-    expect(blogPostCreate.safeParse({ title: 't', content: 'c' }).success).toBe(false);
+    // Post-name permalink (§1.5): no slug → the route auto-generates one.
+    expect(blogPostCreate.safeParse({ title: 't', content: 'c' }).success).toBe(true);
     expect(blogPostCreate.safeParse({ slug: 'ok-slug', content: 'c' }).success).toBe(false);
   });
 });

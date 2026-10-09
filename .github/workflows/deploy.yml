@@ -360,7 +360,9 @@ jobs:
       # exists at a time; its id/value derive the S3 pair pushed below. Skip-fast when
       # the Worker already holds them; warn-and-continue on any provisioning failure
       # (the legacy Worker-mediated upload keeps working). Re-running is always safe.
-      # Values never printed: masked before use, pushed via stdin, shell vars unset after.
+      # The same script then ensures bucket CORS (SITE_ORIGIN, comma-separated) for
+      # browser PUTs — also idempotent, also warn-and-continue. Values never printed:
+      # masked before use, pushed via stdin, shell vars unset after.
       - name: Auto-provision R2 presign credentials (idempotent)
         run: |
           ENV_NAME="${{ github.event.inputs.environment || 'production' }}"
@@ -370,7 +372,7 @@ jobs:
             exit 0
           fi
           set +e
-          OUT="$(TOKEN_NAME="ecomate-media-presign" MEDIA_BUCKET="$MEDIA_BUCKET" python3 scripts/provision-r2-presign.py)"
+          OUT="$(TOKEN_NAME="ecomate-media-presign" MEDIA_BUCKET="$MEDIA_BUCKET" SITE_ORIGIN="$SITE_ORIGIN" python3 scripts/provision-r2-presign.py)"
           CODE=$?
           set -e
           if [ "$CODE" -ne 0 ]; then
@@ -394,6 +396,9 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # Browser origins allowed to PUT straight to R2 (comma-separated for more).
+          # The site serves on the bare domain only — no www host exists to include.
+          SITE_ORIGIN: "https://ecomate.bd"
       # Worker secrets, pushed from GitHub Secrets on every deploy (idempotent —
       # `secret put` overwrites). This is why no dashboard secret setup is needed:
       # add each value ONCE as a GitHub Secret and CI carries it to the Worker.

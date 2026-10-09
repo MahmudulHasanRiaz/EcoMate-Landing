@@ -26,3 +26,7 @@ blob-report/
 .dev.vars
 .dev.vars.*
 .wrangler/
+
+# Python bytecode (deploy helper scripts)
+__pycache__/
+*.pyc

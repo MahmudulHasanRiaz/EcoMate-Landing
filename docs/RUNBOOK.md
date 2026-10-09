@@ -295,16 +295,25 @@ not survive PgBouncer in transaction mode.
 
 ## 7. R2 restore and PITR
 
-### 7.0 Presigned uploads: bucket CORS + orphan lifecycle (Phase 3b Item 17)
+### 7.0 Presigned uploads: bucket CORS (automatic) + orphan lifecycle
 
 Direct-to-R2 uploads (`POST /api/media/sign` → browser PUT) need bucket CORS allowing
-`PUT` from the site origin, or every browser PUT fails preflight:
+`PUT` from the site origin, or every browser PUT fails preflight. The deploy owns
+this (DEPLOYMENT.md §4c) — no dashboard step: each run `GET`s `/?cors` and
+merge-appends the rule when missing. The applied rule (from `SITE_ORIGIN`):
 
-```json
-[{ "AllowedOrigins": ["https://ecomate.bd"], "AllowedMethods": ["PUT"], "AllowedHeaders": ["content-type"], "MaxAgeSeconds": 3600 }]
+```xml
+<CORSConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+  <CORSRule>
+    <AllowedOrigin>https://ecomate.bd</AllowedOrigin>
+    <AllowedMethod>PUT</AllowedMethod>
+    <AllowedHeader>content-type</AllowedHeader>
+    <MaxAgeSeconds>86400</MaxAgeSeconds>
+  </CORSRule>
+</CORSConfiguration>
 ```
 
-(Dashboard → R2 → bucket → Settings → CORS, or `wrangler r2 bucket cors`.)
+Verify with a signed `GET https://<ACCOUNT>.r2.cloudflarestorage.com/ecomate-media-prod?cors`.
 A PUT that is never confirmed (`POST /api/media/confirm`) leaves an object with no
 library row — invisible but billable. Set an Object Lifecycle rule expiring
 unconfirmed-looking prefixes, or sweep periodically; the confirm path deletes

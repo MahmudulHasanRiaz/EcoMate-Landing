@@ -18,10 +18,10 @@ const SIGN_LIMIT_WINDOW_SEC = 3600;
  * header — anything else 403s) → browser calls `POST /api/media/confirm`, which
  * verifies the object and mints the library row. No confirm = no row = invisible.
  *
- * Setup is automatic (DEPLOYMENT.md §4b): the deploy workflow mints the R2 API token
- * itself and stores the four `R2_*` values on the Worker (plus bucket CORS allowing
- * PUT from the site origin, a one-time dashboard step). Without them this answers
- * 503 — the legacy `upload` route keeps working meanwhile.
+ * Setup is automatic (DEPLOYMENT.md §4b–§4c): the deploy workflow mints the R2 API
+ * token itself, stores the four `R2_*` values on the Worker, and ensures the bucket
+ * CORS rule for browser PUTs. Without them this answers 503 — the legacy `upload`
+ * route keeps working meanwhile.
  */
 export async function POST(req: Request) {
   const reqId = requestId(req);

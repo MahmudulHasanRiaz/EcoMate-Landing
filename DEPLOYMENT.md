@@ -92,8 +92,7 @@ Repo → Settings → Secrets and variables → Actions:
    deploy ensures both, creation is idempotent).
 3. DNS: CNAME `media` → R2 (dashboard), then the deploy attaches
    `media.ecomate.bd` via `r2 bucket domain add` (needs `CLOUDFLARE_ZONE_ID`).
-4. R2 S3 API token (Object Read & Write on the media bucket) → the four `R2_*`
-   secrets above; bucket CORS allowing `PUT` from `https://ecomate.bd`.
+4. Nothing for R2 uploads: credentials AND bucket CORS are both automatic (§4b).
 5. `npx wrangler secret put` for each secret above (or set GitHub Secrets and deploy —
    CI pushes them; skip-if-unset never wipes).
 6. Deploy via Actions; watch the `/api/ready` poll go green.
@@ -125,6 +124,24 @@ provisions on the next deploy. Rotation = delete the Worker secret
 (`wrangler secret delete R2_ACCESS_KEY_ID --env production`) and redeploy; the next
 run mints a fresh token (the old API token should then be deleted in the dashboard,
 as its secret no longer exists anywhere).
+
+### 4c. Bucket CORS is automatic too (same step, every deploy)
+
+Browser PUTs go cross-origin to `<account>.r2.cloudflarestorage.com`, so the media
+bucket needs a CORS rule — also owned by the pipeline, no dashboard step:
+
+- Rule applied: `AllowedOrigin https://ecomate.bd` (from `SITE_ORIGIN` in deploy.yml,
+  comma-separated for more), `AllowedMethod PUT`, `AllowedHeader content-type`,
+  `MaxAgeSeconds 86400`.
+- Each deploy `GET`s `/?cors` with SigV4 headers derived from the DEPLOY token
+  (the narrow media token is object-scoped and would 403 bucket calls). Already
+  covered → log and no-op. Otherwise the desired rule is merge-appended onto any
+  existing operator rules (never a blind replace) and `PUT`.
+- Any failure warns and continues — deploy never fails over CORS, legacy upload is
+  unaffected. The narrow media token stays presign-only by design.
+- Verify by hand: sign any XML `GET https://<ACCOUNT>.r2.cloudflarestorage.com/
+  ecomate-media-prod?cors` (or read the deploy log line "Bucket CORS already
+  configured" / "Bucket CORS configured for …").
 
 ## 5. Rollback
 

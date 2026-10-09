@@ -1,12 +1,18 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
+import postgres from 'postgres';
 import { getDb } from '@/db/client';
 
 vi.mock('@opennextjs/cloudflare', () => ({
   getCloudflareContext: vi.fn(),
 }));
 
+vi.mock('postgres', () => ({
+  default: vi.fn(),
+}));
+
 const ctx = () => vi.mocked(getCloudflareContext);
+const pg = () => vi.mocked(postgres);
 
 // Lazy client: parsing never dials, so an unreachable URL is safe — no socket opens
 // until the first query, and these tests never query.
@@ -32,32 +38,47 @@ function mockNoContext(): void {
 
 afterEach(() => {
   ctx().mockReset();
+  pg().mockReset();
   delete process.env.DIRECT_URL;
   delete process.env.DATABASE_URL;
 });
 
+// Default: a fake pool that never dials. Individual tests override `end` when they
+// assert on it. (The real postgres() client is lazy — parsing never connects — but a
+// fake keeps these unit tests hermetic by construction.)
+// drizzle() touches client.options.parsers/serializers at construction — the fake
+// provides them alongside end.
+function fakePool(end: (...args: never[]) => Promise<undefined>): ReturnType<typeof postgres> {
+  return { end, options: { parsers: {}, serializers: {} } } as unknown as ReturnType<typeof postgres>;
+}
+
+beforeEach(() => {
+  pg().mockReturnValue(fakePool(vi.fn().mockResolvedValue(undefined)));
+});
+
 describe('db/client per-request isolation (2026-10-09 P0)', () => {
   it('returns a FRESH client per getDb() call inside a request (no shared singleton)', () => {
-    const seen: Promise<unknown>[] = [];
-    mockRequestContext((p) => {
-      seen.push(p);
-    });
+    mockRequestContext(() => undefined);
     const first = getDb();
     const second = getDb();
     expect(second).not.toBe(first);
-    // One cleanup registration per client, so the isolate closes each pool.
-    expect(seen).toHaveLength(2);
   });
 
   it('N concurrent request-path calls resolve independently (no shared pool)', () => {
-    let registrations = 0;
-    mockRequestContext(() => {
-      registrations += 1;
-    });
+    mockRequestContext(() => undefined);
     const clients = Array.from({ length: 10 }, () => getDb());
     const distinct = new Set(clients);
     expect(distinct.size).toBe(10);
-    expect(registrations).toBe(10);
+  });
+
+  it('does NOT end the pool at creation — eager end() rejects all later queries with CONNECTION_ENDED (P0 2026-10-10)', () => {
+    const end = vi.fn().mockResolvedValue(undefined);
+    pg().mockReturnValue(fakePool(end));
+    mockRequestContext(() => undefined);
+    getDb();
+    // Synchronous assertion, no timers/flush: the pool must be usable the moment
+    // getDb() returns. end() may only ever run against a pool being discarded.
+    expect(end).not.toHaveBeenCalled();
   });
 
   it('keeps the module singleton on the build path (no request context)', () => {

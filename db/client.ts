@@ -86,8 +86,8 @@ function createClient(url: string, max: number): ReturnType<typeof postgres> {
  * during an `/admin/cms` burst). The hard invariant: **no socket-owning object may be
  * shared across requests in the isolate.** Hyperdrive pools server-side, so per-request
  * clients are cheap; correctness first. `max: 3` (each client serves one call site, not
- * the whole isolate). Cleanup is registered on the request's execution context so the
- * isolate closes the pool instead of leaking it.
+ * the whole isolate). Idle pools are reaped by `idle_timeout`/`max_lifetime`, never by
+ * an explicit `end()` — see the request path below.
  *
  * Build path (no request): the module singleton is reused and only rebuilt when the
  * resolved URL changes (preview vs production environment swap).
@@ -95,13 +95,11 @@ function createClient(url: string, max: number): ReturnType<typeof postgres> {
 export function getDb(): Database {
   const { url, inRequest } = resolveConnection();
   if (inRequest) {
+    // Eager end() is FORBIDDEN here: postgres.js sets the pool's internal `ending` flag
+    // the moment end() is invoked, so every later query rejects with CONNECTION_ENDED and
+    // the whole Worker loses its database (observed: all DB routes down, public pages on
+    // static fallback). Reaping is handled by idle_timeout:20 + max_lifetime:60 above.
     const fresh = createClient(url, 3);
-    try {
-      getCloudflareContext().ctx.waitUntil(fresh.end({ timeout: 5 }).catch(() => undefined));
-    } catch {
-      // Cleanup registration must never break the request. Worst case the pool is
-      // reaped by idle_timeout/max_lifetime instead of at response end.
-    }
     return drizzle(fresh, { schema });
   }
   if (!cached || cachedUrl !== url) {

@@ -17,6 +17,6 @@ export default function robots(): MetadataRoute.Robots {
       },
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,
-    host: SITE_URL,
+    // L-37: no `host` directive — only Yandex supports it, and Next warns on it.
   };
 }

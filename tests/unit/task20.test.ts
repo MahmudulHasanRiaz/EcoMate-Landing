@@ -28,7 +28,7 @@ describe('legal fallback (Task 20 §6)', () => {
     const bodies = doc.sections.map((s) => s.body).join(' ');
     expect(bodies).toContain('Meta Pixel');
     expect(bodies).toContain('180 days');
-    expect(bodies).toContain('hello@ecomate.app');
+    expect(bodies).toContain('hello@ecomate.bd');
   });
 
   it('picks the DB row when present', () => {

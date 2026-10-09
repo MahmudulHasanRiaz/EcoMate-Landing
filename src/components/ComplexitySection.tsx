@@ -145,6 +145,7 @@ export const ComplexitySection: React.FC = () => {
                   <button
                     key={problem.id}
                     onClick={() => setSelectedProblem(problem)}
+                    aria-pressed={isSelected}
                     className={`w-full text-left p-3.5 sm:p-4 rounded-xl border transition-all flex items-start justify-between gap-3 cursor-pointer ${
                       isSelected
                         ? 'border-indigo-500/80 bg-indigo-50/90 dark:bg-indigo-950/30 shadow-xs ring-1 ring-indigo-500/20'

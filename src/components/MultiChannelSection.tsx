@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLanding } from '@/components/shell/useLanding';
-import { Globe, Store, Clock, CheckCircle2, Shuffle, Layers } from 'lucide-react';
+import { Globe, Store, Clock, CheckCircle2 } from 'lucide-react';
 
 export const MultiChannelSection: React.FC = () => {
   const { content } = useLanding();

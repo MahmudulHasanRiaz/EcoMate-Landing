@@ -6,10 +6,6 @@ import {
   CheckCircle2,
   Barcode,
   Truck,
-  ShieldCheck,
-  Receipt,
-  RotateCcw,
-  Sparkles,
   ArrowRight,
 } from 'lucide-react';
 

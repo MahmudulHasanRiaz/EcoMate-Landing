@@ -93,6 +93,7 @@ export const EcosystemSection: React.FC = () => {
                 <button
                   key={node.id}
                   onClick={() => setActiveNodeId(node.id)}
+                  aria-pressed={isActive}
                   className={`p-3 sm:p-3.5 rounded-xl border text-left transition-all relative cursor-pointer ${
                     isActive
                       ? 'border-indigo-500 bg-indigo-50/90 dark:bg-indigo-950/40 shadow-xs ring-1 ring-indigo-500/20'

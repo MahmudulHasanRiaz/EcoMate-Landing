@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { EcoMateLogo } from './EcoMateLogo';
 import type { NavItem } from '../types/landing';
 import { useLanding } from '@/components/shell/useLanding';
@@ -15,6 +15,8 @@ export const Header: React.FC = () => {
   } = useLanding();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement | null>(null);
+  const mobilePanelRef = useRef<HTMLDivElement | null>(null);
 
   // M-45: like the footer — a present-but-empty DB menu must not blank navigation.
   const nav: readonly NavItem[] = navItems !== null && navItems.length > 0 ? navItems : content.header.nav;
@@ -46,6 +48,19 @@ export const Header: React.FC = () => {
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
+  }, [mobileMenuOpen]);
+
+  // L-48: focus moves into the panel on open, returns to the toggle on close, and
+  // the background stops scrolling while the menu is up.
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    mobilePanelRef.current?.querySelector<HTMLAnchorElement>('a')?.focus();
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      menuButtonRef.current?.focus();
+    };
   }, [mobileMenuOpen]);
 
   // Intensify the glass once the hero scrolls away. No size change,
@@ -112,8 +127,8 @@ export const Header: React.FC = () => {
             <button
               onClick={onToggleTheme}
               className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-slate-200 bg-white/70 text-slate-600 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:outline-none dark:border-white/10 dark:bg-white/[0.06] dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
-              title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
-              aria-label="Toggle theme"
+              title={locale === 'en' ? (theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode') : (theme === 'light' ? 'ডার্ক মোডে যান' : 'লাইট মোডে যান')}
+              aria-label={locale === 'en' ? 'Toggle theme' : 'থিম বদলান'}
             >
               {theme === 'light' ? (
                 <Moon className="h-4 w-4" />
@@ -127,7 +142,7 @@ export const Header: React.FC = () => {
               onClick={onToggleLocale}
               className="flex h-9 cursor-pointer items-center gap-1 rounded-full border border-slate-200 bg-white/70 px-2.5 text-[11px] font-semibold tracking-wider text-slate-700 uppercase transition-colors duration-200 hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:outline-none dark:border-white/10 dark:bg-white/[0.06] dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
               title={locale === 'en' ? 'Switch to Bangla' : 'Switch to English'}
-              aria-label="Toggle language"
+              aria-label={locale === 'en' ? 'Toggle language' : 'ভাষা বদলান'}
             >
               <Globe className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
               <span>{locale === 'en' ? 'বাং' : 'EN'}</span>
@@ -155,9 +170,10 @@ export const Header: React.FC = () => {
 
             {/* Mobile menu trigger */}
             <button
+              ref={menuButtonRef}
               onClick={() => setMobileMenuOpen((v) => !v)}
               className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-slate-700 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-950 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:outline-none xl:hidden dark:text-slate-200 dark:hover:bg-white/10 dark:hover:text-white"
-              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+              aria-label={locale === 'en' ? (mobileMenuOpen ? 'Close menu' : 'Open menu') : (mobileMenuOpen ? 'মেনু বন্ধ করুন' : 'মেনু খুলুন')}
               aria-expanded={mobileMenuOpen}
               aria-controls="mobile-nav-panel"
             >
@@ -171,6 +187,7 @@ export const Header: React.FC = () => {
         {mobileMenuOpen && (
           <div
             id="mobile-nav-panel"
+            ref={mobilePanelRef}
             className="absolute inset-x-0 top-[calc(100%+8px)] overflow-hidden rounded-2xl border border-[#E0E4F2] bg-white/90 p-2 shadow-xl shadow-indigo-200/40 backdrop-blur-xl xl:hidden dark:border-white/10 dark:bg-[#0B0D18]/95 dark:shadow-black/60"
           >
             <nav aria-label="Mobile" className="flex flex-col">

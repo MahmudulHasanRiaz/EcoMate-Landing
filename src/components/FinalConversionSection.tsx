@@ -3,14 +3,11 @@ import { useLanding } from '@/components/shell/useLanding';
 import { trackBrowserLead } from '../../components/MetaPixel';
 import { Turnstile, type TurnstileHandle } from '../../components/Turnstile';
 import {
-  MessageSquare,
   PhoneCall,
   CheckCircle2,
   ArrowRight,
   ShieldCheck,
-  Send,
   Loader2,
-  Clock,
   Sparkles,
 } from 'lucide-react';
 
@@ -259,7 +256,7 @@ export const FinalConversionSection: React.FC = () => {
           {/* Right Column: High-Converting Streamlined Demo Booking Form (col-span-7) */}
           <div className="lg:col-span-7 rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1C] p-5 sm:p-10 shadow-md dark:shadow-2xl relative">
             {isSubmitted ? (
-              <div className="py-6 sm:py-8 text-center space-y-3 sm:space-y-4 animate-in fade-in duration-300">
+              <div className="py-6 sm:py-8 text-center space-y-3 sm:space-y-4">
                 <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 mx-auto flex items-center justify-center shadow-md shadow-emerald-200">
                   <CheckCircle2 className="h-7 w-7 sm:h-8 sm:w-8" />
                 </div>

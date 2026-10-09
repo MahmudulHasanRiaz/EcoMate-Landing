@@ -1,118 +1,105 @@
-# EcoMate Platform — Cloudflare & CI/CD Deployment Architecture
+# EcoMate — Deployment (Cloudflare Workers via OpenNext)
 
-This document explains the production deployment governance configured for EcoMate.
+> Last reviewed: 2026-10-08 (Phase 3b Item 26 — rewritten to match reality).
+> Companion: [`docs/RUNBOOK.md`](./docs/RUNBOOK.md) (operations), [`docs/CACHE.md`](./docs/CACHE.md) (caching).
 
----
+Deploy target: a **Cloudflare Worker** (`ecomate-landing`, production environment),
+built from Next.js 16 (App Router) by `@opennextjs/cloudflare`. There is no Pages
+project, no `dist/` SPA bundle, no preview environment (decommissioned, CR-3).
 
-## ⚠️ Read first: build hazard
+## 0. Read first: build hazard
 
-**Do not set `package.json`'s `build` script to `opennextjs-cloudflare build`.** OpenNext
-resolves the Next.js build command as `npm run build`, so that value makes the build recurse
-without bound, spawn a chain of Node processes, and hang the machine. It must be
-`"build": "next build"`. CI enforces this with a blocking check.
+**Never set `package.json`'s `build` script to `opennextjs-cloudflare build`.**
+`@opennextjs/aws` resolves the Next build command as `config.buildCommand ?? "npm run build"`.
+If the `build` script *is* the OpenNext build, it invokes itself without bound — each
+level spawning another `npm → opennextjs-cloudflare → next build` chain until the machine
+hangs. Invariant (CI-enforced in `ci.yml` + `deploy.yml`):
 
-- Rules for contributors and agents: [`AGENTS.md`](./AGENTS.md)
-- Incident write-up: [`docs/incidents/2026-10-06-opennext-build-recursion.md`](./docs/incidents/2026-10-06-opennext-build-recursion.md)
-
-**Artifact path:** the deployable Worker bundle is `.open-next/` (hyphenated,
-`.open-next/worker.js`), produced by `npx opennextjs-cloudflare build`. References below to
-`dist/` / an SPA static export are from the earlier Vite/Pages setup and are superseded by
-the Worker deployment described in the migration plan.
-
----
-
-## 1. Architecture Flow
-
-```
-┌──────────────────────────────────────────────┐
-│                GitHub Commit                 │
-└──────────────────────┬───────────────────────┘
-                       │ (git push)
-                       ▼
-┌──────────────────────────────────────────────┐
-│           GitHub Actions (ci.yml)            │
-│  - Setup Node.js (v24 minimum)               │
-│  - npm ci (frozen lockfile)                  │
-│  - npm run lint (TypeScript validate)        │
-│  - npm run build (production bundle)         │
-│  * NO DEPLOYMENT OCCURS ON COMMIT *          │
-└──────────────────────┬───────────────────────┘
-                       │
-                       ▼ (Code Validated)
-┌──────────────────────────────────────────────┐
-│   Manual Trigger in GitHub Actions UI        │
-│   (deploy.yml via workflow_dispatch)         │
-└──────────────────────┬───────────────────────┘
-                       │
-                       ▼
-┌──────────────────────────────────────────────┐
-│         Job 1: Build & Verify Integrity      │
-│  - Setup Node.js (v24 minimum)               │
-│  - Fresh npm ci & production build           │
-│  - Verifies dist/index.html artifact         │
-└──────────────────────┬───────────────────────┘
-                       │
-                 Build Success (If Fails -> STOP)
-                       │
-                       ▼
-┌──────────────────────────────────────────────┐
-│      Job 2: Cloudflare Wrangler Deploy       │
-│  - Direct upload of built /dist bundle       │
-│  - Deploys exclusively to Cloudflare Pages   │
-└──────────────────────────────────────────────┘
+```jsonc
+"build": "next build",
+"preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+"deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"
 ```
 
----
+- Contributor/agent rules: [`AGENTS.md`](./AGENTS.md) (heap caps, one heavy command at a time).
+- Incident write-up: [`docs/incidents/2026-10-06-opennext-build-recursion.md`](./docs/incidents/2026-10-06-opennext-build-recursion.md).
 
-## 2. Preventing Duplicate Triggers (Test D)
+**Artifact:** `.open-next/` (hyphenated — `.open-next/worker.js` + `assets/`), never `.next/`
+alone and never `dist/`.
 
-In Cloudflare Pages, when a repository is connected to Git, Cloudflare tries to trigger its own internal build runner on every commit.
+## 1. Pipeline (all manual — no auto-deploy anywhere)
 
-### Exact Cloudflare Dashboard Steps to Disable Automatic Deployments:
-1. Log in to **[Cloudflare Dashboard](https://dash.cloudflare.com/)**.
-2. Navigate to **Compute (Workers & Pages)** → Click your project (`ecomate-platform` or your chosen name).
-3. Click on the **Settings** tab.
-4. Go to **Builds & deployments**.
-5. Under **Automatic deployments** / **Configure deployments**:
-   - Set **Automatic deployments** to **Pause** or **Disable**.
-   - If connected via Git: Under **Production branch deployment**, toggle **Automatic deployment** to **Disabled**.
-6. Save changes.
+```
+push main ──► CI (ci.yml): lint + vitest + gitleaks + audits + opennext build ──► green check
+                                                                          (deploys NOTHING)
+Actions ──► "Production Deployment - Cloudflare Workers (Manual Trigger Only)"
+            (deploy.yml, workflow_dispatch, production):
+  1. lint + assert guards (no-recursion, no db:push) + vitest
+  2. opennext build (DIRECT_URL exposed for prerender) → verify `.open-next/`
+  3. db:migrate (DIRECT_URL) → db:seed (idempotent)
+  4. ensure R2 buckets: ecomate-media-prod + ecomate-inc-cache-prod
+  5. attach media.ecomate.bd custom domain (warns, never fails, when unset up)
+  6. ensure + sync Hyperdrive ecomate-db-prod from DIRECT_URL (id patched in-runner only)
+  7. push Worker secrets/config from GitHub Secrets (skip-if-unset, never wipe)
+  8. opennext deploy --env production
+  9. poll https://ecomate.bd/api/ready until 200 (~3 min timeout) — H-12 gate
+```
 
-**Outcome:**
-Cloudflare will no longer build on GitHub push events. Only GitHub Actions has the authority to deploy new builds.
+Cron jobs (`retention`, `publish`, `dispatch-drain`) do NOT run on Workers triggers —
+the Worker exports no `scheduled()` handler. They fire from `.github/workflows/cron.yml`
+(HTTP + `CRON_SECRET`). Cloudflare dashboard: **no triggers, no auto-deploy**.
 
----
+## 2. Disable dashboard auto-deploy
 
-## 3. How to Trigger a Manual Deployment (Test B)
+Workers & Pages → `ecomate-landing` → Settings → Builds & deployments → automatic
+deployments **OFF**. Only GitHub Actions deploys. (Project name is `ecomate-landing`,
+not `ecomate-platform`.)
 
-1. Open your GitHub Repository in your browser.
-2. Click on the **Actions** tab at the top.
-3. In the left sidebar, click **"Production Deployment - Cloudflare Pages (Manual Trigger Only)"**.
-4. Click the **Run workflow** button on the right.
-5. Select the target branch (`main`) and environment (`production`).
-6. Click **Run workflow**.
+## 3. Required GitHub Secrets (single source of truth)
 
-GitHub Actions will execute:
-- **Lint & Build**: Runs full TypeScript check and bundle creation.
-- **Wrangler Deploy**: Deploys the built `dist` folder to Cloudflare Pages Production.
+Repo → Settings → Secrets and variables → Actions:
 
----
-
-## 4. Failed Build Protection (Test C)
-
-If any TypeScript error, missing file, or build failure occurs:
-- Job 1 (`build_and_verify`) will exit with status `failed`.
-- Job 2 (`deploy_to_cloudflare`) will **never execute** (`needs: [build_and_verify]` + `if: success()`).
-- Cloudflare Pages will continue serving the existing stable production release.
-
----
-
-## 5. Required GitHub Secrets
-
-Go to **GitHub Repo → Settings → Secrets and variables → Actions** and add:
-
-| Secret Name | Value Description |
+| Secret | Purpose |
 |---|---|
-| `CLOUDFLARE_API_TOKEN` | Cloudflare API Token with Workers/Pages permissions |
-| `CLOUDFLARE_ACCOUNT_ID` | Your 32-character Cloudflare Account ID |
-| `CLOUDFLARE_PROJECT_NAME` | *(Defaults to `ecomate-landing`)* |
+| `CLOUDFLARE_API_TOKEN` | Workers + R2 + Hyperdrive Read/Edit |
+| `CLOUDFLARE_ACCOUNT_ID` | Account ID |
+| `CLOUDFLARE_ZONE_ID` | Zone ID for `media.ecomate.bd` attach (warn-only when unset) |
+| `DIRECT_URL` | Postgres session-pooler URL (`:5432`, migrations/seed/build) |
+| `AUTH_SECRET` | Auth.js secret |
+| `SETUP_TOKEN` | One-time bootstrap (rotate after first superadmin) |
+| `TOTP_ENCRYPTION_KEY` | TOTP at-rest encryption (falls back to AUTH_SECRET) |
+| `META_CAPI_TOKEN` | Meta Conversions API |
+| `META_TEST_EVENT_CODE` | Events Manager test code (empty in prod) |
+| `TURNSTILE_SECRET_KEY` | Turnstile server verification |
+| `LICENSE_PORTAL_API_KEY` | License portal integration |
+| `LICENSE_PORTAL_API_BASE_URL` | Portal base URL (plain config) |
+| `RESEND_API_KEY` | Lead-notification email |
+| `NOTIFY_FROM_EMAIL` | Resend sender (plain config) |
+| `NOTIFY_TO_EMAIL` | Sales inbox (plain config) |
+| `CRON_SECRET` | Guards `/api/cron/*` |
+| `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | Presigned direct uploads (unset = 503 + legacy fallback) |
+| `R2_ACCOUNT_ID` / `R2_BUCKET_NAME` | Presign URL construction (plain config) |
+
+`AUTH_TRUST_HOST`, `RETENTION_DAYS`, `NEXT_PUBLIC_*` stay in `wrangler.toml [vars]`
+— they are deployment properties, not secrets. `CLOUDFLARE_PROJECT_NAME` is unused
+(no Pages project). `GEMINI_API_KEY` / `SENTRY_DSN` were removed (dead config).
+
+## 4. First-time / one-time setup (per environment)
+
+1. `npx wrangler hyperdrive create ecomate-db-prod --connection-string="<DIRECT_URL>"`
+   (or let deploy create it — the ensure step does).
+2. `npx wrangler r2 bucket create ecomate-media-prod` (+ `ecomate-inc-cache-prod`;
+   deploy ensures both, creation is idempotent).
+3. DNS: CNAME `media` → R2 (dashboard), then the deploy attaches
+   `media.ecomate.bd` via `r2 bucket domain add` (needs `CLOUDFLARE_ZONE_ID`).
+4. R2 S3 API token (Object Read & Write on the media bucket) → the four `R2_*`
+   secrets above; bucket CORS allowing `PUT` from `https://ecomate.bd`.
+5. `npx wrangler secret put` for each secret above (or set GitHub Secrets and deploy —
+   CI pushes them; skip-if-unset never wipes).
+6. Deploy via Actions; watch the `/api/ready` poll go green.
+
+## 5. Rollback
+
+`npx wrangler rollback --env production` (drill status: see RUNBOOK §15). Database
+migrations are forward-only — rolling back code never rolls back schema; write a new
+migration instead.

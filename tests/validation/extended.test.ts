@@ -52,14 +52,14 @@ describe('route-adjacent schemas', () => {
 
   it('operator schemas enforce email shape and password length', () => {
     expect(
-      operatorCreate.safeParse({ email: 'op@ecomate.app', password: 'long-enough-password', role: 'editor' }).success,
+      operatorCreate.safeParse({ email: 'op@ecomate.bd', password: 'long-enough-password', role: 'editor' }).success,
     ).toBe(true);
     expect(operatorCreate.safeParse({ email: 'nope', password: 'long-enough-password' }).success).toBe(false);
-    expect(operatorCreate.safeParse({ email: 'op@ecomate.app', password: 'short' }).success).toBe(false);
-    expect(operatorCreate.safeParse({ email: 'op@ecomate.app', password: 'long-enough-password', totpEnabled: true }).success).toBe(false);
+    expect(operatorCreate.safeParse({ email: 'op@ecomate.bd', password: 'short' }).success).toBe(false);
+    expect(operatorCreate.safeParse({ email: 'op@ecomate.bd', password: 'long-enough-password', totpEnabled: true }).success).toBe(false);
     expect(operatorUpdate.safeParse({ role: 'admin' }).success).toBe(true);
     expect(operatorUpdate.safeParse({ role: 'root' }).success).toBe(false);
-    expect(setupCreate.safeParse({ token: 't', email: 'root@ecomate.app', password: 'long-enough-password' }).success).toBe(true);
+    expect(setupCreate.safeParse({ token: 't', email: 'root@ecomate.bd', password: 'long-enough-password' }).success).toBe(true);
   });
 
   it('testimonials and case studies require their identity fields', () => {

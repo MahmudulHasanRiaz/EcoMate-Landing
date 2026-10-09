@@ -1,22 +1,29 @@
 /**
- * Cloudflare Turnstile server-side verification (Task 14 §2).
+ * Cloudflare Turnstile server-side verification (Task 14 §2, Phase 3b Item 19).
  *
- * ## Fail direction
+ * ## Fail direction (hybrid policy, Decision 3)
  *
- * - **`TURNSTILE_SECRET_KEY` unset** (local dev, or a deployment where the widget has not
- *   been provisioned yet): skip verification. Blocking every lead because the secret is
- *   missing would take the lead form offline for an operator mistake, and the widget is
- *   its own gate — a site key that is not rendered means there is no token to check.
+ * - **`TURNSTILE_SECRET_KEY`/`NEXT_PUBLIC_TURNSTILE_SITE_KEY` unset** (local dev, or a
+ *   deployment where the widget has not been provisioned yet): skip verification, LOUDLY
+ *   (error-level log + `turnstile_daily_stats` row). Blocking every lead because the
+ *   secret is missing would take the lead form offline for an operator mistake.
  * - **Explicit `success: false` for a client-attributable reason** (`invalid-input-response`,
- *   `timeout-or-duplicate`, …): reject with 400. This is the security-relevant outcome.
+ *   `timeout-or-duplicate`, …): reject with 400. This is the security-relevant outcome —
+ *   fail CLOSED.
  * - **`success: false` for a configuration reason** (`invalid-input-secret`,
  *   `missing-input-secret`, `internal-error`, …): log loudly and allow. The visitor did
  *   nothing wrong; our secret is broken, and dropping every lead would turn a
- *   misconfiguration into a revenue outage. The same applies to a transport failure or an
- *   unparsable body (`lib/rateLimit.ts` documents the identical reasoning for KV).
+ *   misconfiguration into a revenue outage. Same fail-open direction for transport
+ *   failure / unparsable body.
+ * - **Sustained skips**: every outcome lands in `turnstile_daily_stats`; the trailing-7d
+ *   skip share drives the alert flag on `GET /api/admin/turnstile` (M-13). A protection
+ *   that is silently off is worse than no protection with an alert.
  */
+import { sql } from 'drizzle-orm';
 import { envString } from '@/lib/env';
 import { logOnce } from '@/lib/json';
+import { getDb } from '@/db/client';
+import { turnstileDailyStatsTable } from '@/db/schema';
 
 const SITEVERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
 const MAX_TOKEN_LENGTH = 2048;
@@ -43,7 +50,7 @@ export type TurnstileVerdict =
  * `wrangler secret` or any deployment config — only in the local shell that
  * starts the throwaway preview server) AND a localhost-family request hostname
  * (`localhost`, `127.0.0.1`, `::1`, `*.localhost`, `*.local`). Production
- * serves `ecomate.app`, so even a leaked flag does nothing there, and even a
+ * serves `ecomate.bd`, so even a leaked flag does nothing there, and even a
  * spoofed `Host` header does nothing without the flag. Either condition alone
  * leaves verification untouched.
  *
@@ -80,12 +87,12 @@ export async function verifyTurnstile(token: string, ip: string): Promise<Turnst
   // Fail open loudly instead — same direction as every other misconfiguration here.
   const siteKey = envString('NEXT_PUBLIC_TURNSTILE_SITE_KEY');
   if (siteKey === '') {
-    logOnce('warn', 'turnstile:no-sitekey', '[turnstile] site key not configured — widget cannot exist, skipping verification (no bot protection active)');
+    logOnce('error', 'turnstile:no-sitekey', '[turnstile] site key not configured — widget cannot exist, skipping verification (no bot protection active)');
     return { ok: true, skipped: true };
   }
   const secret = envString('TURNSTILE_SECRET_KEY');
   if (secret === '') {
-    logOnce('warn', 'turnstile:no-secret', '[turnstile] secret not configured — widget renders but tokens cannot be verified, skipping (no bot protection active)');
+    logOnce('error', 'turnstile:no-secret', '[turnstile] secret not configured — widget renders but tokens cannot be verified, skipping (no bot protection active)');
     return { ok: true, skipped: true };
   }
 
@@ -116,8 +123,10 @@ export async function verifyTurnstile(token: string, ip: string): Promise<Turnst
     if (record?.success === false) {
       const codes = readErrorCodes(record);
       if (codes.some((code) => SERVER_FAULT_CODES.has(code))) {
-        console.error(
-          `[turnstile] siteverify reported a configuration problem (${codes.join(',') || response.status}); allowing request`,
+        logOnce(
+          'error',
+          'turnstile:server-fault',
+          `[turnstile] siteverify reported a configuration problem (${codes.join(',') || response.status}); allowing request (no bot protection for it)`,
         );
         return { ok: true, skipped: true };
       }
@@ -125,10 +134,39 @@ export async function verifyTurnstile(token: string, ip: string): Promise<Turnst
     }
 
     // No parseable verdict at all (HTTP error page, truncated body): fail open, loudly.
-    console.warn(`[turnstile] siteverify returned HTTP ${response.status} without a verdict; allowing request`);
+    logOnce('error', 'turnstile:no-verdict', `[turnstile] siteverify returned HTTP ${response.status} without a verdict; allowing request`);
     return { ok: true, skipped: true };
   } catch (error) {
-    console.warn('[turnstile] siteverify unreachable; allowing request', error);
+    logOnce('error', 'turnstile:unreachable', '[turnstile] siteverify unreachable; allowing request', error);
     return { ok: true, skipped: true };
+  }
+}
+
+export type TurnstileOutcome = 'verified' | 'rejected' | 'skipped';
+
+/**
+ * Record one verification outcome in the daily aggregate (M-13 sustained-skip
+ * monitoring). Best-effort and NEVER throwing: monitoring must not break the lead
+ * it observes. Callers hand the promise to `keepAlive`/`ctx.waitUntil` so a recycled
+ * isolate cannot cancel it.
+ */
+export async function recordTurnstileOutcome(outcome: TurnstileOutcome): Promise<void> {
+  try {
+    const day = new Date().toISOString().slice(0, 10);
+    const column =
+      outcome === 'verified'
+        ? turnstileDailyStatsTable.verified
+        : outcome === 'rejected'
+          ? turnstileDailyStatsTable.rejected
+          : turnstileDailyStatsTable.skipped;
+    await getDb()
+      .insert(turnstileDailyStatsTable)
+      .values({ day, verified: 0, rejected: 0, skipped: 0 })
+      .onConflictDoUpdate({
+        target: turnstileDailyStatsTable.day,
+        set: { updatedAt: new Date(), [outcome]: sql`${column} + 1` },
+      });
+  } catch {
+    // Monitoring is expendable; the lead is not.
   }
 }

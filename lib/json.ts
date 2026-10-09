@@ -20,11 +20,17 @@ export function ok(data: unknown, status = 200): Response {
  * the client — `errorMessage()` carries only the message; the full error goes
  * to `logServerError` with the same id.
  */
-export function fail(message: string, status = 500, details?: unknown, requestId?: string | null): Response {
+export function fail(
+  message: string,
+  status = 500,
+  details?: unknown,
+  requestId?: string | null,
+  headers?: HeadersInit,
+): Response {
   const body: Record<string, unknown> =
     details === undefined ? { error: message } : { error: message, details };
   body.requestId = requestId ?? null;
-  return Response.json(body, { status });
+  return Response.json(body, { status, headers });
 }
 
 /** `catch` binds `unknown` under strict mode — never widen it to `any`. */

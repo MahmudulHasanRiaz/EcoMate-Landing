@@ -32,9 +32,9 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'ecomate.bd' },
       { protocol: 'https', hostname: 'dev.ecomate.bd' },
       // Reserved for a future dedicated R2 custom domain (`R2_PUBLIC_ORIGIN`).
-      // `media.ecomate.app` does not resolve today; kept so already-stored absolute
-      // URLs do not throw at render time if they ever do.
-      { protocol: 'https', hostname: 'media.ecomate.app' },
+      // `media.ecomate.bd` after `wrangler r2 bucket domain` + DNS; already-stored
+      // absolute URLs keep rendering through the same-origin proxy meanwhile.
+      { protocol: 'https', hostname: 'media.ecomate.bd' },
     ],
   },
   /**

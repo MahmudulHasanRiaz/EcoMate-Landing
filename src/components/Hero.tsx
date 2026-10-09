@@ -9,8 +9,6 @@ import {
   ShieldCheck,
   Store,
   Warehouse,
-  BarChart3,
-  Layers,
   Sparkles,
   Barcode,
   Truck,

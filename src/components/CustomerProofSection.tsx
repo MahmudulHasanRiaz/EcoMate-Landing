@@ -3,7 +3,7 @@ import type { CaseStudy } from '../types/landing';
 import { useLanding } from '@/components/shell/useLanding';
 import { CaseStudyVideoModal } from './CaseStudyVideoModal';
 import { TestimonialCard } from './TestimonialCard';
-import { ShieldCheck, Play, Globe, Building2, CheckCircle2, ArrowRight } from 'lucide-react';
+import { ShieldCheck, Play, Globe, Building2 } from 'lucide-react';
 
 export const CustomerProofSection: React.FC = () => {
   const { content, locale, testimonials } = useLanding();

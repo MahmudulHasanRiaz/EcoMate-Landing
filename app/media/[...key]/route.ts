@@ -2,11 +2,11 @@
  * Same-origin public media proxy: `GET /media/<key>` serves R2 bytes directly.
  *
  * Why this exists instead of a custom CDN domain: the R2 custom domain
- * (`media.ecomate.app`) does not resolve, so every absolute CDN media URL 404s.
- * This route needs no DNS — it works on dev, preview and production unchanged,
- * and edge-caches for a year (keys embed timestamp + random suffix, never reused).
- * A dedicated CDN later is config only: set `R2_PUBLIC_ORIGIN` and uploads point
- * there with zero code change (see the upload route).
+ * (`media.ecomate.bd`) is provisioned by the deploy workflow (RUNBOOK §7); until its
+ * DNS resolves everywhere, this route needs no DNS — it works on dev and production
+ * unchanged, and edge-caches for a year (keys embed timestamp + random suffix, never
+ * reused). A dedicated CDN later is config only: set `R2_PUBLIC_ORIGIN` and uploads
+ * point there with zero code change (see the upload route).
  *
  * Public by design (site images, OG cards): no session required. The key allowlist
  * below is the entire attack surface — `..`, absolute paths and non-image

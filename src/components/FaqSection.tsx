@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useLanding } from '@/components/shell/useLanding';
-import { HelpCircle, ChevronDown, MessageCircle, PhoneCall, ArrowRight } from 'lucide-react';
+import { HelpCircle, ChevronDown, MessageCircle, PhoneCall } from 'lucide-react';
 
 export const FaqSection: React.FC = () => {
   const { content, locale } = useLanding();

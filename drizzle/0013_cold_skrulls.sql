@@ -1,0 +1,2 @@
+ALTER TABLE "site_settings" ALTER COLUMN "support_email" SET DEFAULT 'hello@ecomate.bd';--> statement-breakpoint
+ALTER TABLE "site_settings" ALTER COLUMN "messenger_url" SET DEFAULT 'https://m.me/ecomate.bd';

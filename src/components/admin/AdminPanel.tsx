@@ -18,6 +18,7 @@ import * as api from '../../services/api';
 import { fieldErrorsOf, type FieldErrors } from './fieldErrors';
 import { TestimonialForm } from './TestimonialForm';
 import { CaseStudyEditor } from './CaseStudyEditor';
+import { MediaLibrary } from './MediaLibrary';
 import { TestimonialCard } from '../TestimonialCard';
 import {
   LayoutDashboard,
@@ -100,7 +101,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [caseStudies, setCaseStudies] = useState<CaseStudy[]>([]);
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
-  const [mediaAssets, setMediaAssets] = useState<MediaAsset[]>([]);
+  // Media uses its own self-fetching library (Phase 3b Item 17) — no bulk fetch here.
   const [integrationLogs, setIntegrationLogs] = useState<IntegrationLog[]>([]);
   const [systemHealth, setSystemHealth] = useState<{ status: string; uptime: number; postgresConfigured: boolean; licensePortalConfigured: boolean } | null>(null);
 
@@ -189,7 +190,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
         tData,
         csData,
         bData,
-        mData,
         iData,
         hData,
       ] = await Promise.all([
@@ -205,7 +205,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
         api.getAllTestimonials({ limit: api.ADMIN_LIST_LIMIT }),
         api.getAllCaseStudies({ limit: api.ADMIN_LIST_LIMIT }),
         api.getBlogPosts({ limit: api.ADMIN_LIST_LIMIT }),
-        api.getMediaAssets({ limit: api.ADMIN_LIST_LIMIT }),
         api.getIntegrationLogs({ limit: api.ADMIN_LIST_LIMIT }),
         api.getSystemHealth(),
       ]);
@@ -217,7 +216,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
       setTestimonials(tData);
       setCaseStudies(csData);
       setBlogPosts(bData);
-      setMediaAssets(mData);
       setIntegrationLogs(iData);
       setSystemHealth(hData);
       // Translation gaps are a dashboard-level signal, and the endpoint is superadmin/admin
@@ -2075,29 +2073,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
           )}
 
           {/* TAB 7: MEDIA SLOTS */}
-          {activeTab === 'media' && (
-            <div className="space-y-6 max-w-6xl mx-auto">
-              <div>
-                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Media Asset Slots</h2>
-                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-0.5">
-                  Clean media architecture abstraction. Replaceable placeholders ready for final graphic production.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                {mediaAssets.map((asset) => (
-                  <div key={asset.id} className="p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1B] shadow-xs">
-                    <span className="text-[10px] font-mono text-indigo-700 dark:text-indigo-300 uppercase font-bold">{asset.category}</span>
-                    <h3 className="font-bold text-sm text-slate-900 dark:text-white mt-1">{asset.title}</h3>
-                    <p className="text-xs font-mono text-slate-400 mt-2 truncate bg-slate-50 dark:bg-black/30 p-2 rounded-lg border border-slate-200/60 dark:border-white/5">
-                      {asset.url}
-                    </p>
-                    <p className="text-[11px] text-slate-600 mt-2 dark:text-slate-300">Key: {asset.key}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {activeTab === 'media' && <MediaLibrary />}
 
           {/* TAB 8: LICENSE PORTAL INTEGRATION QUEUE */}
           {activeTab === 'integrations' && (

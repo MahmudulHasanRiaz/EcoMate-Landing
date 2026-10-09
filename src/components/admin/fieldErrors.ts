@@ -63,11 +63,14 @@ export function toFieldErrors(payload: unknown): FieldErrors {
 /** An `Error` that also carries the per-field breakdown for the form that threw it. */
 export class ApiValidationError extends Error {
   readonly fieldErrors: FieldErrors;
+  /** HTTP status of the failed response (Phase 3b: lets callers branch on 503/409/…). */
+  readonly status: number;
 
-  constructor(message: string, payload: unknown) {
+  constructor(message: string, payload: unknown, status = 0) {
     super(message);
     this.name = 'ApiValidationError';
     this.fieldErrors = toFieldErrors(payload);
+    this.status = status;
   }
 }
 
@@ -78,7 +81,7 @@ export async function throwApiError(response: Response, fallback: string): Promi
     typeof payload === 'object' && payload !== null && 'error' in payload
       ? String((payload as { error: unknown }).error)
       : fallback;
-  throw new ApiValidationError(message || fallback, payload);
+  throw new ApiValidationError(message || fallback, payload, response.status);
 }
 
 /** Field errors from any caught submission error (validation or otherwise). */

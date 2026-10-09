@@ -22,7 +22,7 @@ function trackInput(): TrackLeadInput {
     eventId: EVENT_ID,
     clientIp: '203.0.113.7',
     userAgent: 'vitest',
-    eventSourceUrl: 'https://ecomate.app/#lead-form',
+    eventSourceUrl: 'https://ecomate.bd/#lead-form',
   };
 }
 

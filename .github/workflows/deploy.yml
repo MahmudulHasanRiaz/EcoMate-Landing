@@ -355,6 +355,45 @@ jobs:
       # and silently ships a broken or empty Worker. `--env` selects the matching
       # `[env.*]` block in wrangler.toml (Task 21 §1): deploying without it would
       # fall back to the top-level dev bindings.
+      # R2 presign credentials, auto-provisioned (no manual R2 setup, ever). Exactly one
+      # API token named `ecomate-media-presign` (Object Read & Write, media bucket only)
+      # exists at a time; its id/value derive the S3 pair pushed below. Skip-fast when
+      # the Worker already holds them; warn-and-continue on any provisioning failure
+      # (the legacy Worker-mediated upload keeps working). Re-running is always safe.
+      # Values never printed: masked before use, pushed via stdin, shell vars unset after.
+      - name: Auto-provision R2 presign credentials (idempotent)
+        run: |
+          ENV_NAME="${{ github.event.inputs.environment || 'production' }}"
+          MEDIA_BUCKET="ecomate-media-prod"
+          if npx wrangler secret list --env "$ENV_NAME" 2>/dev/null | grep -q "R2_ACCESS_KEY_ID"; then
+            echo "Presign credentials already provisioned — skipping."
+            exit 0
+          fi
+          set +e
+          OUT="$(TOKEN_NAME="ecomate-media-presign" MEDIA_BUCKET="$MEDIA_BUCKET" python3 scripts/provision-r2-presign.py)"
+          CODE=$?
+          set -e
+          if [ "$CODE" -ne 0 ]; then
+            # Soft skip: the script already emitted a ::warning:: with the reason.
+            exit 0
+          fi
+          KEY_ID="$(printf '%s' "$OUT" | sed -n 's/^KEY_ID=//p' | head -1)"
+          SECRET="$(printf '%s' "$OUT" | sed -n 's/^SECRET=//p' | head -1)"
+          OUT=""
+          if [ -z "$KEY_ID" ] || [ -z "$SECRET" ]; then
+            echo "::warning::Presign auto-provisioning skipped: provisioner returned no credentials. The legacy Worker-mediated upload keeps working."
+            exit 0
+          fi
+          echo "::add-mask::$SECRET"
+          printf '%s' "$KEY_ID" | npx wrangler secret put R2_ACCESS_KEY_ID --env "$ENV_NAME"
+          printf '%s' "$SECRET" | npx wrangler secret put R2_SECRET_ACCESS_KEY --env "$ENV_NAME"
+          printf '%s' "$CLOUDFLARE_ACCOUNT_ID" | npx wrangler secret put R2_ACCOUNT_ID --env "$ENV_NAME"
+          printf '%s' "$MEDIA_BUCKET" | npx wrangler secret put R2_BUCKET_NAME --env "$ENV_NAME"
+          KEY_ID=""; SECRET=""
+          echo "Presign credentials provisioned (one token, media bucket only)."
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       # Worker secrets, pushed from GitHub Secrets on every deploy (idempotent —
       # `secret put` overwrites). This is why no dashboard secret setup is needed:
       # add each value ONCE as a GitHub Secret and CI carries it to the Worker.
@@ -395,13 +434,6 @@ jobs:
           put_secret LICENSE_PORTAL_API_KEY "$LICENSE_PORTAL_API_KEY"
           put_secret RESEND_API_KEY "$RESEND_API_KEY"
           put_secret CRON_SECRET "$CRON_SECRET"
-          # Phase 3b Item 17 — presigned direct-to-R2 uploads: the S3 API key pair is
-          # secret; account id + bucket name are plain config (appear in hostnames).
-          # All unset = sign endpoint 503s, admin uploader falls back to legacy route.
-          put_secret R2_ACCESS_KEY_ID "$R2_ACCESS_KEY_ID"
-          put_secret R2_SECRET_ACCESS_KEY "$R2_SECRET_ACCESS_KEY"
-          put_config R2_ACCOUNT_ID "$R2_ACCOUNT_ID"
-          put_config R2_BUCKET_NAME "$R2_BUCKET_NAME"
           # Decision 7 — plain (non-secret) config values, same push mechanism so the
           # single source of truth stays GitHub Secrets. Unset is valid and silent:
           # NOTIFY_* unset = lead-notification emails stay in log-only mode;
@@ -423,10 +455,6 @@ jobs:
           LICENSE_PORTAL_API_KEY: ${{ secrets.LICENSE_PORTAL_API_KEY }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
-          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
-          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
           NOTIFY_FROM_EMAIL: ${{ secrets.NOTIFY_FROM_EMAIL }}
           NOTIFY_TO_EMAIL: ${{ secrets.NOTIFY_TO_EMAIL }}
           LICENSE_PORTAL_API_BASE_URL: ${{ secrets.LICENSE_PORTAL_API_BASE_URL }}

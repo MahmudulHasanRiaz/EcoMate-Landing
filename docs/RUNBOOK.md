@@ -154,8 +154,7 @@ unset ones) — deletion stays a manual `wrangler secret delete <NAME> --env pro
 | `TURNSTILE_SECRET_KEY` | `verifyTurnstile` fails — check `lib/turnstile.ts` for the failure direction; if it fails **closed**, the public lead form stops accepting submissions. |
 | `LICENSE_PORTAL_API_KEY` | Dispatches fail with `licensePortalStatus = 'Failed'`; the lead row is still authoritative. Retry from the admin. |
 | `RESEND_API_KEY` | Lead notifications revert to the `Log` provider: `integration_logs` rows go to `Pending` and no email is sent. Visible on `/api/ready` as `notificationProvider: "log_only"`. |
-| `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | Presigned direct uploads stop (`POST /api/media/sign` 503s); the admin uploader falls back to the legacy multipart route automatically. Library reads unaffected. |
-| `R2_ACCOUNT_ID` / `R2_BUCKET_NAME` | Same fallback as above (plain config, pushed by CI). |
+| `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_ACCOUNT_ID` / `R2_BUCKET_NAME` | **Auto-provisioned by deploy** (DEPLOYMENT.md §4b) — never created by hand. Rotation = `wrangler secret delete R2_ACCESS_KEY_ID --env production` + redeploy (mints a fresh token; delete the orphaned API token in the dashboard). |
 | `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` | CI-only (GitHub secrets, not Worker secrets). Rotation invalidates in-flight deploys. |
 
 ✅ **VERIFIED** — the `AUTH_SECRET` → `TOTP_ENCRYPTION_KEY` coupling is read directly from
@@ -296,20 +295,52 @@ not survive PgBouncer in transaction mode.
 
 ## 7. R2 restore and PITR
 
-### 7.0 Presigned uploads: bucket CORS + orphan lifecycle (Phase 3b Item 17)
+### 7.0 Presigned uploads: bucket CORS (automatic) + orphan lifecycle
 
 Direct-to-R2 uploads (`POST /api/media/sign` → browser PUT) need bucket CORS allowing
-`PUT` from the site origin, or every browser PUT fails preflight:
+`PUT` from the site origin, or every browser PUT fails preflight. The deploy owns
+this (DEPLOYMENT.md §4c) — no dashboard step: each run `GET`s `/?cors` and
+merge-appends the rule when missing. The applied rule (from `SITE_ORIGIN`):
 
-```json
-[{ "AllowedOrigins": ["https://ecomate.bd"], "AllowedMethods": ["PUT"], "AllowedHeaders": ["content-type"], "MaxAgeSeconds": 3600 }]
+```xml
+<CORSConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+  <CORSRule>
+    <AllowedOrigin>https://ecomate.bd</AllowedOrigin>
+    <AllowedMethod>PUT</AllowedMethod>
+    <AllowedHeader>content-type</AllowedHeader>
+    <MaxAgeSeconds>86400</MaxAgeSeconds>
+  </CORSRule>
+</CORSConfiguration>
 ```
 
-(Dashboard → R2 → bucket → Settings → CORS, or `wrangler r2 bucket cors`.)
+Verify with a signed `GET https://<ACCOUNT>.r2.cloudflarestorage.com/ecomate-media-prod?cors`.
 A PUT that is never confirmed (`POST /api/media/confirm`) leaves an object with no
 library row — invisible but billable. Set an Object Lifecycle rule expiring
 unconfirmed-looking prefixes, or sweep periodically; the confirm path deletes
 sniff-rejected objects itself, so only *abandoned* PUTs accumulate here.
+
+### 7.0b Presign token: exact API shapes (verified 2026-10-09)
+
+Provisioner: `scripts/provision-r2-presign.py` (dry-run with `--dry-run` — no network).
+All shapes below were read from the CURRENT Cloudflare docs, not guessed:
+
+- Token endpoints (`Authorization: Bearer $CLOUDFLARE_API_TOKEN`):
+  `GET /user/tokens?per_page=50&page=N` → `{success, result: [{id, name, status…}],
+  result_info: {total_count}}` ([List Tokens](https://developers.cloudflare.com/api/resources/user/subresources/tokens/methods/list/));
+  `POST /user/tokens` `{name, policies}` → `{success, result: {id, value}}` —
+  `value` is shown ONCE ([Create Token](https://developers.cloudflare.com/api/resources/user/subresources/tokens/methods/create/));
+  `DELETE /user/tokens/{token_id}` → `{success, result: {id}}`.
+- Permission group is resolved BY NAME at runtime via
+  `GET /user/tokens/permission_groups`: exactly
+  `Workers R2 Storage Bucket Item Write` ("Can read, write, and list objects in
+  buckets", Bucket scope). No group ID is hardcoded in this repo.
+- Bucket resource: `com.cloudflare.edge.r2.bucket.<ACCOUNT_ID>_default_<BUCKET>`
+  (jurisdiction `default` — these buckets were created without a jurisdiction flag).
+  ([R2 API tokens](https://developers.cloudflare.com/r2/api/tokens/)).
+- S3 derivation: Access Key ID = token `id`; Secret Access Key =
+  `hex(sha256(token value))` (same R2 docs page, "Get S3 API credentials").
+- Caller needs **API Tokens: Edit** on the deploy token; without it every call
+  401/403s and the step warns (never fails the deploy).
 
 ### 7.1 R2 (media bucket `ecomate-media`)
 
@@ -569,14 +600,21 @@ triggers (the Worker exports no `scheduled()` handler) — they fire from
 ### 13.4 Worker secrets (pushed by deploy.yml — single source of truth = GitHub Secrets)
 
 CI pushes every value on each deploy (skip-if-unset, never wipe); nothing needs
-dashboard setup by hand:
+dashboard setup by hand. Exception: the four `R2_*` presign values are
+**auto-provisioned by the deploy itself** (DEPLOYMENT.md §4b) — they are neither
+GitHub Secrets nor manual Worker secrets.
 
 Secrets: `AUTH_SECRET`, `SETUP_TOKEN`, `TOTP_ENCRYPTION_KEY`, `META_CAPI_TOKEN`,
 `META_TEST_EVENT_CODE`, `TURNSTILE_SECRET_KEY`, `LICENSE_PORTAL_API_KEY`,
-`RESEND_API_KEY`, `CRON_SECRET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`.
-Plain config: `NOTIFY_FROM_EMAIL`, `NOTIFY_TO_EMAIL`, `LICENSE_PORTAL_API_BASE_URL`,
-`R2_ACCOUNT_ID`, `R2_BUCKET_NAME`. Manual equivalent (one value):
+`RESEND_API_KEY`, `CRON_SECRET`.
+Plain config: `NOTIFY_FROM_EMAIL`, `NOTIFY_TO_EMAIL`, `LICENSE_PORTAL_API_BASE_URL`.
+Manual equivalent (one value):
 `npx wrangler secret put CRON_SECRET --env production`.
+
+One-time prerequisite for the auto-provisioning (NOT a secret): the deploy token
+`CLOUDFLARE_API_TOKEN` needs **API Tokens: Edit** (dashboard → Manage Account →
+API Tokens). Without it the provision step warns and continues — presigned uploads
+503 with legacy fallback until the permission is granted and deploy re-runs.
 
 ### 13.4.1 Plain config values pushed by deploy.yml (Decision 7)
 
@@ -589,8 +627,7 @@ truth stays GitHub Secrets) and documented here:
 | `NOTIFY_FROM_EMAIL` | Resend sender for new-lead sales notifications (`lib/notifyResend.ts`) | unset = notifications stay in log-only mode (`isNotificationProviderConfigured()` false) |
 | `NOTIFY_TO_EMAIL` | Resend recipient (sales inbox) for new-lead notifications | unset = same log-only mode as above; both must be set with `RESEND_API_KEY` |
 | `LICENSE_PORTAL_API_BASE_URL` | Future license-portal base URL (`lib/licensePortal.ts`); e.g. `https://license.ecomate.bd` | unset = portal dispatches queue locally as `Pending` — never a failure |
-| `R2_ACCOUNT_ID` | R2 account id for presigned direct uploads (Phase 3b Item 17) | unset = sign endpoint 503s, admin uploader uses legacy route |
-| `R2_BUCKET_NAME` | R2 bucket name for presigned URLs (`ecomate-media-prod`) | unset = same fallback as above |
+| `R2_ACCOUNT_ID` / `R2_BUCKET_NAME` | **Auto-provisioned** (DEPLOYMENT.md §4b), not GitHub Secrets | n/a — derived from `CLOUDFLARE_ACCOUNT_ID` + the ensured bucket |
 
 Set them once as GitHub Secrets and redeploy; an unset value keeps whatever the
 Worker already has (the step never wipes). `.env.example` carries local/dev skeletons only.

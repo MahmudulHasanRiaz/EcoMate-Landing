@@ -18,11 +18,10 @@ const SIGN_LIMIT_WINDOW_SEC = 3600;
  * header — anything else 403s) → browser calls `POST /api/media/confirm`, which
  * verifies the object and mints the library row. No confirm = no row = invisible.
  *
- * Setup required (once per environment, see DEPLOYMENT.md): an R2 S3 API token
- * (`R2_ACCESS_KEY_ID` + `R2_SECRET_ACCESS_KEY`), the account id (`R2_ACCOUNT_ID`)
- * and the bucket name (`R2_BUCKET_NAME`), plus bucket CORS allowing PUT from the
- * site origin. Without them this answers 503 — the legacy `upload` route keeps
- * working meanwhile.
+ * Setup is automatic (DEPLOYMENT.md §4b–§4c): the deploy workflow mints the R2 API
+ * token itself, stores the four `R2_*` values on the Worker, and ensures the bucket
+ * CORS rule for browser PUTs. Without them this answers 503 — the legacy `upload`
+ * route keeps working meanwhile.
  */
 export async function POST(req: Request) {
   const reqId = requestId(req);
@@ -47,7 +46,7 @@ export async function POST(req: Request) {
     const missing = missingPresignKeys(config);
     if (missing.length > 0) {
       return fail(
-        `Direct upload is not configured (${missing.join(', ')} unset). Ask an operator to provision R2 presign credentials, or use the standard upload.`,
+        `Direct upload is not configured (${missing.join(', ')} unset — the deploy auto-provisions them; grant 'API Tokens: Edit' to CLOUDFLARE_API_TOKEN and re-run deploy). The standard upload keeps working meanwhile.`,
         503,
         undefined,
         reqId,

@@ -77,8 +77,8 @@ Repo → Settings → Secrets and variables → Actions:
 | `NOTIFY_FROM_EMAIL` | Resend sender (plain config) |
 | `NOTIFY_TO_EMAIL` | Sales inbox (plain config) |
 | `CRON_SECRET` | Guards `/api/cron/*` |
-| `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | Presigned direct uploads (unset = 503 + legacy fallback) |
-| `R2_ACCOUNT_ID` / `R2_BUCKET_NAME` | Presign URL construction (plain config) |
+| `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | **Auto-provisioned by deploy** (see §4) — do NOT create by hand |
+| `R2_ACCOUNT_ID` / `R2_BUCKET_NAME` | **Auto-provisioned by deploy** (derived, see §4) |
 
 `AUTH_TRUST_HOST`, `RETENTION_DAYS`, `NEXT_PUBLIC_*` stay in `wrangler.toml [vars]`
 — they are deployment properties, not secrets. `CLOUDFLARE_PROJECT_NAME` is unused
@@ -92,11 +92,56 @@ Repo → Settings → Secrets and variables → Actions:
    deploy ensures both, creation is idempotent).
 3. DNS: CNAME `media` → R2 (dashboard), then the deploy attaches
    `media.ecomate.bd` via `r2 bucket domain add` (needs `CLOUDFLARE_ZONE_ID`).
-4. R2 S3 API token (Object Read & Write on the media bucket) → the four `R2_*`
-   secrets above; bucket CORS allowing `PUT` from `https://ecomate.bd`.
+4. Nothing for R2 uploads: credentials AND bucket CORS are both automatic (§4b).
 5. `npx wrangler secret put` for each secret above (or set GitHub Secrets and deploy —
    CI pushes them; skip-if-unset never wipes).
 6. Deploy via Actions; watch the `/api/ready` poll go green.
+
+### 4b. R2 presign credentials are automatic (no manual setup)
+
+The deploy workflow provisions everything itself from `CLOUDFLARE_API_TOKEN` +
+`CLOUDFLARE_ACCOUNT_ID` — there is deliberately nothing to create by hand:
+
+1. Skip-fast: if the Worker already holds `R2_ACCESS_KEY_ID`, nothing happens.
+2. Otherwise `scripts/provision-r2-presign.py` lists API tokens for one named exactly
+   `ecomate-media-presign`. A found token is DELETED first (its secret value is shown
+   only once at creation — an orphaned token's secret is unrecoverable, and names are
+   not unique, so it is replaced, never reused; a failed delete aborts instead of
+   minting a duplicate).
+3. It resolves the `Workers R2 Storage Bucket Item Write` permission-group ID **by
+   name at runtime** (`GET /user/tokens/permission_groups` — no group ID is
+   hardcoded), then creates the token scoped to
+   `com.cloudflare.edge.r2.bucket.<ACCOUNT>_default_ecomate-media-prod` (Object
+   Read & Write, media bucket only).
+4. It derives `R2_ACCESS_KEY_ID = <token id>` and
+   `R2_SECRET_ACCESS_KEY = hex(sha256(<token value>))`, masks them, and stores all
+   four values (`+ R2_ACCOUNT_ID`, `+ R2_BUCKET_NAME`) via `wrangler secret put`.
+
+Failure handling: if the deploy token lacks **API Tokens: Edit**, the step warns
+(`::warning::` with the fix) and the deploy continues — the legacy
+Worker-mediated upload keeps working, and re-running after granting the permission
+provisions on the next deploy. Rotation = delete the Worker secret
+(`wrangler secret delete R2_ACCESS_KEY_ID --env production`) and redeploy; the next
+run mints a fresh token (the old API token should then be deleted in the dashboard,
+as its secret no longer exists anywhere).
+
+### 4c. Bucket CORS is automatic too (same step, every deploy)
+
+Browser PUTs go cross-origin to `<account>.r2.cloudflarestorage.com`, so the media
+bucket needs a CORS rule — also owned by the pipeline, no dashboard step:
+
+- Rule applied: `AllowedOrigin https://ecomate.bd` (from `SITE_ORIGIN` in deploy.yml,
+  comma-separated for more), `AllowedMethod PUT`, `AllowedHeader content-type`,
+  `MaxAgeSeconds 86400`.
+- Each deploy `GET`s `/?cors` with SigV4 headers derived from the DEPLOY token
+  (the narrow media token is object-scoped and would 403 bucket calls). Already
+  covered → log and no-op. Otherwise the desired rule is merge-appended onto any
+  existing operator rules (never a blind replace) and `PUT`.
+- Any failure warns and continues — deploy never fails over CORS, legacy upload is
+  unaffected. The narrow media token stays presign-only by design.
+- Verify by hand: sign any XML `GET https://<ACCOUNT>.r2.cloudflarestorage.com/
+  ecomate-media-prod?cors` (or read the deploy log line "Bucket CORS already
+  configured" / "Bucket CORS configured for …").
 
 ## 5. Rollback
 

@@ -59,22 +59,20 @@ interface BlogPageProps {
 }
 
 /**
- * Phase 3a caching note (measured live, 2026-10-08): this route stays prerendered.
+ * Caching note (classic pipeline since 2026-10-09): this route stays prerendered.
  *
  * `await connection()` was tried and REVERTED: it makes every render dynamic, so the
  * static ancestor shells stream a 200 before the page's `notFound()` fires — permanently,
  * on every request. Without it, unknown slugs still serve the not-found UI with a 200
  * on a cold hit, but the result is cacheable and crawlers are kept out by the
  * `noindex` metadata below (returned for every missing post), so nothing junk is ever
- * indexed. `export const instant = false` below only *permits* blocking — it does not
- * force dynamic rendering, so the route stays prerendered either way; it is kept as
- * documentation of intent.
+ * indexed.
  *
- * Junk-cache bounding: a missing slug caches under the short FAILURE profile (30s),
- * not the long body profile, and publishing any post fires `updateTag('blog')`, which
- * clears those entries — so a slug published later appears immediately regardless.
+ * Junk-cache bounding: a missing slug is cached for the standard window (no short
+ * failure profile under `unstable_cache` — see docs/CACHE.md), and publishing any post
+ * fires `updateTag('blog')`, which clears those entries — so a slug published later
+ * appears on the next navigation regardless.
  */
-export const instant = false;
 
 const CRUMBS = { en: { home: 'Home' }, bn: { home: 'হোম' } } as const;
 

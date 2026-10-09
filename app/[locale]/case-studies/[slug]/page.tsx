@@ -34,11 +34,9 @@ interface CaseStudyPageProps {
 }
 
 /**
- * Phase 3a caching note: same measured trade as the blog page (see it) — stays
- * prerendered, `instant = false` documents intent, missing slugs are `noindex` and
- * cache under the short failure profile.
+ * Caching note: same trade as the blog page (see it) — stays prerendered, missing slugs
+ * are `noindex` and cached for the standard window.
  */
-export const instant = false;
 
 const CRUMBS = {
   en: { home: 'Home' },

@@ -8,19 +8,17 @@ const exposeTestingApi = process.env.EXPOSE_TESTING_API === '1';
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  // Phase 3a (Item 16 / §8.6): Cache Components + Partial Prefetching are ON.
+  // Cache Components are OFF (2026-10-09 P0: `cacheComponents: true` hangs every cached
+  // route on Workers with Error 1101 — see docs/muse/cache-components-off-directive.md).
+  // Public content caches via the classic `unstable_cache` pipeline instead
+  // (`lib/content.ts` + `revalidateTag` invalidation in `lib/revalidate.ts`).
   // Backend: R2 incremental cache (`NEXT_INC_CACHE_R2_BUCKET`) + DO sharded tag
   // cache (`NEXT_TAG_CACHE_DO_SHARDED`) — see open-next.config.ts + wrangler.toml.
-  // Public content prerenders static with tag-based on-demand invalidation
-  // (docs/CACHE.md); admin/API stay dynamic. Build requires DIRECT_URL (CI passes
-  // it) because prerendered `'use cache'` reads have no Hyperdrive binding.
-  cacheComponents: true,
-  // Task 24: Partial Prefetching (Next >= 16.3). Default links warm the shared
-  // App Shell (provider + `[locale]` layout); `prefetch={true}` additionally
-  // resolves cached URL-specific content. No per-route `prefetch = 'partial'`
-  // exports remain — the audit found zero `prefetch={true}` links, so there
-  // was nothing to adopt incrementally and the flag lands directly.
-  partialPrefetching: true,
+  // NOTE: `partialPrefetching: true` REQUIRES the flag (Next throws E1321 without it),
+  // so it is off too until/unless Cache Components returns. `export const instant`
+  // route configs (blog/case-study slugs, admin layout) are inert without the flag.
+  // Build requires DIRECT_URL (CI passes it) because prerendered cached reads have
+  // no Hyperdrive binding.
   experimental: {
     exposeTestingApiInProductionBuild: exposeTestingApi,
   },

@@ -25,6 +25,11 @@ let client: ReturnType<typeof postgres> | null = null;
 let cached: Database | null = null;
 let cachedUrl = '';
 
+// One drizzle instance per live request, keyed by the request's Cloudflare context
+// object (stable per request via the entrypoint's AsyncLocalStorage). Weakly held:
+// when the request ends and its context is dropped, the entry collects itself.
+const perRequestDbs = new WeakMap<object, Database>();
+
 /**
  * Resolve the Postgres connection string for the current execution context.
  *
@@ -78,16 +83,23 @@ function createClient(url: string, max: number): ReturnType<typeof postgres> {
 /**
  * Drizzle client for the current execution context.
  *
- * Request path (Hyperdrive resolves): a FRESH `postgres()` client + drizzle instance on
- * EVERY call — never shared across requests. One isolate serves many CONCURRENT requests
- * on Workers, and postgres.js ties sockets to the request context that opened them
- * (workerd cancels continuations resolving in the wrong context with "A promise was
- * resolved or rejected from a different request context" — observed live 2026-10-09
- * during an `/admin/cms` burst). The hard invariant: **no socket-owning object may be
- * shared across requests in the isolate.** Hyperdrive pools server-side, so per-request
- * clients are cheap; correctness first. `max: 3` (each client serves one call site, not
- * the whole isolate). Idle pools are reaped by `idle_timeout`/`max_lifetime`, never by
- * an explicit `end()` — see the request path below.
+ * Request path (Hyperdrive resolves): ONE `postgres()` client + drizzle instance per
+ * REQUEST, memoized on the request's Cloudflare context object and shared across all
+ * `getDb()` calls within that request — never across requests. One isolate serves many
+ * CONCURRENT requests on Workers, and postgres.js ties sockets to the request context
+ * that opened them (workerd cancels continuations resolving in the wrong context with
+ * "A promise was resolved or rejected from a different request context" — observed live
+ * 2026-10-09 during an `/admin/cms` burst). The hard invariant: **no socket-owning
+ * object may be shared across requests in the isolate.** Memoizing per request (not per
+ * call) matters because every fresh client pays full connection setup on first query
+ * (TCP + TLS + Postgres handshake, 0.6–3s via Hyperdrive): a CMS burst of ~10 API
+ * requests × several queries each created hundreds of simultaneous handshakes and
+ * exhausted the worker (1102, observed 2026-10-09). The context object is stable per
+ * request (the entrypoint scopes `{env, ctx, cf}` in AsyncLocalStorage), so it is a
+ * correct WeakMap key; keys are weakly held, so nothing leaks when the request ends.
+ * Hyperdrive pools server-side, so one client per request is cheap; correctness first.
+ * `max: 3` (each client serves one request, not the whole isolate). Idle pools are
+ * reaped by `idle_timeout`/`max_lifetime`, never by an explicit `end()` — see below.
  *
  * Build path (no request): the module singleton is reused and only rebuilt when the
  * resolved URL changes (preview vs production environment swap).
@@ -99,8 +111,14 @@ export function getDb(): Database {
     // the moment end() is invoked, so every later query rejects with CONNECTION_ENDED and
     // the whole Worker loses its database (observed: all DB routes down, public pages on
     // static fallback). Reaping is handled by idle_timeout:20 + max_lifetime:60 above.
-    const fresh = createClient(url, 3);
-    return drizzle(fresh, { schema });
+    // getCloudflareContext() cannot throw here — inRequest is true only when the
+    // Hyperdrive binding resolved from it a moment ago.
+    const store = getCloudflareContext();
+    const memoized = perRequestDbs.get(store);
+    if (memoized) return memoized;
+    const fresh = drizzle(createClient(url, 3), { schema });
+    perRequestDbs.set(store, fresh);
+    return fresh;
   }
   if (!cached || cachedUrl !== url) {
     if (client) {

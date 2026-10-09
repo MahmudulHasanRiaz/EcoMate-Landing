@@ -19,15 +19,17 @@ const pg = () => vi.mocked(postgres);
 const REQUEST_URL = 'postgres://user:pass@localhost:5432/requestdb';
 const BUILD_URL = 'postgres://user:pass@localhost:5432/build-only-db';
 
-function mockRequestContext(waitUntil: (p: Promise<unknown>) => void): void {
-  ctx().mockImplementation(
-    () =>
-      ({
-        env: { HYPERDRIVE: { connectionString: REQUEST_URL } },
-        cf: undefined,
-        ctx: { waitUntil },
-      }) as unknown as ReturnType<typeof getCloudflareContext>,
-  );
+// The mocked context returns a STABLE store object per simulated request — mirroring
+// the entrypoint's AsyncLocalStorage, which scopes one {env, ctx, cf} object per
+// request. Returning a fresh object per getCloudflareContext() call would defeat
+// memoization testing (every lookup would miss).
+function mockRequestContext(): void {
+  const store = {
+    env: { HYPERDRIVE: { connectionString: REQUEST_URL } },
+    cf: undefined,
+    ctx: { waitUntil: () => undefined },
+  } as unknown as ReturnType<typeof getCloudflareContext>;
+  ctx().mockImplementation(() => store);
 }
 
 function mockNoContext(): void {
@@ -57,24 +59,25 @@ beforeEach(() => {
 });
 
 describe('db/client per-request isolation (2026-10-09 P0)', () => {
-  it('returns a FRESH client per getDb() call inside a request (no shared singleton)', () => {
-    mockRequestContext(() => undefined);
-    const first = getDb();
-    const second = getDb();
-    expect(second).not.toBe(first);
+  it('memoizes ONE client per request: same store across getDb() calls -> toBe', () => {
+    mockRequestContext();
+    expect(getDb()).toBe(getDb());
   });
 
-  it('N concurrent request-path calls resolve independently (no shared pool)', () => {
-    mockRequestContext(() => undefined);
-    const clients = Array.from({ length: 10 }, () => getDb());
-    const distinct = new Set(clients);
-    expect(distinct.size).toBe(10);
+  it('isolates concurrent requests: different stores -> not.toBe', () => {
+    mockRequestContext();
+    const firstRequest = getDb();
+    // Second simulated concurrent request: a distinct context object, same as a
+    // second ALS scope on the worker.
+    mockRequestContext();
+    const secondRequest = getDb();
+    expect(secondRequest).not.toBe(firstRequest);
   });
 
   it('does NOT end the pool at creation — eager end() rejects all later queries with CONNECTION_ENDED (P0 2026-10-10)', () => {
     const end = vi.fn().mockResolvedValue(undefined);
     pg().mockReturnValue(fakePool(end));
-    mockRequestContext(() => undefined);
+    mockRequestContext();
     getDb();
     // Synchronous assertion, no timers/flush: the pool must be usable the moment
     // getDb() returns. end() may only ever run against a pool being discarded.

@@ -51,6 +51,27 @@ import { timed } from '@/lib/slowlog';
  */
 const authAsProxy = auth as unknown as NextMiddleware;
 
+/** Cookie names Auth.js sets on every response it touches (CSRF token, session). */
+const AUTH_COOKIE_PREFIXES = ['__Host-authjs.', '__Secure-authjs.'] as const;
+
+/** True when a raw `Set-Cookie` entry sets one of Auth.js' own cookies. */
+function isAuthSetCookie(entry: string): boolean {
+  const name = entry.split(';', 1)[0]?.split('=', 1)[0]?.trim() ?? '';
+  return AUTH_COOKIE_PREFIXES.some((prefix) => name.startsWith(prefix));
+}
+
+/**
+ * Drop Auth.js `Set-Cookie` entries, keeping every other cookie and header intact.
+ * Operates on the live `Headers` (delete + re-append the survivors).
+ */
+function stripAuthCookies(headers: Headers): void {
+  const all = headers.getSetCookie();
+  const kept = all.filter((entry) => !isAuthSetCookie(entry));
+  if (kept.length === all.length) return;
+  headers.delete('set-cookie');
+  for (const entry of kept) headers.append('set-cookie', entry);
+}
+
 /** The language of the response body, as declared by `Content-Language`. */
 function contentLanguageFor(pathname: string): string {
   return localeFromPathname(pathname) ?? DEFAULT_LOCALE;
@@ -162,6 +183,17 @@ export async function proxy(request: NextRequest, event: Parameters<NextMiddlewa
   if (response instanceof Response) {
     response.headers.set('Content-Language', contentLanguageFor(pathname));
     response.headers.set('x-request-id', requestId);
+    // Anonymous public page views must be cookie-free so the edge can cache them: Auth.js
+    // re-sets `__Host-authjs.csrf-token` (+ one more authjs cookie) on EVERY response it
+    // touches, and any `Set-Cookie` disables Cloudflare edge caching — every visitor would
+    // hit the Worker instead of the CDN. The CSRF cookie is only needed for the auth flow,
+    // which re-sets it on its own paths (`/admin/*`, `/api/auth/*` — both excluded here,
+    // as is all of `/api/*`). A visitor who already holds the cookie keeps it in their
+    // browser; this only stops RE-SETTING it on public paths, so sign-in CSRF protection
+    // is unaffected. No other header is touched.
+    const isPublicDocument =
+      isDocument && !pathname.startsWith('/api/') && !pathname.startsWith('/admin');
+    if (isPublicDocument) stripAuthCookies(response.headers);
   }
 
   return response;

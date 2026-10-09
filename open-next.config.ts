@@ -13,10 +13,23 @@ import doShardedTagCache from '@opennextjs/cloudflare/overrides/tag-cache/do-sha
 //   from an admin mutation invalidates the R2 entries without a rebuild.
 // - The DO factory is passed lazy (`() => T`): it is instantiated inside the Worker,
 //   never at config-evaluation time on the build machine.
-export default defineCloudflareConfig({
+// `defineCloudflareConfig` drops unknown keys (it destructures only cache overrides and
+// hardcodes `dangerous: { enableCacheInterception }`), so `disableTagCache` must be merged
+// onto the returned object — passing it inside the call is silently ignored (and rejected
+// by its parameter type).
+const cloudflareConfig = defineCloudflareConfig({
   incrementalCache: r2IncrementalCache,
   tagCache: doShardedTagCache,
 });
+
+export default {
+  ...cloudflareConfig,
+  dangerous: {
+    ...cloudflareConfig.dangerous,
+    // TEMPORARY 2026-10-09: bisecting production 1101 hang — re-enable once the hanging component is identified.
+    disableTagCache: true,
+  },
+};
 
 // ---------------------------------------------------------------------------
 // HAZARD: never point package.json's `build` script at `opennextjs-cloudflare build`.

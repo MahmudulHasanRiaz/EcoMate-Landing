@@ -28,6 +28,8 @@ import { assembleLandingContent } from '@/lib/merge';
 import { LOCALES, isLocale } from '@/lib/locales';
 import { localeAlternates, ogLocale } from '@/lib/seo';
 import { timed } from '@/lib/slowlog';
+import { withTimeout } from '@/lib/withTimeout';
+import { errorMessage, logOnce } from '@/lib/json';
 
 export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));
@@ -75,12 +77,38 @@ export default async function LocaleLayout({
   // Components tracks a dynamic API access through the `await` that reaches it, and joined
   // branches can read as uncached data and refuse the prerender. Cache reads follow the
   // first as microtasks, not queries, so this costs nothing.
-  const sections = await timed(getLandingContent(locale), `layout:content:${locale}`, 10000, { locale });
-  const mainMenu = await timed(getMenu('main', locale), `layout:menu-main:${locale}`, 10000, { locale });
-  const footerMenu = await timed(getMenu('footer', locale), `layout:menu-footer:${locale}`, 10000, { locale });
-  const pricing = await timed(getPricingPlans(), `layout:pricing:${locale}`, 10000, { locale });
-  // 2c: published DB testimonials seed the proof section (null → static fallback copy).
-  const testimonials = await timed(getTestimonials(), 'layout:testimonials', 10000, { locale });
+  //
+  // P0 2026-10-09: the `'use cache'` R2/DO operations run outside any timeout guard — a
+  // never-settling cache promise hangs the request until the runtime kills it (1101).
+  // The whole five-await block is bounded to 20s (< ~30s kill); on timeout every result
+  // stays `null` and the page renders fully static. Sequential awaits preserved inside.
+  let sections: Awaited<ReturnType<typeof getLandingContent>> = null;
+  let mainMenu: Awaited<ReturnType<typeof getMenu>> = null;
+  let footerMenu: Awaited<ReturnType<typeof getMenu>> = null;
+  let pricing: Awaited<ReturnType<typeof getPricingPlans>> = null;
+  let testimonials: Awaited<ReturnType<typeof getTestimonials>> = null;
+  try {
+    const loaded = await withTimeout(
+      (async () => {
+        const s = await timed(getLandingContent(locale), `layout:content:${locale}`, 10000, { locale });
+        const m1 = await timed(getMenu('main', locale), `layout:menu-main:${locale}`, 10000, { locale });
+        const m2 = await timed(getMenu('footer', locale), `layout:menu-footer:${locale}`, 10000, { locale });
+        const p = await timed(getPricingPlans(), `layout:pricing:${locale}`, 10000, { locale });
+        // 2c: published DB testimonials seed the proof section (null → static fallback copy).
+        const t = await timed(getTestimonials(), 'layout:testimonials', 10000, { locale });
+        return { sections: s, mainMenu: m1, footerMenu: m2, pricing: p, testimonials: t };
+      })(),
+      `layout:landing:${locale}`,
+      20000,
+    );
+    sections = loaded.sections;
+    mainMenu = loaded.mainMenu;
+    footerMenu = loaded.footerMenu;
+    pricing = loaded.pricing;
+    testimonials = loaded.testimonials;
+  } catch (e) {
+    logOnce('warn', `layout:landing-timeout:${locale}`, `[layout] landing data fetch timed out for locale "${locale}", serving static fallback:`, errorMessage(e));
+  }
 
   return (
     <LocaleThemeProvider

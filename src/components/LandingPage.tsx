@@ -19,6 +19,8 @@
 import { LocaleThemeProvider } from '@/components/shell/LocaleThemeProvider';
 import { getLandingContent, getMenu, getPricingPlans, getTestimonials } from '@/lib/content';
 import { assembleLandingContent } from '@/lib/merge';
+import { errorMessage, logOnce } from '@/lib/json';
+import { withTimeout } from '@/lib/withTimeout';
 import type { Locale } from '@/src/types/landing';
 import { LandingShell } from './LandingShell';
 
@@ -31,12 +33,38 @@ export async function LandingPage({ locale }: { locale: Locale }) {
   // uncached data and refuses to emit `/`. Awaiting one at a time keeps the chain observable
   // to the tracker, and costs nothing here — all four are cache reads, so the ones that follow
   // the first are microtasks, not queries.
-  const sections = await getLandingContent(locale);
-  const mainMenu = await getMenu('main', locale);
-  const footerMenu = await getMenu('footer', locale);
-  const pricing = await getPricingPlans();
-  // 2c: published DB testimonials seed the proof section (null → static fallback copy).
-  const testimonials = await getTestimonials();
+  //
+  // P0 2026-10-09: the `'use cache'` R2/DO operations run outside any timeout guard — a
+  // never-settling cache promise hangs the request until the runtime kills it (1101).
+  // The whole five-await block is bounded to 20s (< ~30s kill); on timeout every result
+  // stays `null` and the page renders fully static. Sequential awaits preserved inside.
+  let sections: Awaited<ReturnType<typeof getLandingContent>> = null;
+  let mainMenu: Awaited<ReturnType<typeof getMenu>> = null;
+  let footerMenu: Awaited<ReturnType<typeof getMenu>> = null;
+  let pricing: Awaited<ReturnType<typeof getPricingPlans>> = null;
+  let testimonials: Awaited<ReturnType<typeof getTestimonials>> = null;
+  try {
+    const loaded = await withTimeout(
+      (async () => {
+        const s = await getLandingContent(locale);
+        const m1 = await getMenu('main', locale);
+        const m2 = await getMenu('footer', locale);
+        const p = await getPricingPlans();
+        // 2c: published DB testimonials seed the proof section (null → static fallback copy).
+        const t = await getTestimonials();
+        return { sections: s, mainMenu: m1, footerMenu: m2, pricing: p, testimonials: t };
+      })(),
+      `landing-page:${locale}`,
+      20000,
+    );
+    sections = loaded.sections;
+    mainMenu = loaded.mainMenu;
+    footerMenu = loaded.footerMenu;
+    pricing = loaded.pricing;
+    testimonials = loaded.testimonials;
+  } catch (e) {
+    logOnce('warn', `landing-page:timeout:${locale}`, `[landing] data fetch timed out for locale "${locale}", serving static fallback:`, errorMessage(e));
+  }
 
   return (
     <LocaleThemeProvider

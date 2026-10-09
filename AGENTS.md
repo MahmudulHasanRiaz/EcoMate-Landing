@@ -72,19 +72,29 @@ the bundle must use `.open-next`, not `.opennext`.
 - **`proxy.ts`, not `middleware.ts`** — export `proxy()`. A `middleware.ts` is ignored in v16.
 - **`params` and `searchParams` are Promises** in pages, layouts and route handlers — always
   `await` them.
-- **Cache Components** (`cacheComponents: true` in `next.config.ts`):
-  - `'use cache'` lives in exactly one module: `lib/content.ts`. Do not add it to component
-    files — it scatters invalidation targets.
-  - Tag reads with `cacheTag()` and give them a `cacheLife()` profile.
+- **Cache Components are OFF — do NOT re-enable** (`cacheComponents` removed from
+  `next.config.ts` on 2026-10-09): `cacheComponents: true` hangs every cached route on
+  Cloudflare Workers with Error 1101 (Next.js warns it "cannot guarantee that Cache
+  Components will run as expected due to the current runtime's implementation of
+  `setTimeout()`"). Do not re-enable without a verified production test — full record:
+  `docs/muse/cache-components-off-directive.md`.
+- **Blessed caching path: `unstable_cache()` in `lib/content.ts`** (the old ban on it is
+  lifted). It lives in exactly one module: `lib/content.ts`. Do not add cached reads to
+  component files — it scatters invalidation targets.
+  - Tags go in the `tags:` option, lifetimes are `revalidate:` seconds.
   - Invalidate from admin mutations with `updateTag(tag)` (same-request visibility) or
-    `revalidateTag(tag)` (background). Tags are per-domain **and per-locale**
-    (`content:en`, `content:bn`) — never one global tag.
-  - Do **not** use `fetch(url, { next: { tags } })` or `unstable_cache()` (legacy).
-  - Do **not** use `export const dynamic = 'force-dynamic'` (removed). A route that must
-    block on runtime data (e.g. admin pages reading the session) opts in with
-    `export const instant = false`.
-  - Never compute `Date.now()` / `Math.random()` inside a cached function — it freezes at
-    build time. Select raw timestamps and format them in the component.
+    `revalidateTag(tag)` (background) via `lib/revalidate.ts`. Tags are per-domain **and
+    per-locale** (`content:en`, `content:bn`) — never one global tag.
+  - Do **not** use `fetch(url, { next: { tags } })`.
+- **FORBIDDEN: `'use cache'` / `cacheTag()` / `cacheLife()`** — they throw `E886`
+  without the flag, and the flag stays off.
+- **Never use `export const instant`** — it is a build error without the flag.
+- **`partialPrefetching` requires the flag** (Next throws `E1321`) — stays off too.
+- Do **not** use `export const dynamic = 'force-dynamic'` (removed). Routes that block
+  on runtime data (e.g. admin pages reading the session via `auth()`) are dynamic by
+  default — no opt-out export is needed.
+- Never compute `Date.now()` / `Math.random()` inside a cached function — it freezes at
+  build time. Select raw timestamps and format them in the component.
 - Fonts via `next/font`, images via `next/image` with an explicit `sizes` (and `priority`
   only on the LCP hero).
 - Node.js runtime is the default; do not set `export const runtime = 'edge'`.

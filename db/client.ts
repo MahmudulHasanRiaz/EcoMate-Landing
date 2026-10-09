@@ -18,6 +18,9 @@ import * as schema from './schema';
 
 type Database = PostgresJsDatabase<typeof schema>;
 
+// Build-time / plain-Node singleton ONLY (no request exists there — `next build`
+// prerender, seed scripts, `next dev` without the wrangler proxy, unit tests).
+// The build is single-threaded Node, so sharing one client across calls is safe.
 let client: ReturnType<typeof postgres> | null = null;
 let cached: Database | null = null;
 let cachedUrl = '';
@@ -27,37 +30,80 @@ let cachedUrl = '';
  *
  * 1. Inside a request, the Hyperdrive binding is authoritative. It is the only source
  *    that exists in production, and it never exists outside a request.
- * 2. At build time `next build` prerenders the static shell and executes every
- *    `'use cache'` function once. That happens with no request, so
- *    `getCloudflareContext()` throws (sync mode requires a request context) and there is
- *    no binding to read. Without the `DIRECT_URL` fallback the very first prerender
- *    fails with `HYPERDRIVE_NOT_BOUND`; CI therefore exposes `DIRECT_URL` to the build
- *    step as well as to the migration step.
+ * 2. At build time `next build` prerenders the static shell and executes every cached
+ *    function once. That happens with no request, so `getCloudflareContext()` throws
+ *    (sync mode requires a request context) and there is no binding to read. Without
+ *    the `DIRECT_URL` fallback the very first prerender fails with
+ *    `HYPERDRIVE_NOT_BOUND`; CI therefore exposes `DIRECT_URL` to the build step as
+ *    well as to the migration step.
  */
-function resolveUrl(): string {
+function resolveConnection(): { url: string; inRequest: boolean } {
   try {
     const { env } = getCloudflareContext();
     const bound = env.HYPERDRIVE?.connectionString;
-    if (bound) return bound;
+    if (bound) return { url: bound, inRequest: true };
   } catch {
     // No Cloudflare context: build-time prerender, `next dev` without the wrangler
     // proxy, or a plain Node script. Fall through to the direct-connection fallback.
   }
   const buildUrl = process.env.DIRECT_URL || process.env.DATABASE_URL || '';
-  if (buildUrl) return buildUrl;
+  if (buildUrl) return { url: buildUrl, inRequest: false };
   throw new Error('HYPERDRIVE_NOT_BOUND');
 }
 
+function createClient(url: string, max: number): ReturnType<typeof postgres> {
+  // prepare:false -> transaction-pooler safe (Supabase 6543 / Hyperdrive): prepared
+  //                  statements do not survive PgBouncer in transaction mode.
+  // connect_timeout:10 -> without this, a blackholed network (SYN dropped, no RST —
+  //                  exactly what GitHub runners hit against an unreachable Supabase
+  //                  host) hangs TCP connect for minutes. Ten seconds bounds every
+  //                  failure mode to fast-and-loud, so callers degrade to the static
+  //                  fallback instead of hanging (2026-10-06).
+  // max_lifetime:60 + idle_timeout:20 -> pool self-healing (2026-10-08 prod).
+  //                  withTimeout rejects the WAITER after 12s, but the stuck query keeps
+  //                  holding its pool slot forever — slots accumulate until every slot is
+  //                  a zombie and every new query hangs (observed: even trivial COUNTs
+  //                  timing out). Rotating connections every minute guarantees a stuck
+  //                  slot dies and is replaced with a fresh one; idle ones are reaped
+  //                  even sooner. Hyperdrive multiplexes server-side, so churn is cheap.
+  return postgres(url, {
+    prepare: false,
+    max,
+    connect_timeout: 10,
+    idle_timeout: 20,
+    max_lifetime: 60,
+  });
+}
+
 /**
- * Per-isolate Drizzle client.
+ * Drizzle client for the current execution context.
  *
- * Module-scoped singleton on purpose: `getDb()` is called by every route handler, and a
- * fresh Pool per call leaks a connection for the whole lifetime of the isolate, which
- * eventually exhausts the database's `max_connections`. The client is only rebuilt when
- * the resolved URL changes (preview vs production environment swap).
+ * Request path (Hyperdrive resolves): a FRESH `postgres()` client + drizzle instance on
+ * EVERY call — never shared across requests. One isolate serves many CONCURRENT requests
+ * on Workers, and postgres.js ties sockets to the request context that opened them
+ * (workerd cancels continuations resolving in the wrong context with "A promise was
+ * resolved or rejected from a different request context" — observed live 2026-10-09
+ * during an `/admin/cms` burst). The hard invariant: **no socket-owning object may be
+ * shared across requests in the isolate.** Hyperdrive pools server-side, so per-request
+ * clients are cheap; correctness first. `max: 3` (each client serves one call site, not
+ * the whole isolate). Cleanup is registered on the request's execution context so the
+ * isolate closes the pool instead of leaking it.
+ *
+ * Build path (no request): the module singleton is reused and only rebuilt when the
+ * resolved URL changes (preview vs production environment swap).
  */
 export function getDb(): Database {
-  const url = resolveUrl();
+  const { url, inRequest } = resolveConnection();
+  if (inRequest) {
+    const fresh = createClient(url, 3);
+    try {
+      getCloudflareContext().ctx.waitUntil(fresh.end({ timeout: 5 }).catch(() => undefined));
+    } catch {
+      // Cleanup registration must never break the request. Worst case the pool is
+      // reaped by idle_timeout/max_lifetime instead of at response end.
+    }
+    return drizzle(fresh, { schema });
+  }
   if (!cached || cachedUrl !== url) {
     if (client) {
       const stale = client;
@@ -66,36 +112,7 @@ export function getDb(): Database {
       // would keep a dead connection slot in the pool.
       void stale.end({ timeout: 5 }).catch(() => undefined);
     }
-    // prepare:false -> transaction-pooler safe (Supabase 6543 / Hyperdrive): prepared
-    //                  statements do not survive PgBouncer in transaction mode.
-    // max:10         -> was 1. A single connection serializes every parallel query of a
-    //                  page behind one slot: one stuck query stalls ALL of them until the
-    //                  runtime kills the request ("hung", 2026-10-07 prod). Hyperdrive
-    //                  multiplexes server-side and one isolate serves one request, so 10
-    //                  local slots cannot exhaust anything — but one bad query can no
-    //                  longer deadlock the other nine. Combined with withTimeout on reads
-    //                  and connect_timeout below, no DB wait is unbounded anymore.
-    // connect_timeout:10 -> without this, a blackholed network (SYN dropped, no RST —
-    //                  exactly what GitHub runners hit against an unreachable Supabase
-    //                  host) hangs TCP connect for minutes. Next's prerender cache-fill
-    //                  timeout fires first, failing the whole build with a misleading
-    //                  "Filling a cache during prerender timed out". Ten seconds bounds
-    //                  every failure mode to fast-and-loud, so callers degrade to the
-    //                  static fallback instead of hanging the build (2026-10-06).
-    // max_lifetime:60 + idle_timeout:20 -> pool self-healing (2026-10-08 prod).
-    //                  withTimeout rejects the WAITER after 12s, but the stuck query keeps
-    //                  holding its pool slot forever — slots accumulate until all 10 are
-    //                  zombies and every new query hangs (observed: even trivial COUNTs
-    //                  timing out). Rotating connections every minute guarantees a stuck
-    //                  slot dies and is replaced with a fresh one; idle ones are reaped
-    //                  even sooner. Hyperdrive multiplexes server-side, so churn is cheap.
-    client = postgres(url, {
-      prepare: false,
-      max: 10,
-      connect_timeout: 10,
-      idle_timeout: 20,
-      max_lifetime: 60,
-    });
+    client = createClient(url, 10);
     cached = drizzle(client, { schema });
     cachedUrl = url;
   }
@@ -108,7 +125,7 @@ export function getDb(): Database {
  */
 export function isPostgresConfigured(): boolean {
   try {
-    resolveUrl();
+    resolveConnection();
     return true;
   } catch {
     return false;

@@ -6,8 +6,8 @@
  * Copy comes from `useLanding()` (header/footer/dock keys + DB menus); contact
  * URLs are CMS data in the `dock` key, not hardcoded links.
  */
-import React, { useState } from 'react';
-import { Moon, Sun } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Menu, Moon, Sun } from 'lucide-react';
 import { useLanding } from '@/components/shell/useLanding';
 import { buildHttpUrl, buildTelUrl, buildWhatsAppUrl } from '@/lib/contact';
 import {
@@ -19,49 +19,191 @@ import {
   WhatsAppIcon,
 } from './BrandIcons';
 
-export function MkHeader() {
+export function MkHeader({
+  drawerOpen: controlledOpen,
+  onDrawerChange,
+}: {
+  // Controlled by LandingV3 so the dock can hide with the drawer; standalone
+  // pages (blog) omit both and the drawer manages itself locally.
+  drawerOpen?: boolean;
+  onDrawerChange?: (open: boolean) => void;
+}) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const drawerOpen = controlledOpen ?? internalOpen;
+  const setDrawerOpen = onDrawerChange ?? setInternalOpen;
   const { content, locale, menu, branding, toggleLocale, prefetchLocale, toggleTheme, theme } = useLanding();
   const header = content.header;
+  const dock = content.dock;
   const nav = menu ?? header.nav;
   const logoUrl = branding?.logoUrl.trim() ?? '';
   const brandName = branding?.siteName.trim() || 'EcoMate';
+  const panelRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  const callUrl = buildTelUrl(dock.callNumber);
+  const whatsappUrl = buildWhatsAppUrl(dock.whatsapp);
+  const messengerUrl = buildHttpUrl(dock.messengerUrl);
+
+  const close = () => setDrawerOpen(false);
+
+  // Focus the panel on open; return focus to the trigger on close.
+  // The ref guard skips the initial mount so page load never steals focus.
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    if (drawerOpen) {
+      panelRef.current?.focus();
+    } else if (wasOpen.current) {
+      triggerRef.current?.focus();
+    }
+    wasOpen.current = drawerOpen;
+  }, [drawerOpen]);
+
+  // Esc closes; Tab cycles inside the panel (lightweight focus trap).
+  const onPanelKey = (event: React.KeyboardEvent): void => {
+    if (event.key === 'Escape') {
+      event.stopPropagation();
+      close();
+      return;
+    }
+    if (event.key !== 'Tab' || !panelRef.current) return;
+    const focusable = panelRef.current.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled])',
+    );
+    if (focusable.length === 0) return;
+    const first = focusable[0] as HTMLElement;
+    const last = focusable[focusable.length - 1] as HTMLElement;
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
 
   return (
-    <header className="mk-nav">
-      <div className="mk-nav-bar">
-        <a href="#top" className="mk-logo" aria-label={brandName}>
-          {logoUrl ? (
-            <img
-              src={logoUrl}
-              alt={brandName}
-              width={26}
-              height={26}
-              className="mk-logo-img"
-              loading="eager"
-              decoding="async"
-            />
-          ) : (
-            <span className="mk-logo-mark" aria-hidden="true">
-              E
-            </span>
-          )}
-          {brandName}
-        </a>
-        <nav className="mk-nav-links" aria-label="Primary">
-          {nav.slice(0, 4).map((item) => (
-            <a key={`${item.label}-${item.href}`} href={item.href}>
+    <>
+      <header className="mk-nav">
+        <div className="mk-nav-bar">
+          <a href="#top" className="mk-logo" aria-label={brandName}>
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt={brandName}
+                width={26}
+                height={26}
+                className="mk-logo-img"
+                loading="eager"
+                decoding="async"
+              />
+            ) : (
+              <span className="mk-logo-mark" aria-hidden="true">
+                E
+              </span>
+            )}
+            {brandName}
+          </a>
+          <nav className="mk-nav-links" aria-label="Primary">
+            {nav.map((item) => (
+              <a key={`${item.label}-${item.href}`} href={item.href}>
+                {item.label}
+              </a>
+            ))}
+          </nav>
+          <div className="mk-nav-right">
+            <button
+              type="button"
+              className="mk-lang"
+              data-active={locale}
+              onClick={toggleLocale}
+              onMouseEnter={prefetchLocale}
+              onFocus={prefetchLocale}
+              aria-label={locale === 'en' ? 'Switch to Bangla' : 'Switch to English'}
+            >
+              <span className="mk-lang-thumb" aria-hidden="true" />
+              <span className="mk-lang-opt" data-on={locale === 'bn'}>
+                বাং
+              </span>
+              <span className="mk-lang-opt" data-on={locale === 'en'}>
+                EN
+              </span>
+            </button>
+            <button
+              type="button"
+              className="mk-icon-btn"
+              onClick={toggleTheme}
+              aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+            >
+              {theme === 'dark' ? <Sun size={15} aria-hidden="true" /> : <Moon size={15} aria-hidden="true" />}
+            </button>
+            <a href="/admin/login" className="mk-signin">
+              {header.signInLabel}
+            </a>
+            <a href="#demo" className="mk-btn mk-btn-primary mk-btn-sm mk-nav-cta">
+              {header.ctaBookDemo}
+            </a>
+            <button
+              ref={triggerRef}
+              type="button"
+              className="mk-icon-btn mk-nav-burger"
+              onClick={() => setDrawerOpen(true)}
+              aria-expanded={drawerOpen}
+              aria-controls="mk-nav-drawer"
+              aria-label="Open navigation menu"
+            >
+              <Menu size={17} aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {drawerOpen && (
+        <div
+          className="mk-drawer-scrim"
+          onClick={close}
+          aria-hidden="true"
+        />
+      )}
+      <div
+        ref={panelRef}
+        id="mk-nav-drawer"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Site navigation"
+        tabIndex={-1}
+        data-open={drawerOpen}
+        className="mk-drawer"
+        onKeyDown={onPanelKey}
+        aria-hidden={!drawerOpen}
+        inert={!drawerOpen}
+      >
+        <div className="mk-drawer-head">
+          <span className="mk-logo">{brandName}</span>
+          <button
+            type="button"
+            className="mk-icon-btn"
+            onClick={close}
+            aria-label="Close navigation menu"
+          >
+            <CloseIcon size={17} />
+          </button>
+        </div>
+        <nav aria-label="Mobile">
+          {nav.map((item) => (
+            <a key={`${item.label}-${item.href}`} href={item.href} onClick={close} className="mk-drawer-link">
               {item.label}
             </a>
           ))}
         </nav>
-        <div className="mk-nav-right">
+        <div className="mk-drawer-row">
           <button
             type="button"
             className="mk-lang"
             data-active={locale}
-            onClick={toggleLocale}
-            onMouseEnter={prefetchLocale}
-            onFocus={prefetchLocale}
+            onClick={() => {
+              toggleLocale();
+              close();
+            }}
             aria-label={locale === 'en' ? 'Switch to Bangla' : 'Switch to English'}
           >
             <span className="mk-lang-thumb" aria-hidden="true" />
@@ -80,15 +222,33 @@ export function MkHeader() {
           >
             {theme === 'dark' ? <Sun size={15} aria-hidden="true" /> : <Moon size={15} aria-hidden="true" />}
           </button>
-          <a href="/admin/login" className="mk-signin">
-            {header.signInLabel}
-          </a>
-          <a href="#demo" className="mk-btn mk-btn-primary mk-btn-sm">
-            {header.ctaBookDemo}
-          </a>
+        </div>
+        <a href="#demo" onClick={close} className="mk-btn mk-btn-primary mk-btn-block">
+          <CalendarIcon size={16} />
+          {header.ctaBookDemo}
+        </a>
+        <div className="mk-drawer-contact">
+          {callUrl && (
+            <a href={callUrl} className="mk-drawer-contact-btn" aria-label={dock.callLabel}>
+              <CallIcon size={16} />
+              {dock.callLabel}
+            </a>
+          )}
+          {whatsappUrl && (
+            <a href={whatsappUrl} target="_blank" rel="noreferrer" className="mk-drawer-contact-btn" aria-label={dock.whatsappLabel}>
+              <WhatsAppIcon size={16} />
+              {dock.whatsappLabel}
+            </a>
+          )}
+          {messengerUrl && (
+            <a href={messengerUrl} target="_blank" rel="noreferrer" className="mk-drawer-contact-btn" aria-label={dock.messengerLabel}>
+              <MessengerIcon size={16} />
+              {dock.messengerLabel}
+            </a>
+          )}
         </div>
       </div>
-    </header>
+    </>
   );
 }
 
@@ -128,10 +288,38 @@ export function MkFooter() {
   );
 }
 
-export function MkDock() {
+export function MkDock({ drawerOpen = false }: { drawerOpen?: boolean }) {
   const { content } = useLanding();
   const dock = content.dock;
   const [open, setOpen] = useState(false);
+  // Smart hide: the dock slides away on scroll down and returns on scroll up
+  // or near the top/bottom. Passive listener + rAF throttle; a ~10px dead zone
+  // stops jitter. It also stays hidden while the nav drawer is open.
+  const [hidden, setHidden] = useState(false);
+
+  useEffect(() => {
+    let lastY = window.scrollY;
+    let ticking = false;
+    const onScroll = (): void => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        ticking = false;
+        const y = window.scrollY;
+        const delta = y - lastY;
+        lastY = y;
+        const nearTop = y < 80;
+        const nearBottom = window.innerHeight + y > document.body.scrollHeight - 80;
+        if (nearTop || nearBottom) {
+          setHidden(false);
+        } else if (Math.abs(delta) > 10) {
+          setHidden(delta > 0);
+        }
+      });
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   // All four endpoints resolve through the contact builders: a blank or
   // unparseable CMS value hides that action instead of linking nowhere.
@@ -209,7 +397,7 @@ export function MkDock() {
       </div>
 
       {/* Mobile: help text + big demo button + three icon actions in a row. */}
-      <div className="mk-dock">
+      <div className="mk-dock" data-hidden={hidden || drawerOpen} aria-hidden={drawerOpen} inert={drawerOpen}>
         <span className="mk-dock-help">
           <span className="mk-pulse-dot" aria-hidden="true" />
           {dock.helpLabel}

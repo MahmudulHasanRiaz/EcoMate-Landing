@@ -207,6 +207,8 @@ export interface BlogPost {
   category: string;
   tags: string[];
   featuredImageUrl: string;
+  videoUrl: string;
+  galleryUrls: string[];
   readTime: string;
   status: 'draft' | 'scheduled' | 'published' | 'archived';
   seoTitle: string;

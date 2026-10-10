@@ -633,6 +633,26 @@ export interface LandingContent {
     privacyLabel: string;
     termsLabel: string;
   };
+  /** Blog archive page copy (PART A3). Categories derive from the posts. */
+  blogArchive: {
+    eyebrow: string;
+    heading: string;
+    subheading: string;
+    featuredLabel: string;
+    allLabel: string;
+    emptyLabel: string;
+    loadMoreLabel: string;
+  };
+  /** Blog detail chrome around the post body (PART A4). */
+  blogDetail: {
+    backLabel: string;
+    shareLabel: string;
+    relatedLabel: string;
+    authorLabel: string;
+    galleryLabel: string;
+    videoLabel: string;
+    copiedLabel: string;
+  };
   /** Tracking-consent banner copy (H-18): per-locale, never hardcoded English. */
   consent: {
     title: string;

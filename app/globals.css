@@ -859,6 +859,245 @@ html.dark body {
   font-family: var(--font-mono);
 }
 
+/* Article body typography (the Tailwind typography plugin is not installed,
+   so the old `prose` classes were no-ops — this is the real styling). */
+.mk-prose {
+  margin-top: 28px;
+  color: var(--mk-tx);
+  line-height: 1.75;
+  font-size: 16px;
+  overflow-wrap: break-word;
+}
+
+.mk-prose > *:first-child {
+  margin-top: 0;
+}
+
+.mk-prose h2,
+.mk-prose h3,
+.mk-prose h4 {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+  margin: 28px 0 10px;
+}
+
+.mk-prose h2 {
+  font-size: 24px;
+}
+
+.mk-prose h3 {
+  font-size: 20px;
+}
+
+.mk-prose h4 {
+  font-size: 17px;
+}
+
+.mk-prose p {
+  margin: 14px 0;
+  color: var(--mk-tx);
+}
+
+.mk-prose ul,
+.mk-prose ol {
+  margin: 14px 0;
+  padding-left: 24px;
+}
+
+.mk-prose li {
+  margin: 6px 0;
+}
+
+.mk-prose li::marker {
+  color: var(--mk-ac);
+}
+
+.mk-prose a {
+  color: var(--mk-ac);
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+
+.mk-prose a:hover {
+  border-color: var(--mk-ac);
+}
+
+.mk-prose blockquote {
+  margin: 18px 0;
+  padding: 12px 18px;
+  border-left: 3px solid var(--mk-ac);
+  background: var(--mk-s1);
+  border-radius: 0 6px 6px 0;
+  color: var(--mk-mu);
+}
+
+.mk-prose code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: var(--mk-s2);
+  border: 1px solid var(--mk-bd);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
+.mk-prose pre {
+  margin: 18px 0;
+  padding: 16px;
+  border-radius: 6px;
+  background: var(--mk-s2);
+  border: 1px solid var(--mk-bd);
+  overflow-x: auto;
+}
+
+.mk-prose pre code {
+  background: none;
+  border: 0;
+  padding: 0;
+}
+
+.mk-prose img {
+  margin: 20px 0;
+  width: 100%;
+  border-radius: 6px;
+  border: 1px solid var(--mk-bd);
+}
+
+.mk-prose table {
+  width: 100%;
+  margin: 18px 0;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.mk-prose th,
+.mk-prose td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--mk-bd);
+  text-align: left;
+}
+
+.mk-prose th {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--mk-mu);
+}
+
+.mk-prose hr {
+  margin: 24px 0;
+  border: 0;
+  border-top: 1px solid var(--mk-bd);
+}
+
+/* Mobile nav drawer (trigger + panel are mobile-only). */
+.mk-nav-burger {
+  display: none;
+}
+
+.mk-drawer-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(0, 0, 0, 0.55);
+  animation: mk-fade 0.2s ease;
+}
+
+@keyframes mk-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+.mk-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 41;
+  width: min(320px, 84vw);
+  background: var(--mk-s1);
+  border-left: 1px solid var(--mk-bd);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+  transform: translateX(105%);
+  transition: transform 0.28s cubic-bezier(0.32, 0.72, 0.35, 1);
+  visibility: hidden;
+}
+
+.mk-drawer[data-open='true'] {
+  transform: translateX(0);
+  visibility: visible;
+}
+
+.mk-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mk-drawer-link {
+  display: block;
+  padding: 11px 4px;
+  border-bottom: 1px solid var(--mk-bd);
+  color: var(--mk-tx);
+  font-weight: 600;
+  font-size: 16px;
+  text-decoration: none;
+}
+
+.mk-drawer-link:hover {
+  color: var(--mk-ac);
+}
+
+.mk-drawer-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mk-drawer-contact {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-top: auto;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+}
+
+.mk-drawer-contact-btn {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 4px;
+  border: 1px solid var(--mk-bd);
+  border-radius: 6px;
+  background: var(--mk-bg);
+  color: var(--mk-tx);
+  font-size: 11px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* Smart dock: hides on scroll down, returns on scroll up / top / bottom. */
+.mk-dock {
+  transition: transform 0.3s ease;
+}
+
+.mk-dock[data-hidden='true'] {
+  transform: translateY(calc(100% + 20px));
+}
+
+@media (min-width: 821px) {
+  .mk-drawer,
+  .mk-drawer-scrim {
+    display: none;
+  }
+}
+
 /* Desktop FAB with fan-out contact actions; mobile bottom dock. */
 .mk-fab {
   position: fixed;
@@ -1025,8 +1264,13 @@ select:focus-visible {
   }
 
   .mk-nav-links,
-  .mk-signin {
+  .mk-signin,
+  .mk-nav-cta {
     display: none;
+  }
+
+  .mk-nav-burger {
+    display: inline-flex;
   }
 
   .mk-proof-grid {

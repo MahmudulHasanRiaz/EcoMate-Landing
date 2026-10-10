@@ -18,6 +18,7 @@ import * as api from '../../services/api';
 import { CONTENT_KEY_GROUPS } from '@/lib/contentKeys';
 import { fieldErrorsOf, type FieldErrors } from './fieldErrors';
 import { TestimonialForm } from './TestimonialForm';
+import { BlogMediaFields } from './BlogMediaFields';
 import { CaseStudyEditor } from './CaseStudyEditor';
 import { MediaLibrary } from './MediaLibrary';
 import { TestimonialCard } from '../TestimonialCard';
@@ -2089,6 +2090,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                     />
                     <FieldError id="blog-content-error" message={blogErrors.content} />
                   </div>
+
+                  <BlogMediaFields
+                    videoUrl={editingPost.videoUrl ?? ''}
+                    galleryUrls={editingPost.galleryUrls ?? []}
+                    errors={blogErrors}
+                    onVideoUrl={(value) => setEditingPost({ ...editingPost, videoUrl: value })}
+                    onGallery={(value) => setEditingPost({ ...editingPost, galleryUrls: value })}
+                  />
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                     <div>

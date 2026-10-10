@@ -167,6 +167,10 @@ export interface BlogPostSummary {
   category: string;
   tags: string[];
   featuredImageUrl: string;
+  /** Optional YouTube link — the detail page embeds it below the hero. */
+  videoUrl: string;
+  /** Optional gallery image URLs — the detail page grids them after the body. */
+  galleryUrls: string[];
   readTime: string;
   seoTitle: string;
   seoDescription: string;
@@ -184,6 +188,8 @@ const BLOG_SELECT = {
   category: blogPostsTable.category,
   tags: blogPostsTable.tags,
   featuredImageUrl: blogPostsTable.featuredImageUrl,
+  videoUrl: blogPostsTable.videoUrl,
+  galleryUrls: blogPostsTable.galleryUrls,
   readTime: blogPostsTable.readTime,
   seoTitle: blogPostsTable.seoTitle,
   seoDescription: blogPostsTable.seoDescription,
@@ -206,6 +212,8 @@ function toBlogSummary(row: {
   category: string;
   tags: unknown;
   featuredImageUrl: string | null;
+  videoUrl: string | null;
+  galleryUrls: unknown;
   readTime: string | null;
   seoTitle: string | null;
   seoDescription: string | null;
@@ -216,6 +224,10 @@ function toBlogSummary(row: {
   // `tags` is jsonb with no schema guarantee — anything that is not an array of strings is
   // dropped rather than rendered, because it ends up inside a JSON-LD `keywords` field.
   const tags = Array.isArray(row.tags) ? row.tags.filter((tag): tag is string => typeof tag === 'string') : [];
+  // `gallery_urls` is jsonb with no schema guarantee — same defensive read as `tags`.
+  const galleryUrls = Array.isArray(row.galleryUrls)
+    ? row.galleryUrls.filter((url): url is string => typeof url === 'string' && url.length > 0)
+    : [];
   const published = row.publishedAt ?? row.createdAt;
   return {
     slug: row.slug,
@@ -225,6 +237,8 @@ function toBlogSummary(row: {
     category: row.category,
     tags,
     featuredImageUrl: row.featuredImageUrl ?? '',
+    videoUrl: row.videoUrl ?? '',
+    galleryUrls,
     readTime: row.readTime ?? '',
     seoTitle: row.seoTitle ?? '',
     seoDescription: row.seoDescription ?? '',

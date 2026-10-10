@@ -37,7 +37,9 @@ export async function PUT(req: Request) {
     // `is_pricing_visible` lives on this row and the pricing cache reads it, so a settings
     // edit has to invalidate pricing too — otherwise toggling pricing visibility from the
     // "System & Branding" tab would leave the cached pricing section in the old mode.
-    invalidateDomains(['content', 'pricing'], updated.defaultLocale === 'bn' ? 'bn' : 'en');
+    // `branding` rides along for the same reason: logo/favicon edits must reach the
+    // header and the metadata without waiting out the cache window.
+    invalidateDomains(['content', 'pricing', 'branding'], updated.defaultLocale === 'bn' ? 'bn' : 'en');
     return ok(updated);
   } catch (e) {
     logServerError('PUT /api/settings', e);

@@ -170,17 +170,28 @@ export function MkLeadForm() {
     }
   };
 
+  const walkthrough = content.walkthrough;
+
   return (
     <SectionShell id="demo">
       <SectionHead index="14" eyebrow={form.eyebrow} title={form.heading} sub={form.subheading} />
-      <div className="mk-pn" style={{ maxWidth: 560 }}>
-        {isSubmitted ? (
-          <div aria-live="polite">
-            <p style={{ fontWeight: 700, fontSize: 17 }}>{form.successHeading}</p>
-            <p style={{ color: 'var(--mk-mu)', marginTop: 8 }}>{form.successMessage}</p>
-          </div>
-        ) : (
-          <form onSubmit={(e) => void handleSubmit(e)} noValidate={false}>
+      <div className="mk-g mk-demo-grid">
+        <div className="mk-pn">
+          <ul className="mk-check">
+            {walkthrough.bullets.map((bullet) => (
+              <li key={bullet}>{bullet}</li>
+            ))}
+          </ul>
+          <p className="mk-strip">{walkthrough.trustNote}</p>
+        </div>
+        <div className="mk-pn">
+          {isSubmitted ? (
+            <div aria-live="polite">
+              <p style={{ fontWeight: 700, fontSize: 17 }}>{form.successHeading}</p>
+              <p style={{ color: 'var(--mk-mu)', marginTop: 8 }}>{form.successMessage}</p>
+            </div>
+          ) : (
+            <form onSubmit={(e) => void handleSubmit(e)} noValidate={false}>
             <label className="mk-label" htmlFor="mk-lead-name">
               {form.nameLabel}
             </label>
@@ -244,7 +255,8 @@ export function MkLeadForm() {
             </button>
             <p className="mk-strip">{form.privacyNote}</p>
           </form>
-        )}
+          )}
+        </div>
       </div>
     </SectionShell>
   );

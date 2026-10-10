@@ -13,6 +13,7 @@ import { useLanding } from '@/components/shell/useLanding';
 import type { PublicTestimonial } from '@/lib/content';
 import type { CaseStudy, Locale } from '@/src/types/landing';
 import { CaseStudyVideoModal } from '@/src/components/CaseStudyVideoModal';
+import { youtubeEmbedUrl } from '@/lib/contact';
 import { SectionHead, SectionShell } from './SectionHead';
 
 interface Story {
@@ -81,6 +82,8 @@ export function MkTrust() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [videoOpen, setVideoOpen] = useState(false);
   const selected = stories.find((story) => story.id === (selectedId ?? stories[0]?.id)) ?? stories[0];
+  // Real embed when the CMS video URL is set; the illustrated stub otherwise.
+  const embedUrl = youtubeEmbedUrl(content.videoSection.youtubeUrl);
 
   return (
     <SectionShell id="proof">
@@ -109,19 +112,31 @@ export function MkTrust() {
             ))}
           </div>
           <div className="mk-pn" aria-live="polite">
-            <div className="mk-vid">
-              <span className="mk-vid-tag">
-                {proof.chrome.featuredBadge} · {selected.videoDuration}
-              </span>
-              <button
-                type="button"
-                className="mk-vid-play"
-                onClick={() => setVideoOpen(true)}
-                aria-label={`${proof.chrome.watchInterview}: ${selected.businessName}`}
-              >
-                <Play size={22} aria-hidden="true" />
-              </button>
-            </div>
+            {embedUrl ? (
+              <div className="mk-vid-frame">
+                <iframe
+                  src={embedUrl}
+                  title={`${selected.videoTitle}: ${selected.businessName}`}
+                  loading="lazy"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+            ) : (
+              <div className="mk-vid">
+                <span className="mk-vid-tag">
+                  {proof.chrome.featuredBadge} · {selected.videoDuration}
+                </span>
+                <button
+                  type="button"
+                  className="mk-vid-play"
+                  onClick={() => setVideoOpen(true)}
+                  aria-label={`${proof.chrome.watchInterview}: ${selected.businessName}`}
+                >
+                  <Play size={22} aria-hidden="true" />
+                </button>
+              </div>
+            )}
             <p className="mk-quote">“{selected.quote}”</p>
             <p className="mk-strip">
               {selected.businessName}

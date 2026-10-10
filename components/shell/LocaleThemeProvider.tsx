@@ -31,13 +31,15 @@
 import { createContext, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { LandingContent, Locale, NavItem, Theme } from '@/src/types/landing';
-import type { PublicTestimonial } from '@/lib/content';
+import type { PublicTestimonial, SiteBranding } from '@/lib/content';
 
 export interface ShellValue {
   locale: Locale;
   theme: Theme;
   /** Already merged static fallback + DB rows for the active locale. */
   content: LandingContent;
+  /** Site branding (`site_settings`), or `null` → built-in logo mark + globe favicon. */
+  branding: SiteBranding | null;
   /** DB-managed `main` menu for the seed locale, or `null` → fall back to `content.header.nav`. */
   menu: readonly NavItem[] | null;
   /** DB-managed `footer` menu for the seed locale, or `null` → hardcoded footer links. */
@@ -47,6 +49,8 @@ export interface ShellValue {
   /** `site_settings.is_pricing_visible` at seed time; PricingSection renders hidden mode when false. */
   isPricingVisible: boolean;
   toggleLocale: () => void;
+  /** Warm the alternate locale route (hover/focus hook for the language toggle). */
+  prefetchLocale: () => void;
   toggleTheme: () => void;
 }
 
@@ -128,6 +132,7 @@ export function LocaleThemeProvider({
   initialFooterMenu,
   initialTestimonials,
   initialIsPricingVisible,
+  initialBranding,
   children,
 }: {
   initialLocale: Locale;
@@ -136,6 +141,7 @@ export function LocaleThemeProvider({
   initialFooterMenu: readonly NavItem[] | null;
   initialTestimonials: readonly PublicTestimonial[] | null;
   initialIsPricingVisible: boolean;
+  initialBranding: SiteBranding | null;
   children: React.ReactNode;
 }) {
   const router = useRouter();
@@ -168,19 +174,55 @@ export function LocaleThemeProvider({
     setContent(initialContent);
   }, [initialLocale, initialContent]);
 
+  // The alternate locale route, prefetched at idle (and on toggle hover) so the
+  // next navigation serves a warm RSC payload instead of a cold server render.
+  const prefetchAlternate = useCallback(() => {
+    const next: Locale = localeRef.current === 'en' ? 'bn' : 'en';
+    try {
+      router.prefetch(`/${next}`);
+    } catch {
+      // Prefetch is advisory: a failure must never break the toggle itself.
+    }
+  }, [router]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const idle = (window as Window & { requestIdleCallback?: (cb: () => void) => number }).requestIdleCallback;
+    if (typeof idle === 'function') {
+      const id = idle(() => prefetchAlternate());
+      return () => {
+        try {
+          window.cancelIdleCallback(id);
+        } catch {
+          // teardown best-effort only
+        }
+      };
+    }
+    const timer = setTimeout(() => prefetchAlternate(), 1500);
+    return () => clearTimeout(timer);
+  }, [prefetchAlternate]);
+
   // Decision 15 (M-29): the toggle navigates to `/{locale}` instead of swapping client
   // state. The URL carries the language — share/bookmark/crawl/hreflang all agree — and
   // the locale layout re-seeds server-merged content, so there is no stale-locale flash
   // (M-30): the old locale stays painted until the new route is ready.
+  //
+  // v3 polish: `scroll: false` keeps the browser at the current offset (no
+  // scroll-to-top flash before the anchor restore), and the alternate route is
+  // prefetched above, so the swap reads warm.
   const toggleLocale = useCallback(() => {
     const next: Locale = localeRef.current === 'en' ? 'bn' : 'en';
     // Read the anchor *before* navigating: the switch swaps the whole document body,
     // so afterwards the previous scroll offset points at an arbitrary section.
     const anchor = captureScrollAnchor();
     localeRef.current = next;
-    router.push(`/${next}`);
+    router.push(`/${next}`, { scroll: false });
     restoreScrollAnchor(anchor);
   }, [router]);
+
+  const prefetchLocale = useCallback(() => {
+    prefetchAlternate();
+  }, [prefetchAlternate]);
 
   const toggleTheme = useCallback(() => {
     setTheme((prev) => {
@@ -217,14 +259,16 @@ export function LocaleThemeProvider({
       locale,
       theme,
       content,
+      branding: initialBranding,
       menu: initialMenu,
       footerMenu: initialFooterMenu,
       testimonials: initialTestimonials,
       isPricingVisible,
       toggleLocale,
+      prefetchLocale,
       toggleTheme,
     }),
-    [locale, theme, content, initialMenu, initialFooterMenu, initialTestimonials, isPricingVisible, toggleLocale, toggleTheme],
+    [locale, theme, content, initialBranding, initialMenu, initialFooterMenu, initialTestimonials, isPricingVisible, toggleLocale, prefetchLocale, toggleTheme],
   );
 
   return <ShellContext.Provider value={value}>{children}</ShellContext.Provider>;

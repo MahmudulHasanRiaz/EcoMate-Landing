@@ -15,6 +15,7 @@ import type {
   OverdueLead,
 } from '../../types/api';
 import * as api from '../../services/api';
+import { CONTENT_KEY_GROUPS } from '@/lib/contentKeys';
 import { fieldErrorsOf, type FieldErrors } from './fieldErrors';
 import { TestimonialForm } from './TestimonialForm';
 import { CaseStudyEditor } from './CaseStudyEditor';
@@ -1524,6 +1525,46 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                 )}
               </div>
 
+              {/* Section browser: every CMS key in page order, grouped so new keys
+                  (dock, walkthrough, videoSection) are found where they render. */}
+              <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1B] p-4 sm:p-5 shadow-xs">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">
+                  All sections (page order)
+                </h3>
+                <div className="space-y-3">
+                  {CONTENT_KEY_GROUPS.map((group) => (
+                    <div key={group.title}>
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1.5">
+                        {group.title}
+                      </p>
+                      <ul className="flex flex-wrap gap-1.5">
+                        {group.keys.map((key) => {
+                          const gap = i18nReport?.gaps.find((entry) => entry.sectionKey === key);
+                          return (
+                            <li key={key}>
+                              <button
+                                onClick={() => void handleOpenSection(key)}
+                                title={gap ? `Missing Bangla (${gap.reason}) — open to translate` : `Open ${key} in the editor`}
+                                className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 font-mono text-[11px] font-semibold cursor-pointer ${
+                                  editingSectionKey === key
+                                    ? 'border-indigo-500 bg-indigo-50 text-indigo-800 dark:bg-indigo-500/20 dark:text-indigo-200'
+                                    : gap
+                                      ? 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200'
+                                      : 'border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5'
+                                }`}
+                              >
+                                {key}
+                                {gap && <span className="opacity-70">· {gap.reason}</span>}
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {/* EN | BN editor */}
               {editingSectionKey ? (
                 <div className="space-y-3">
@@ -2165,6 +2206,36 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                       <option value="bn">Bangla (বাংলা)</option>
                     </select>
                     <FieldError id="settings-defaultLocale-error" message={settingsErrors.defaultLocale} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                  <div>
+                    <label htmlFor="settings-logoUrl" className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Header Logo (absolute URL or /media path, blank for built-in mark)</label>
+                    <input
+                      id="settings-logoUrl"
+                      type="text"
+                      value={settings.logoUrl}
+                      onChange={(e) => setSettings({ ...settings, logoUrl: e.target.value })}
+                      aria-describedby={settingsErrors.logoUrl ? 'settings-logoUrl-error' : undefined}
+                      placeholder="/assets/ecomate-logo.svg"
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white font-mono"
+                    />
+                    <FieldError id="settings-logoUrl-error" message={settingsErrors.logoUrl} />
+                  </div>
+
+                  <div>
+                    <label htmlFor="settings-faviconUrl" className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Favicon (absolute URL or /media path, blank for default)</label>
+                    <input
+                      id="settings-faviconUrl"
+                      type="text"
+                      value={settings.faviconUrl}
+                      onChange={(e) => setSettings({ ...settings, faviconUrl: e.target.value })}
+                      aria-describedby={settingsErrors.faviconUrl ? 'settings-faviconUrl-error' : undefined}
+                      placeholder="/assets/favicon.svg"
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white font-mono"
+                    />
+                    <FieldError id="settings-faviconUrl-error" message={settingsErrors.faviconUrl} />
                   </div>
                 </div>
 

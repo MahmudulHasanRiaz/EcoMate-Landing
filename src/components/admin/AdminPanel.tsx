@@ -164,7 +164,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
     content: '',
     category: 'Operations & Fulfillment',
     author: 'EcoMate Engineering Team',
-    status: 'published',
+    // Draft by default: publishing is an explicit choice in the form, never a
+    // side effect of opening the composer.
+    status: 'draft',
     readTime: '5 min read',
     tags: ['ecommerce', 'operations'],
   });
@@ -183,17 +185,20 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
     setIsLoading(true);
     setLoadError(null);
     try {
+      // allSettled, not all: one role-gated fetch (e.g. settings for an editor)
+      // must degrade its own panel instead of blanking every panel. Rejected
+      // entries keep their previous state so a retry never flashes empty lists.
       const [
-        sData,
-        secData,
-        pData,
-        lData,
-        tData,
-        csData,
-        bData,
-        iData,
-        hData,
-      ] = await Promise.all([
+        sResult,
+        secResult,
+        pResult,
+        lResult,
+        tResult,
+        csResult,
+        bResult,
+        iResult,
+        hResult,
+      ] = await Promise.allSettled([
         api.getSettings(),
         api.getSections(),
         api.getPricing(),
@@ -205,20 +210,35 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
         // serve published rows only and would hide fresh drafts from this console.
         api.getAllTestimonials({ limit: api.ADMIN_LIST_LIMIT }),
         api.getAllCaseStudies({ limit: api.ADMIN_LIST_LIMIT }),
-        api.getBlogPosts({ limit: api.ADMIN_LIST_LIMIT }),
+        api.getAllBlogPosts({ limit: api.ADMIN_LIST_LIMIT }),
         api.getIntegrationLogs({ limit: api.ADMIN_LIST_LIMIT }),
         api.getSystemHealth(),
       ]);
 
-      setSettings(sData);
-      setSections(secData);
-      setPricing(pData);
-      setLeads(lData);
-      setTestimonials(tData);
-      setCaseStudies(csData);
-      setBlogPosts(bData);
-      setIntegrationLogs(iData);
-      setSystemHealth(hData);
+      let failures = 0;
+      const take = <T,>(result: PromiseSettledResult<T>, apply: (value: T) => void): void => {
+        if (result.status === 'fulfilled') apply(result.value);
+        else {
+          failures += 1;
+          console.error('Failed to load admin data:', result.reason);
+        }
+      };
+      take(sResult, setSettings);
+      take(secResult, setSections);
+      take(pResult, setPricing);
+      take(lResult, setLeads);
+      take(tResult, setTestimonials);
+      take(csResult, setCaseStudies);
+      take(bResult, setBlogPosts);
+      take(iResult, setIntegrationLogs);
+      take(hResult, setSystemHealth);
+      if (failures > 0) {
+        // Honest about the cause: role gates (403) and outages both land here, so
+        // the message names neither — the per-request detail stays in the console.
+        setLoadError(
+          'Some admin data could not be loaded (check permissions and database connectivity). Panels below show what was reachable.',
+        );
+      }
       // Translation gaps are a dashboard-level signal, and the endpoint is superadmin/admin
       // only — so it is fetched on its own and a 403 leaves the badge at zero rather than
       // taking down the whole `Promise.all` (which would blank every panel for an editor).
@@ -597,7 +617,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
         showNotification('New article published successfully');
       }
       setIsEditingBlog(false);
-      const bData = await api.getBlogPosts({ limit: api.ADMIN_LIST_LIMIT });
+      const bData = await api.getAllBlogPosts({ limit: api.ADMIN_LIST_LIMIT });
       setBlogPosts(bData);
     } catch (err: unknown) {
       setBlogErrors(fieldErrorsOf(err));
@@ -1983,7 +2003,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                         content: '',
                         category: 'Logistics & Economics',
                         author: 'EcoMate Operations Research',
-                        status: 'published',
+                        status: 'draft',
                         readTime: '5 min read',
                         tags: ['courier', 'ecommerce', 'bangladesh'],
                       });
@@ -2070,12 +2090,31 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                     <FieldError id="blog-content-error" message={blogErrors.content} />
                   </div>
 
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                    <div>
+                      <label htmlFor="blog-status" className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Status (archived hides the article without deleting its URL history)</label>
+                      <select
+                        id="blog-status"
+                        value={editingPost.status ?? 'draft'}
+                        onChange={(e) => setEditingPost({ ...editingPost, status: e.target.value as BlogPost['status'] })}
+                        aria-describedby={blogErrors.status ? 'blog-status-error' : undefined}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white cursor-pointer"
+                      >
+                        <option value="draft">Draft (hidden)</option>
+                        <option value="scheduled">Scheduled</option>
+                        <option value="published">Published</option>
+                        <option value="archived">Archived (hidden, keeps history)</option>
+                      </select>
+                      <FieldError id="blog-status-error" message={blogErrors.status} />
+                    </div>
+                  </div>
+
                   <div className="pt-2 flex justify-end gap-2">
                     <button
                       type="submit"
                       className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-xs cursor-pointer"
                     >
-                      Publish Article to CMS
+                      {editingPost.id || editingPost.status !== 'published' ? 'Save Article' : 'Publish Article to CMS'}
                     </button>
                   </div>
                 </form>
@@ -2087,6 +2126,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
                         <div className="flex items-center gap-2 mb-1">
                           <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">
                             {post.category}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${
+                            post.status === 'published'
+                              ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
+                              : 'bg-amber-50 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300'
+                          }`}>
+                            {post.status}
                           </span>
                           <span className="text-xs text-slate-400 font-mono">/blog/{post.slug}</span>
                         </div>

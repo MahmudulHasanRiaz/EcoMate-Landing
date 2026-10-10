@@ -15,6 +15,7 @@ import { CONTENT_EDITOR_ROLES, requireRole } from '@/lib/authz';
 import { errorMessage, fail, logServerError, ok, parseId } from '@/lib/json';
 import { invalidateDomains } from '@/lib/revalidate';
 import { caseStudyUpdate } from '@/lib/validation/caseStudies';
+import { stripUnknownKeys } from '@/lib/validation';
 
 export async function PUT(req: Request, { params }: { params: Promise<{ idOrSlug: string }> }) {
   // Decision 1: case studies are CMS content — editor-allowed.
@@ -23,7 +24,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ idOrSlug
 
   try {
     const { idOrSlug } = await params;
-    const parsed = caseStudyUpdate.safeParse(await req.json().catch(() => null));
+    const parsed = caseStudyUpdate.safeParse(stripUnknownKeys(caseStudyUpdate, await req.json().catch(() => null)));
     if (!parsed.success) {
       return fail('Validation failed', 400, { issues: parsed.error.issues });
     }

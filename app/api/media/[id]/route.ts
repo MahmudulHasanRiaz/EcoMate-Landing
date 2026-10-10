@@ -6,7 +6,7 @@ import { errorMessage, fail, isUniqueViolation, logServerError, ok, parseId } fr
 import { assertMediaNotInUse } from '@/lib/guard';
 import { resolveBucket } from '@/lib/media';
 import { requestId } from '@/lib/request';
-import { mediaUpdate } from '@/lib/validation';
+import { mediaUpdate, stripUnknownKeys } from '@/lib/validation';
 
 /** Soft-deleted rows younger than this still count as references to their R2 key. */
 const REFERENCE_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
@@ -103,7 +103,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const id = parseId(rawId);
     if (id === null) return fail('Invalid media id', 400, undefined, requestId(req));
 
-    const parsed = mediaUpdate.safeParse(await req.json().catch(() => null));
+    const parsed = mediaUpdate.safeParse(stripUnknownKeys(mediaUpdate, await req.json().catch(() => null)));
     if (!parsed.success) {
       return fail('Validation failed', 400, { issues: parsed.error.issues }, requestId(req));
     }

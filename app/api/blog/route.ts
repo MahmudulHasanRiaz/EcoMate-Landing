@@ -17,7 +17,7 @@ import { invalidateDomains } from '@/lib/revalidate';
 import { recordRevision } from '@/lib/revisions';
 import { sanitizeHtml } from '@/lib/sanitize';
 import { slugify, slugWithSuffix } from '@/lib/slug';
-import { blogPostCreate } from '@/lib/validation';
+import { blogPostCreate, stripUnknownKeys } from '@/lib/validation';
 
 /** Paginated (Task 16 §4). Public: this route is the index feed, not an admin surface.
  * Only `status = 'published'` rows are served — drafts/scheduled/archived posts stay
@@ -88,7 +88,7 @@ export async function POST(req: Request) {
   try {
     // Validate first (shape + length): a 120KB payload is rejected by length before it
     // ever reaches the sanitizer.
-    const parsed = blogPostCreate.safeParse(await req.json().catch(() => null));
+    const parsed = blogPostCreate.safeParse(stripUnknownKeys(blogPostCreate, await req.json().catch(() => null)));
     if (!parsed.success) {
       return fail('Validation failed', 400, { issues: parsed.error.issues });
     }

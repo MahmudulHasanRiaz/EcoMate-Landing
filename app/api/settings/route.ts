@@ -4,7 +4,7 @@ import { siteSettingsTable } from '@/db/schema';
 import { ADMIN_ONLY_ROLES, requireRole } from '@/lib/authz';
 import { errorMessage, fail, logServerError, ok } from '@/lib/json';
 import { invalidateDomains } from '@/lib/revalidate';
-import { settingsPatch } from '@/lib/validation';
+import { settingsPatch, stripUnknownKeys } from '@/lib/validation';
 
 export async function GET() {
   try {
@@ -24,7 +24,10 @@ export async function PUT(req: Request) {
   try {
     // Declarative allowlist: unknown keys are rejected, not dropped — silent acceptance
     // is the mass-assignment hole. `parsed.data` carries only the validated fields.
-    const parsed = settingsPatch.safeParse(await req.json().catch(() => null));
+    // Admin forms round-trip full GET rows: strip non-editable keys first so a
+    // fetched row always validates. Mass assignment stays impossible — only
+    // schema keys can reach `.set()`.
+    const parsed = settingsPatch.safeParse(stripUnknownKeys(settingsPatch, await req.json().catch(() => null)));
     if (!parsed.success) {
       return fail('Validation failed', 400, { issues: parsed.error.issues });
     }

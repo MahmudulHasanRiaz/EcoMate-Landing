@@ -287,7 +287,9 @@ export function getLeadActivities(id: number, params?: PageParams): Promise<Page
 
 /** Operators who can own a lead (for the assignment picker). */
 export async function getAssignableOperators(): Promise<{ id: number; email: string }[]> {
-  const res = await fetch(`${API_BASE}/admin/users`);
+  // Dedicated roster endpoint: the full user list is superadmin-only, which left
+  // this resolving to [] (and the drawer assignment dead) for admins/editors.
+  const res = await fetch(`${API_BASE}/admin/operators`);
   if (!res.ok) throw new Error('Failed to fetch operators');
   const body: unknown = await res.json();
   const list = Array.isArray(body)
@@ -395,6 +397,11 @@ export async function deleteCaseStudy(idOrSlug: number | string): Promise<void> 
 
 export async function getBlogPosts(params?: PageParams): Promise<BlogPost[]> {
   return fetchListData<BlogPost>('/blog', params);
+}
+
+/** Full CMS list (drafts included) — admin console only, editor-allowed. */
+export async function getAllBlogPosts(params?: PageParams): Promise<BlogPost[]> {
+  return fetchListData<BlogPost>('/admin/blog', params);
 }
 
 export async function getBlogPostBySlug(slug: string): Promise<BlogPost> {

@@ -20,7 +20,7 @@ import { errorMessage, fail, logServerError, ok } from '@/lib/json';
 import { recordAudit } from '@/lib/audit';
 import { invalidateDomains } from '@/lib/revalidate';
 import { getRevision, landingContentKey, recordRevision } from '@/lib/revisions';
-import { contentRestore } from '@/lib/validation';
+import { contentRestore, stripUnknownKeys } from '@/lib/validation';
 
 const restoreBody = contentRestore.extend({
   locale: z.enum(['en', 'bn']),
@@ -36,7 +36,7 @@ export async function POST(req: Request, { params }: RouteContext) {
 
   try {
     const sectionKey = (await params).sectionKey;
-    const parsed = restoreBody.safeParse(await req.json().catch(() => null));
+    const parsed = restoreBody.safeParse(stripUnknownKeys(restoreBody, await req.json().catch(() => null)));
     if (!parsed.success) {
       return fail('Validation failed', 400, { issues: parsed.error.issues });
     }

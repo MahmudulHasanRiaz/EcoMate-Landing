@@ -19,6 +19,7 @@ import { errorMessage, fail, logServerError, ok } from '@/lib/json';
 import { recordAudit } from '@/lib/audit';
 import { invalidateDomains } from '@/lib/revalidate';
 import { landingContentKey, recordRevision } from '@/lib/revisions';
+import { stripUnknownKeys } from '@/lib/validation';
 
 const publishBody = z.strictObject({
   locale: z.enum(['en', 'bn']),
@@ -34,7 +35,7 @@ export async function POST(req: Request, { params }: RouteContext) {
 
   try {
     const sectionKey = (await params).sectionKey;
-    const parsed = publishBody.safeParse(await req.json().catch(() => null));
+    const parsed = publishBody.safeParse(stripUnknownKeys(publishBody, await req.json().catch(() => null)));
     if (!parsed.success) {
       return fail('Validation failed', 400, { issues: parsed.error.issues });
     }

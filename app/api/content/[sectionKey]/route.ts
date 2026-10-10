@@ -34,7 +34,7 @@ import { errorMessage, fail, logServerError, ok } from '@/lib/json';
 import { recordAudit } from '@/lib/audit';
 import { invalidateDomains } from '@/lib/revalidate';
 import { landingContentKey, recordRevision } from '@/lib/revisions';
-import { contentUpsert } from '@/lib/validation';
+import { contentUpsert, stripUnknownKeys } from '@/lib/validation';
 
 interface RouteContext {
   params: Promise<{ sectionKey: string }>;
@@ -93,7 +93,7 @@ export async function PUT(req: Request, { params }: RouteContext) {
     const body: unknown = await req.json().catch(() => null);
     const candidate =
       typeof body === 'object' && body !== null ? { ...(body as object), sectionKey } : null;
-    const parsed = contentUpsert.safeParse(candidate);
+    const parsed = contentUpsert.safeParse(stripUnknownKeys(contentUpsert, candidate));
     if (!parsed.success) {
       return fail('Validation failed', 400, { issues: parsed.error.issues });
     }

@@ -18,7 +18,7 @@ import {
   parseId,
 } from '@/lib/json';
 import { invalidateDomains } from '@/lib/revalidate';
-import { socialLinkCreate, socialLinkUpdate } from '@/lib/validation';
+import { socialLinkCreate, socialLinkUpdate, stripUnknownKeys } from '@/lib/validation';
 
 export async function GET(req: Request) {
   try {
@@ -40,7 +40,7 @@ export async function POST(req: Request) {
   const guard = await requireRole(ADMIN_ONLY_ROLES);
   if (!guard.ok) return guard.response;
   try {
-    const parsed = socialLinkCreate.safeParse(await req.json().catch(() => null));
+    const parsed = socialLinkCreate.safeParse(stripUnknownKeys(socialLinkCreate, await req.json().catch(() => null)));
     if (!parsed.success) {
       return fail('Validation failed', 400, { issues: parsed.error.issues });
     }
@@ -67,7 +67,7 @@ export async function PUT(req: Request) {
   const guard = await requireRole(ADMIN_ONLY_ROLES);
   if (!guard.ok) return guard.response;
   try {
-    const parsed = socialLinkUpdate.safeParse(await req.json().catch(() => null));
+    const parsed = socialLinkUpdate.safeParse(stripUnknownKeys(socialLinkUpdate, await req.json().catch(() => null)));
     if (!parsed.success) {
       return fail('Validation failed', 400, { issues: parsed.error.issues });
     }

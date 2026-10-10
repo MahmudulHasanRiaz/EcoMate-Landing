@@ -4,7 +4,7 @@ import { pricingPlansTable } from '@/db/schema';
 import { ADMIN_ONLY_ROLES, requireRole } from '@/lib/authz';
 import { errorMessage, fail, logServerError, ok, parseId } from '@/lib/json';
 import { invalidateDomains } from '@/lib/revalidate';
-import { pricingPlanUpdate } from '@/lib/validation';
+import { pricingPlanUpdate, stripUnknownKeys } from '@/lib/validation';
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   // H-4: pricing is site customization (Decision 1) — editors cannot edit plans.
@@ -17,7 +17,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
     // `slug` is creatable but not updatable: it is the stable identifier, and the strict
     // schema rejects it here rather than silently dropping it.
-    const parsed = pricingPlanUpdate.safeParse(await req.json().catch(() => null));
+    const parsed = pricingPlanUpdate.safeParse(stripUnknownKeys(pricingPlanUpdate, await req.json().catch(() => null)));
     if (!parsed.success) {
       return fail('Validation failed', 400, { issues: parsed.error.issues });
     }

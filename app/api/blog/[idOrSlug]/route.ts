@@ -14,7 +14,7 @@ import { recordAudit } from '@/lib/audit';
 import { invalidateDomains } from '@/lib/revalidate';
 import { getRevision, recordRevision } from '@/lib/revisions';
 import { sanitizeHtml } from '@/lib/sanitize';
-import { blogPostUpdate } from '@/lib/validation';
+import { blogPostUpdate, stripUnknownKeys } from '@/lib/validation';
 import { contentRestore } from '@/lib/validation/content';
 
 /**
@@ -62,7 +62,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ idOrSlug
     const id = parseId(idOrSlug);
     if (id === null) return fail('Invalid post id', 400);
 
-    const parsed = blogPostUpdate.safeParse(await req.json().catch(() => null));
+    const parsed = blogPostUpdate.safeParse(stripUnknownKeys(blogPostUpdate, await req.json().catch(() => null)));
     if (!parsed.success) {
       return fail('Validation failed', 400, { issues: parsed.error.issues });
     }
@@ -139,7 +139,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ idOrSlu
     const id = parseId(idOrSlug);
     if (id === null) return fail('Invalid post id', 400);
 
-    const parsed = contentRestore.safeParse(await req.json().catch(() => null));
+    const parsed = contentRestore.safeParse(stripUnknownKeys(contentRestore, await req.json().catch(() => null)));
     if (!parsed.success) {
       return fail('Validation failed', 400, { issues: parsed.error.issues });
     }

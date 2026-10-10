@@ -1,4 +1,5 @@
 export { settingsPatch } from './settings';
+export { stripUnknownKeys } from './strip';
 export { pricingPlanCreate, pricingPlanUpdate } from './pricing';
 export { leadCreate, leadUpdate, normalisePhone } from './lead';
 export { blogPostCreate, blogPostUpdate } from './blog';

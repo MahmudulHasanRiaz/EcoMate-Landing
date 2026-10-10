@@ -4,7 +4,7 @@ import { CONTENT_EDITOR_ROLES, requireRole } from '@/lib/authz';
 import { errorMessage, fail, isUniqueViolation, logServerError, ok } from '@/lib/json';
 import { MAX_UPLOAD_BYTES, MEDIA_KEY_PATTERN, resolveBucket, resolvePublicOrigin, SNIFF_BYTES, sniffImageType } from '@/lib/media';
 import { requestId } from '@/lib/request';
-import { mediaConfirmRequest } from '@/lib/validation';
+import { mediaConfirmRequest, stripUnknownKeys } from '@/lib/validation';
 
 /**
  * POST /api/media/confirm — verify a direct-to-R2 upload and mint the library row
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
   if (!guard.ok) return guard.response;
 
   try {
-    const parsed = mediaConfirmRequest.safeParse(await req.json().catch(() => null));
+    const parsed = mediaConfirmRequest.safeParse(stripUnknownKeys(mediaConfirmRequest, await req.json().catch(() => null)));
     if (!parsed.success) {
       return fail('Validation failed', 400, { issues: parsed.error.issues }, reqId);
     }

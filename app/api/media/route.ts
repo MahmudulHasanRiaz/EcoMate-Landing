@@ -12,7 +12,7 @@ import {
 } from '@/lib/json';
 import { paginate } from '@/lib/paginate';
 import { requestId } from '@/lib/request';
-import { mediaCreate } from '@/lib/validation';
+import { mediaCreate, stripUnknownKeys } from '@/lib/validation';
 
 /** Paginated (Task 16 §4): the media library is a growing list, not a fixed set. */
 export async function GET(req: Request) {
@@ -53,7 +53,7 @@ export async function POST(req: Request) {
   const guard = await requireRole(CONTENT_EDITOR_ROLES);
   if (!guard.ok) return guard.response;
   try {
-    const parsed = mediaCreate.safeParse(await req.json().catch(() => null));
+    const parsed = mediaCreate.safeParse(stripUnknownKeys(mediaCreate, await req.json().catch(() => null)));
     if (!parsed.success) {
       return fail('Validation failed', 400, { issues: parsed.error.issues });
     }

@@ -1,0 +1,55 @@
+# Sync landing content to production (manual) — ONE-TIME CUTOVER PER REDESIGN.
+#
+# Do NOT run casually: scripts/sync-landing-content.ts OVERWRITES every
+# landing_content row with the static fallback in src/data/landingContent.ts,
+# destroying any Admin edits made after the last sync. Run once to publish a
+# redesign's copy, then leave production copy to the Admin → Content editor.
+# The typed OVERWRITE confirmation below is the safety for this destructive op.
+
+name: Sync landing content to production (manual)
+
+# Least privilege: read-only code access. No pushes, releases or deploys.
+permissions:
+  contents: read
+
+on:
+  # Manual only — never on push, pull_request, or schedule.
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type OVERWRITE to confirm you understand this replaces prod CMS copy'
+        required: true
+        type: string
+
+jobs:
+  sync_content:
+    name: Overwrite prod CMS copy from static fallback
+    runs-on: ubuntu-latest
+    steps:
+      - name: Refuse unless explicitly confirmed
+        if: ${{ inputs.confirm != 'OVERWRITE' }}
+        run: |
+          echo "::error::Refusing to sync: type OVERWRITE in the confirm input to proceed."
+          exit 1
+
+      # Pinned by SHA, not by moving tag (repo convention — see ci.yml).
+      - name: Checkout main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Setup Node.js (v24)
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Sync landing content to production
+        if: ${{ inputs.confirm == 'OVERWRITE' }}
+        run: npx tsx scripts/sync-landing-content.ts
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}

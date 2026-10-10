@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Hind_Siliguri, Instrument_Serif, JetBrains_Mono, Plus_Jakarta_Sans } from 'next/font/google';
+import { Hind_Siliguri, Instrument_Serif, Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { ConsentBanner } from '@/components/ConsentBanner';
 import { MetaPixel } from '@/components/MetaPixel';
@@ -12,7 +12,7 @@ import {
   serializeJsonLd,
 } from '@/lib/seo';
 
-const sans = Plus_Jakarta_Sans({
+const sans = Inter({
   subsets: ['latin'],
   display: 'swap',
   variable: '--font-sans',

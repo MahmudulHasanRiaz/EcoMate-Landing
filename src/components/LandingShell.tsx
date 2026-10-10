@@ -27,6 +27,17 @@ import { PricingSection } from '@/src/components/PricingSection';
 import { FinalConversionSection } from '@/src/components/FinalConversionSection';
 import { Footer } from '@/src/components/Footer';
 import { MobileStickyBar } from '@/src/components/MobileStickyBar';
+import {
+  AdBudgetDefenseSection,
+  GettingStartedSection,
+  LogisticsAutomationSection,
+  PackingWorkspaceSection,
+  RevenueProtectionSection,
+  StatsBarSection,
+  StoreSwitchesSection,
+  TrustedBySection,
+  WhyDifferentSection,
+} from '@/src/components/V2Sections';
 
 /**
  * The interactive marketing composition, reading everything from the shell context.
@@ -51,10 +62,37 @@ export function LandingShell() {
         {/* Section 01: Hero with Integrated Convergence Bus & Live Console */}
         <Hero />
 
-        {/* Section 02: Growth Creates Complexity — Chaos vs Control */}
+        {/* v2: Stats bar */}
+        <StatsBarSection />
+
+        {/* v2: Trusted-by strip */}
+        <TrustedBySection />
+
+        {/* Section 02: Growth Creates Complexity — Chaos vs Control (fragmented reality before/after) */}
         <ComplexitySection />
 
-        {/* Section 03: One Business. One Control Center — 6 Pillars */}
+        {/* v2: Packing workspace interactive scan demo */}
+        <PackingWorkspaceSection />
+
+        {/* v2: Revenue protection policy toggles */}
+        <RevenueProtectionSection />
+
+        {/* v2: Logistics automation courier booking demo */}
+        <LogisticsAutomationSection />
+
+        {/* v2: Ad budget defense CAPI mode selector */}
+        <AdBudgetDefenseSection />
+
+        {/* Attribution ROAS panel — Executive Realized Profit Analytics & Courier Cohort Matrix */}
+        <ExecutiveAnalyticsSection />
+
+        {/* v2: Multi-store & showroom toggle switches demo */}
+        <StoreSwitchesSection />
+
+        {/* v2: Why-different feature grid (renders CMS productShowcase modules) */}
+        <WhyDifferentSection />
+
+        {/* Section 03: One Business. One Control Center — 6 Pillars (infrastructure) */}
         <EcosystemSection />
 
         {/* Section 04: Sell Everywhere — Master SKU Selective Routing */}
@@ -66,7 +104,7 @@ export function LandingShell() {
         {/* Section 06: Courier Return Fraud & Loss Prevention Calculator + Mid-Funnel CTA */}
         <LossPreventionSection />
 
-        {/* Section 07: Warehouses, Bin Locations & Double-Entry Accounting */}
+        {/* Financial clarity — Warehouses, Bin Locations & Double-Entry Accounting */}
         <InventoryFinanceSection />
 
         {/* Section 08: Showroom POS & Real-Time Cashier Simulation */}
@@ -78,8 +116,8 @@ export function LandingShell() {
         {/* Section 10: Team Governance & RBAC Accountabilities */}
         <TeamOperationsSection />
 
-        {/* Section 11: Executive Realized Profit Analytics & Courier Cohort Matrix */}
-        <ExecutiveAnalyticsSection />
+        {/* v2: Getting started in 3 steps */}
+        <GettingStartedSection />
 
         {/* Section 12: Customer Proof & Verified Founder Stories */}
         <CustomerProofSection />

@@ -4,7 +4,7 @@ import { buildObjectKey, imageTypeForMime } from '@/lib/media';
 import { hitLimit } from '@/lib/rateLimit';
 import { missingPresignKeys, presignConfig, presignedPutUrl, PRESIGN_EXPIRES_SEC } from '@/lib/r2sign';
 import { requestId } from '@/lib/request';
-import { mediaSignRequest } from '@/lib/validation';
+import { mediaSignRequest, stripUnknownKeys } from '@/lib/validation';
 
 /** 30 presigns per operator per hour — same budget as the legacy upload path. */
 const SIGN_LIMIT_MAX = 30;
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
       return fail('Too many uploads. Please try again later.', 429);
     }
 
-    const parsed = mediaSignRequest.safeParse(await req.json().catch(() => null));
+    const parsed = mediaSignRequest.safeParse(stripUnknownKeys(mediaSignRequest, await req.json().catch(() => null)));
     if (!parsed.success) {
       return fail('Validation failed', 400, { issues: parsed.error.issues }, reqId);
     }

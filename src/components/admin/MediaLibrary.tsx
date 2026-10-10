@@ -27,7 +27,13 @@ function formatBytes(size: number | null | undefined): string {
 }
 
 function errorText(err: unknown): string {
-  if (err instanceof Error && err.message) return err.message;
+  const message = err instanceof Error && err.message ? err.message : '';
+  // R2 is a deployment binding, not an operator mistake: say what to do instead
+  // of surfacing the driver constant.
+  if (/R2_NOT_BOUND|presign|direct upload not configured/i.test(message)) {
+    return 'Uploads need R2 storage configured on this deployment — ask your deploy admin. Library browsing, metadata edits and URL copies still work.';
+  }
+  if (message) return message;
   return 'Something went wrong. Please try again.';
 }
 

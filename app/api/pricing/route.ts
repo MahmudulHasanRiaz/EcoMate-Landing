@@ -6,7 +6,7 @@ import { errorMessage, fail, isUniqueViolation, logServerError, ok } from '@/lib
 import { requestId } from '@/lib/request';
 import { assertSlugAvailable } from '@/lib/guard';
 import { invalidateDomains } from '@/lib/revalidate';
-import { pricingPlanCreate } from '@/lib/validation';
+import { pricingPlanCreate, stripUnknownKeys } from '@/lib/validation';
 
 export async function GET(req: Request) {
   const reqId = requestId(req);
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
   const guard = await requireRole(ADMIN_ONLY_ROLES);
   if (!guard.ok) return guard.response;
   try {
-    const parsed = pricingPlanCreate.safeParse(await req.json().catch(() => null));
+    const parsed = pricingPlanCreate.safeParse(stripUnknownKeys(pricingPlanCreate, await req.json().catch(() => null)));
     if (!parsed.success) {
       return fail('Validation failed', 400, { issues: parsed.error.issues });
     }

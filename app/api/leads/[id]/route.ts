@@ -34,7 +34,7 @@ import {
   parseId,
 } from '@/lib/json';
 import { requestId } from '@/lib/request';
-import { leadUpdate } from '@/lib/validation';
+import { leadUpdate, stripUnknownKeys } from '@/lib/validation';
 
 /** `assignedToId` must name a live operator. `null` explicitly unassigns. */
 function readAssignee(value: number | null | undefined): number | null | undefined {
@@ -90,7 +90,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const id = parseId(rawId);
     if (id === null) return fail('Invalid lead id', 400);
 
-    const parsed = leadUpdate.safeParse(await req.json().catch(() => null));
+    const parsed = leadUpdate.safeParse(stripUnknownKeys(leadUpdate, await req.json().catch(() => null)));
     if (!parsed.success) {
       return fail('Validation failed', 400, { issues: parsed.error.issues });
     }

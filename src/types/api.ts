@@ -208,7 +208,7 @@ export interface BlogPost {
   tags: string[];
   featuredImageUrl: string;
   readTime: string;
-  status: 'draft' | 'published' | 'scheduled';
+  status: 'draft' | 'scheduled' | 'published' | 'archived';
   seoTitle: string;
   seoDescription: string;
   canonicalUrl: string;

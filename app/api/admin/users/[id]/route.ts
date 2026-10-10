@@ -18,7 +18,7 @@ import { errorMessage, fail, logServerError, ok, parseId } from '@/lib/json';
 import { assertNotLastSuperadmin, assertNotSelfDeactivate } from '@/lib/guard';
 import { hashPassword, passwordPolicyError } from '@/lib/password';
 import { clientIp } from '@/lib/request';
-import { operatorUpdate } from '@/lib/validation';
+import { operatorUpdate, stripUnknownKeys } from '@/lib/validation';
 
 const OPERATOR_COLUMNS = {
   id: adminUsersTable.id,
@@ -48,7 +48,7 @@ export async function PUT(
     const [target] = await db.select().from(adminUsersTable).where(eq(adminUsersTable.id, id)).limit(1);
     if (!target) return fail('Operator not found', 404);
 
-    const parsed = operatorUpdate.safeParse(await request.json().catch(() => null));
+    const parsed = operatorUpdate.safeParse(stripUnknownKeys(operatorUpdate, await request.json().catch(() => null)));
     if (!parsed.success) {
       return fail('Validation failed', 400, { issues: parsed.error.issues });
     }

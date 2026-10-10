@@ -24,7 +24,7 @@ import { paginate, parsePage } from '@/lib/paginate';
 import { clientIp as clientIpOf, requestId } from '@/lib/request';
 import { hitLimit, retryAfterSec } from '@/lib/rateLimit';
 import { isLocalE2eBypass, recordTurnstileOutcome, verifyTurnstile } from '@/lib/turnstile';
-import { leadCreate } from '@/lib/validation';
+import { leadCreate, stripUnknownKeys } from '@/lib/validation';
 
 // Registers the Resend adapter on import. No call site changes when it becomes active.
 import '@/lib/notifyResend';
@@ -230,7 +230,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const parsed = leadCreate.safeParse(await req.json().catch(() => null));
+    const parsed = leadCreate.safeParse(stripUnknownKeys(leadCreate, await req.json().catch(() => null)));
     if (!parsed.success) {
       return fail('Validation failed', 400, { issues: parsed.error.issues }, reqId);
     }

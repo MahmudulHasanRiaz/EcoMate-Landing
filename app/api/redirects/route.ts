@@ -29,7 +29,7 @@ import {
 } from '@/lib/json';
 import { ADMIN_ONLY_ROLES, requireRole } from '@/lib/authz';
 import { resetRedirectCache } from '@/lib/redirects';
-import { redirectCreate, redirectDelete, redirectUpdate } from '@/lib/validation';
+import { redirectCreate, redirectDelete, redirectUpdate, stripUnknownKeys } from '@/lib/validation';
 
 /** Prefixes a redirect may never claim, because they are not public documents. */
 const RESERVED_PREFIXES = ['/admin', '/api', '/_next', '/_vercel'];
@@ -92,7 +92,7 @@ export async function POST(req: Request) {
   if (!guard.ok) return guard.response;
 
   try {
-    const parsed = redirectCreate.safeParse(await req.json().catch(() => null));
+    const parsed = redirectCreate.safeParse(stripUnknownKeys(redirectCreate, await req.json().catch(() => null)));
     if (!parsed.success) {
       return fail('Validation failed', 400, { issues: parsed.error.issues });
     }
@@ -123,7 +123,7 @@ export async function PUT(req: Request) {
   if (!guard.ok) return guard.response;
 
   try {
-    const parsed = redirectUpdate.safeParse(await req.json().catch(() => null));
+    const parsed = redirectUpdate.safeParse(stripUnknownKeys(redirectUpdate, await req.json().catch(() => null)));
     if (!parsed.success) {
       return fail('Validation failed', 400, { issues: parsed.error.issues });
     }
@@ -154,7 +154,7 @@ export async function DELETE(req: Request) {
   if (!guard.ok) return guard.response;
 
   try {
-    const parsed = redirectDelete.safeParse(await req.json().catch(() => null));
+    const parsed = redirectDelete.safeParse(stripUnknownKeys(redirectDelete, await req.json().catch(() => null)));
     if (!parsed.success) {
       return fail('Validation failed', 400, { issues: parsed.error.issues });
     }

@@ -7,22 +7,45 @@
  * URLs are CMS data in the `dock` key, not hardcoded links.
  */
 import React, { useState } from 'react';
-import { MessageCircle, Moon, Phone, Sun } from 'lucide-react';
+import { Moon, Sun } from 'lucide-react';
 import { useLanding } from '@/components/shell/useLanding';
+import { buildHttpUrl, buildTelUrl, buildWhatsAppUrl } from '@/lib/contact';
+import {
+  CalendarIcon,
+  CallIcon,
+  ChatIcon,
+  CloseIcon,
+  MessengerIcon,
+  WhatsAppIcon,
+} from './BrandIcons';
 
 export function MkHeader() {
-  const { content, locale, menu, toggleLocale, toggleTheme, theme } = useLanding();
+  const { content, locale, menu, branding, toggleLocale, prefetchLocale, toggleTheme, theme } = useLanding();
   const header = content.header;
   const nav = menu ?? header.nav;
+  const logoUrl = branding?.logoUrl.trim() ?? '';
+  const brandName = branding?.siteName.trim() || 'EcoMate';
 
   return (
     <header className="mk-nav">
       <div className="mk-nav-bar">
-        <a href="#top" className="mk-logo" aria-label="EcoMate">
-          <span className="mk-logo-mark" aria-hidden="true">
-            E
-          </span>
-          EcoMate
+        <a href="#top" className="mk-logo" aria-label={brandName}>
+          {logoUrl ? (
+            <img
+              src={logoUrl}
+              alt={brandName}
+              width={26}
+              height={26}
+              className="mk-logo-img"
+              loading="eager"
+              decoding="async"
+            />
+          ) : (
+            <span className="mk-logo-mark" aria-hidden="true">
+              E
+            </span>
+          )}
+          {brandName}
         </a>
         <nav className="mk-nav-links" aria-label="Primary">
           {nav.slice(0, 4).map((item) => (
@@ -37,6 +60,8 @@ export function MkHeader() {
             className="mk-lang"
             data-active={locale}
             onClick={toggleLocale}
+            onMouseEnter={prefetchLocale}
+            onFocus={prefetchLocale}
             aria-label={locale === 'en' ? 'Switch to Bangla' : 'Switch to English'}
           >
             <span className="mk-lang-thumb" aria-hidden="true" />
@@ -103,71 +128,125 @@ export function MkFooter() {
   );
 }
 
-function MessengerIcon() {
-  return (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M12 2C6.48 2 2 6.14 2 11.25c0 2.91 1.56 5.5 4 7.24V22l3.66-2.01c.98.27 2.02.42 3.1.42h.24c5.52 0 10-4.14 10-9.25S17.52 2 12 2zm5.2 9.4-2.5 3.97c-.4.63-1.27.83-1.94.45l-2.5-1.87a.75.75 0 0 0-.9 0l-3.43 2.6c-.5.38-1.2-.17-.93-.73l2.5-3.97c.4-.63 1.27-.83 1.94-.45l2.5 1.87c.25.19.6.19.9 0l3.43-2.6c.5-.38 1.2.17.93.73z" />
-    </svg>
-  );
-}
-
 export function MkDock() {
   const { content } = useLanding();
   const dock = content.dock;
   const [open, setOpen] = useState(false);
 
+  // All four endpoints resolve through the contact builders: a blank or
+  // unparseable CMS value hides that action instead of linking nowhere.
+  const callUrl = buildTelUrl(dock.callNumber);
+  const whatsappUrl = buildWhatsAppUrl(dock.whatsapp);
+  const messengerUrl = buildHttpUrl(dock.messengerUrl);
+
+  const fan = (x: string, y: string, delay: string): React.CSSProperties =>
+    ({ '--x': x, '--y': y, '--d': delay }) as React.CSSProperties;
+
   return (
     <>
-      {/* Desktop: FAB with fan-out contact actions. */}
+      {/* Desktop: FAB with a four-icon quarter-circle fan-out (mockup-exact
+          offsets and stagger). Hidden icons stay out of the tab order. */}
       <div className="mk-fab" data-open={open}>
         <a
           href={dock.demoUrl}
           className="mk-fab-item mk-fab-item-demo"
-          style={{ ['--x' as string]: '-52px', ['--y' as string]: '-6px' }}
+          style={fan('-0px', '-96px', '.18s')}
           aria-label={dock.demoLabel}
+          title={dock.demoLabel}
           tabIndex={open ? 0 : -1}
         >
-          <MessageCircle size={17} aria-hidden="true" />
+          <CalendarIcon size={17} />
         </a>
-        <a
-          href={dock.whatsappUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="mk-fab-item mk-fab-item-wa"
-          style={{ ['--x' as string]: '-6px', ['--y' as string]: '-52px' }}
-          aria-label="WhatsApp"
-          tabIndex={open ? 0 : -1}
-        >
-          <Phone size={17} aria-hidden="true" />
-        </a>
-        <a
-          href={dock.messengerUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="mk-fab-item mk-fab-item-ms"
-          style={{ ['--x' as string]: '-46px', ['--y' as string]: '-46px' }}
-          aria-label="Messenger"
-          tabIndex={open ? 0 : -1}
-        >
-          <MessengerIcon />
-        </a>
+        {callUrl && (
+          <a
+            href={callUrl}
+            className="mk-fab-item"
+            style={fan('-48px', '-83px', '.12s')}
+            aria-label={dock.callLabel}
+            title={dock.callLabel}
+            tabIndex={open ? 0 : -1}
+          >
+            <CallIcon size={17} />
+          </a>
+        )}
+        {whatsappUrl && (
+          <a
+            href={whatsappUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="mk-fab-item mk-fab-item-wa"
+            style={fan('-83px', '-48px', '.06s')}
+            aria-label={dock.whatsappLabel}
+            title={dock.whatsappLabel}
+            tabIndex={open ? 0 : -1}
+          >
+            <WhatsAppIcon size={17} />
+          </a>
+        )}
+        {messengerUrl && (
+          <a
+            href={messengerUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="mk-fab-item mk-fab-item-ms"
+            style={fan('-96px', '0px', '0s')}
+            aria-label={dock.messengerLabel}
+            title={dock.messengerLabel}
+            tabIndex={open ? 0 : -1}
+          >
+            <MessengerIcon size={17} />
+          </a>
+        )}
         <button
           type="button"
           className="mk-fab-main"
           onClick={() => setOpen((prev) => !prev)}
           aria-expanded={open}
-          aria-label={dock.demoLabel}
+          aria-label={dock.fabLabel}
         >
-          <MessageCircle size={18} aria-hidden="true" />
+          {open ? <CloseIcon size={20} /> : <ChatIcon size={20} />}
         </button>
       </div>
 
-      {/* Mobile: bottom dock with help text + demo CTA. */}
+      {/* Mobile: help text + big demo button + three icon actions in a row. */}
       <div className="mk-dock">
-        <span>{dock.helpLabel}</span>
+        <span className="mk-dock-help">
+          <span className="mk-pulse-dot" aria-hidden="true" />
+          {dock.helpLabel}
+        </span>
         <a href={dock.demoUrl} className="mk-btn mk-btn-primary">
+          <CalendarIcon size={18} />
           {dock.demoLabel}
         </a>
+        {callUrl && (
+          <a href={callUrl} className="mk-dock-icon" aria-label={dock.callLabel} title={dock.callLabel}>
+            <CallIcon size={17} />
+          </a>
+        )}
+        {whatsappUrl && (
+          <a
+            href={whatsappUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="mk-dock-icon mk-dock-icon-wa"
+            aria-label={dock.whatsappLabel}
+            title={dock.whatsappLabel}
+          >
+            <WhatsAppIcon size={19} />
+          </a>
+        )}
+        {messengerUrl && (
+          <a
+            href={messengerUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="mk-dock-icon mk-dock-icon-ms"
+            aria-label={dock.messengerLabel}
+            title={dock.messengerLabel}
+          >
+            <MessengerIcon size={19} />
+          </a>
+        )}
       </div>
     </>
   );

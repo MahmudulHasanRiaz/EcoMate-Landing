@@ -23,7 +23,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { LocaleThemeProvider } from '@/components/shell/LocaleThemeProvider';
-import { getLandingContent, getMenu, getPricingPlans, getTestimonials } from '@/lib/content';
+import { getLandingContent, getMenu, getPricingPlans, getSiteBranding, getTestimonials } from '@/lib/content';
 import { assembleLandingContent } from '@/lib/merge';
 import { LOCALES, isLocale } from '@/lib/locales';
 import { localeAlternates, ogLocale } from '@/lib/seo';
@@ -87,6 +87,7 @@ export default async function LocaleLayout({
   let footerMenu: Awaited<ReturnType<typeof getMenu>> = null;
   let pricing: Awaited<ReturnType<typeof getPricingPlans>> = null;
   let testimonials: Awaited<ReturnType<typeof getTestimonials>> = null;
+  let branding: Awaited<ReturnType<typeof getSiteBranding>> = null;
   try {
     const loaded = await withTimeout(
       (async () => {
@@ -96,7 +97,9 @@ export default async function LocaleLayout({
         const p = await timed(getPricingPlans(), `layout:pricing:${locale}`, 10000, { locale });
         // 2c: published DB testimonials seed the proof section (null → static fallback copy).
         const t = await timed(getTestimonials(), 'layout:testimonials', 10000, { locale });
-        return { sections: s, mainMenu: m1, footerMenu: m2, pricing: p, testimonials: t };
+        // v3 polish: header logo + favicon (null → built-in marks).
+        const b = await timed(getSiteBranding(), 'layout:branding', 10000, { locale });
+        return { sections: s, mainMenu: m1, footerMenu: m2, pricing: p, testimonials: t, branding: b };
       })(),
       `layout:landing:${locale}`,
       20000,
@@ -106,8 +109,9 @@ export default async function LocaleLayout({
     footerMenu = loaded.footerMenu;
     pricing = loaded.pricing;
     testimonials = loaded.testimonials;
+    branding = loaded.branding;
   } catch (e) {
-    logOnce('warn', `layout:landing-timeout:${locale}`, `[layout] landing data fetch timed out for locale "${locale}", serving static fallback:`, errorMessage(e));
+    logOnce('warn', `layout:landing-timeout:${locale}`, `[landing] landing data fetch timed out for locale "${locale}", serving static fallback:`, errorMessage(e));
   }
 
   return (
@@ -118,6 +122,7 @@ export default async function LocaleLayout({
       initialFooterMenu={footerMenu}
       initialTestimonials={testimonials}
       initialIsPricingVisible={pricing?.isPricingVisible ?? true}
+      initialBranding={branding}
     >
       {children}
     </LocaleThemeProvider>

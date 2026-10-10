@@ -12,6 +12,7 @@ import {
   organizationJsonLd,
   serializeJsonLd,
 } from '@/lib/seo';
+import { getSiteBranding } from '@/lib/content';
 
 const sans = Inter({
   subsets: ['latin'],
@@ -38,7 +39,7 @@ const mono = JetBrains_Mono({
   variable: '--font-mono',
 });
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   // Every relative URL below (canonical, OG, sitemap) resolves against this origin, so the
   // deployed host and the declared canonical can never drift apart.
   metadataBase: new URL(SITE_URL),
@@ -85,6 +86,20 @@ export const metadata: Metadata = {
     'theme-color': '#090A0F',
   },
 };
+
+/**
+ * v3 polish: the uploaded favicon (`site_settings.favicon_url`, Admin →
+ * Settings) is served as the page icon. The read is cached (`branding` tag,
+ * invalidated on settings save); when empty no `icons` entry is emitted and
+ * the browser falls back to its default. Static-safe: at build time the
+ * direct-URL fallback feeds the prerender, exactly like the landing content.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const branding = await getSiteBranding();
+  const favicon = branding?.faviconUrl.trim() ?? '';
+  if (!favicon) return baseMetadata;
+  return { ...baseMetadata, icons: { icon: favicon } };
+}
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   // H-15: `lang` is `en` here — the root layout is shared by both locales and reading

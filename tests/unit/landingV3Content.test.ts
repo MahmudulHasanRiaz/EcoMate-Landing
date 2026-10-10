@@ -32,6 +32,8 @@ describe('landing v3 CMS coverage (src/data/landingContent.ts)', () => {
       'infraTrack',
       'volumeTiers',
       'dock',
+      'walkthrough',
+      'videoSection',
     ] as const) {
       expect(content[key], `missing section: ${key}`).toBeDefined();
     }
@@ -63,7 +65,13 @@ describe('landing v3 CMS coverage (src/data/landingContent.ts)', () => {
     expect(content.pricing.visiblePricing.plans.length).toBeGreaterThan(0);
     expect(content.faq.items.length).toBeGreaterThan(0);
     expect(content.leadForm.volumeOptions.length).toBeGreaterThan(0);
-    expect(nonEmpty(content.dock.whatsappUrl)).toBe(true);
+    expect(nonEmpty(content.dock.whatsapp)).toBe(true);
+    expect(nonEmpty(content.dock.callNumber)).toBe(true);
+    expect(nonEmpty(content.dock.messengerUrl)).toBe(true);
+    expect(nonEmpty(content.dock.fabLabel)).toBe(true);
+    expect(content.walkthrough.bullets.length).toBeGreaterThan(0);
+    expect(nonEmpty(content.walkthrough.trustNote)).toBe(true);
+    expect('youtubeUrl' in content.videoSection).toBe(true);
   });
 
   it('volume tiers resolve positionally to a real fallback plan', () => {

@@ -35,6 +35,8 @@ export const PRICING_DOMAIN = 'pricing' as const;
 export const SOCIAL_DOMAIN = 'social' as const;
 export const TESTIMONIALS_DOMAIN = 'testimonials' as const;
 export const CASE_STUDIES_DOMAIN = 'casestudies' as const;
+/** v3 polish: header logo + favicon (`site_settings.logo_url` / `favicon_url`). */
+export const BRANDING_DOMAIN = 'branding' as const;
 
 type Domain =
   | typeof CONTENT_DOMAIN
@@ -43,7 +45,8 @@ type Domain =
   | typeof PRICING_DOMAIN
   | typeof SOCIAL_DOMAIN
   | typeof TESTIMONIALS_DOMAIN
-  | typeof CASE_STUDIES_DOMAIN;
+  | typeof CASE_STUDIES_DOMAIN
+  | typeof BRANDING_DOMAIN;
 
 /**
  * Content is tagged per locale (`content:en`, `content:bn`), so an edit to one language must

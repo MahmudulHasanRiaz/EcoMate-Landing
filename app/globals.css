@@ -282,6 +282,12 @@ html.dark body {
   grid-template-columns: repeat(3, 1fr);
 }
 
+/* Walkthrough: pitch + form side by side on desktop, stacked on mobile. */
+.mk-demo-grid {
+  grid-template-columns: 1fr 1fr;
+  align-items: start;
+}
+
 .mk-row {
   display: flex;
   justify-content: space-between;
@@ -294,6 +300,11 @@ html.dark body {
 
 .mk-row > span:first-child {
   color: var(--mk-mu);
+}
+
+.mk-row > strong:last-child {
+  white-space: nowrap;
+  text-align: right;
 }
 
 .mk-row:last-of-type {
@@ -375,6 +386,15 @@ html.dark body {
   flex: none;
   font-weight: 700;
   font-size: 14px;
+}
+
+/* CMS-uploaded logo: exact 26px box, contained, crisp on retina. */
+.mk-logo-img {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  object-fit: contain;
+  flex: none;
 }
 
 .mk-nav-links {
@@ -758,6 +778,25 @@ html.dark body {
   box-shadow: 0 10px 30px var(--mk-gl);
 }
 
+/* Real embed: responsive 16:9, privacy-enhanced. */
+.mk-vid-frame {
+  position: relative;
+  aspect-ratio: 16/9;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--mk-bd);
+  margin-bottom: 16px;
+  background: #000;
+}
+
+.mk-vid-frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
 /* Forms. */
 .mk-label {
   display: block;
@@ -866,7 +905,9 @@ html.dark body {
   opacity: 0;
   pointer-events: none;
   transform: translate(0, 0) scale(0.2);
-  transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s;
+  transition:
+    transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) var(--d, 0s),
+    opacity 0.25s var(--d, 0s);
 }
 
 .mk-fab[data-open="true"] .mk-fab-item {
@@ -978,7 +1019,8 @@ select:focus-visible {
   }
 
   .mk-c2,
-  .mk-c3 {
+  .mk-c3,
+  .mk-demo-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1022,8 +1064,80 @@ select:focus-visible {
     color: var(--mk-mu);
   }
 
+  .mk-dock {
+    gap: 4px;
+  }
+
   .mk-dock .mk-btn-primary {
     flex: 1;
+    min-height: 38px;
+    white-space: nowrap;
+    font-size: 13px;
+    padding: 0 10px;
+    min-width: 0;
+  }
+
+  .mk-dock-help {
+    padding: 0 6px 0 8px;
+    font-size: 13px;
+  }
+
+  /* Tab/chip rails never wrap on mobile: shrink first, scroll as a last resort. */
+  .mk-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .mk-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .mk-tab {
+    white-space: nowrap;
+    padding: 4px 8px;
+    font-size: 11.5px;
+    flex: none;
+  }
+
+  .mk-hero .mk-tabs {
+    gap: 4px;
+  }
+
+  .mk-dock-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--mk-bd);
+    background: var(--mk-s1);
+    color: var(--mk-tx);
+    flex: none;
+    text-decoration: none;
+  }
+
+  .mk-dock-icon-wa {
+    background: var(--mk-wa);
+    border: 0;
+    color: #fff;
+  }
+
+  .mk-dock-icon-ms {
+    background: linear-gradient(135deg, var(--mk-msg1), var(--mk-msg2));
+    border: 0;
+    color: #fff;
+  }
+
+  .mk-dock-help {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px 0 14px;
+    font-size: 14px;
+    color: var(--mk-mu);
+    white-space: nowrap;
   }
 }
 

@@ -1304,10 +1304,24 @@ export const landingContent: Record<Locale, LandingContent> = {
       helpLabel: 'Need help?',
       demoLabel: 'Book demo',
       demoUrl: '#demo',
-      whatsappUrl: 'https://wa.me/8801894828290',
-      messengerUrl: 'https://m.me/ecomate.bd',
-      callUrl: 'tel:+8801894828290',
+      callNumber: '+8801894828290',
       callLabel: 'Call',
+      whatsapp: '8801894828290',
+      whatsappLabel: 'WhatsApp',
+      messengerUrl: 'https://m.me/ecomate.bd',
+      messengerLabel: 'Messenger',
+      fabLabel: 'Contact',
+    },
+    walkthrough: {
+      bullets: [
+        'See your own order volume running on EcoMate',
+        'Packing, courier and COD setup mapped live',
+        'Pricing for your monthly volume, on the call',
+      ],
+      trustNote: 'Strictly confidential. We never share your business data.',
+    },
+    videoSection: {
+      youtubeUrl: '',
     },
     statsBar: {
       items: [
@@ -2766,10 +2780,24 @@ export const landingContent: Record<Locale, LandingContent> = {
       helpLabel: 'সাহায্য লাগবে?',
       demoLabel: 'ডেমো বুক করুন',
       demoUrl: '#demo',
-      whatsappUrl: 'https://wa.me/8801894828290',
-      messengerUrl: 'https://m.me/ecomate.bd',
-      callUrl: 'tel:+8801894828290',
+      callNumber: '+8801894828290',
       callLabel: 'কল করুন',
+      whatsapp: '8801894828290',
+      whatsappLabel: 'হোয়াটসঅ্যাপ',
+      messengerUrl: 'https://m.me/ecomate.bd',
+      messengerLabel: 'মেসেঞ্জার',
+      fabLabel: 'যোগাযোগ',
+    },
+    walkthrough: {
+      bullets: [
+        'আপনার নিজের অর্ডার ভলিউম ইকোমেটে চালিয়ে দেখুন',
+        'প্যাকিং, কুরিয়ার ও সিওডি সেটআপ লাইভে ম্যাপ করা হয়',
+        'আপনার মাসিক ভলিউম অনুযায়ী প্রাইসিং, কলেই',
+      ],
+      trustNote: 'সম্পূর্ণ গোপনীয়। আপনার ব্যবসার তথ্য কখনো শেয়ার করা হয় না।',
+    },
+    videoSection: {
+      youtubeUrl: '',
     },
     statsBar: {
       items: [

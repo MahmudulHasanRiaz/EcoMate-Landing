@@ -555,6 +555,44 @@ export function getCaseStudies(): Promise<Awaited<ReturnType<typeof _getCaseStud
   })();
 }
 
+/** Site branding for the header logo + favicon. `null` keeps the built-in marks. */
+export interface SiteBranding {
+  siteName: string;
+  logoUrl: string;
+  faviconUrl: string;
+}
+
+async function _getSiteBranding(): Promise<SiteBranding | null> {
+  try {
+    const [row] = await withTimeout(getDb()
+      .select({
+        siteName: siteSettingsTable.siteName,
+        logoUrl: siteSettingsTable.logoUrl,
+        faviconUrl: siteSettingsTable.faviconUrl,
+      })
+      .from(siteSettingsTable)
+      .limit(1), 'getSiteBranding');
+    if (!row) {
+      return null;
+    }
+    return {
+      siteName: row.siteName,
+      logoUrl: row.logoUrl ?? '',
+      faviconUrl: row.faviconUrl ?? '',
+    };
+  } catch (e) {
+    logOnce('warn', 'content:branding', '[content] branding read failed, using built-in marks:', errorMessage(e));
+    return null;
+  }
+}
+
+export function getSiteBranding(): Promise<SiteBranding | null> {
+  return unstable_cache(_getSiteBranding, ['site-branding'], {
+    tags: ['branding'],
+    revalidate: REVALIDATE_STANDARD,
+  })();
+}
+
 /** jsonb arrays pass through `unknown`; anything that is not a string array is treated as empty. */
 function asStringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];

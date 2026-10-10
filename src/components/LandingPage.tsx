@@ -17,7 +17,7 @@
  * complete page. Nothing here can blank a section.
  */
 import { LocaleThemeProvider } from '@/components/shell/LocaleThemeProvider';
-import { getLandingContent, getMenu, getPricingPlans, getTestimonials } from '@/lib/content';
+import { getLandingContent, getMenu, getPricingPlans, getSiteBranding, getTestimonials } from '@/lib/content';
 import { assembleLandingContent } from '@/lib/merge';
 import { errorMessage, logOnce } from '@/lib/json';
 import { withTimeout } from '@/lib/withTimeout';
@@ -43,6 +43,7 @@ export async function LandingPage({ locale }: { locale: Locale }) {
   let footerMenu: Awaited<ReturnType<typeof getMenu>> = null;
   let pricing: Awaited<ReturnType<typeof getPricingPlans>> = null;
   let testimonials: Awaited<ReturnType<typeof getTestimonials>> = null;
+  let branding: Awaited<ReturnType<typeof getSiteBranding>> = null;
   try {
     const loaded = await withTimeout(
       (async () => {
@@ -52,7 +53,9 @@ export async function LandingPage({ locale }: { locale: Locale }) {
         const p = await getPricingPlans();
         // 2c: published DB testimonials seed the proof section (null → static fallback copy).
         const t = await getTestimonials();
-        return { sections: s, mainMenu: m1, footerMenu: m2, pricing: p, testimonials: t };
+        // v3 polish: header logo + favicon (null → built-in marks).
+        const b = await getSiteBranding();
+        return { sections: s, mainMenu: m1, footerMenu: m2, pricing: p, testimonials: t, branding: b };
       })(),
       `landing-page:${locale}`,
       20000,
@@ -62,6 +65,7 @@ export async function LandingPage({ locale }: { locale: Locale }) {
     footerMenu = loaded.footerMenu;
     pricing = loaded.pricing;
     testimonials = loaded.testimonials;
+    branding = loaded.branding;
   } catch (e) {
     logOnce('warn', `landing-page:timeout:${locale}`, `[landing] data fetch timed out for locale "${locale}", serving static fallback:`, errorMessage(e));
   }
@@ -74,6 +78,7 @@ export async function LandingPage({ locale }: { locale: Locale }) {
       initialFooterMenu={footerMenu}
       initialTestimonials={testimonials}
       initialIsPricingVisible={pricing?.isPricingVisible ?? true}
+      initialBranding={branding}
     >
       <LandingShell />
     </LocaleThemeProvider>

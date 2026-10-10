@@ -981,9 +981,24 @@ export interface LandingContent {
     helpLabel: string;
     demoLabel: string;
     demoUrl: string;
-    whatsappUrl: string;
-    messengerUrl: string;
-    callUrl: string;
+    /** Phone number for the `tel:` call action (digits, may start with `+`). */
+    callNumber: string;
     callLabel: string;
+    /** WhatsApp target: bare digits become a `wa.me` link, full URLs pass through. */
+    whatsapp: string;
+    whatsappLabel: string;
+    messengerUrl: string;
+    messengerLabel: string;
+    /** Main FAB toggle announcement (e.g. Contact / যোগাযোগ). */
+    fabLabel: string;
+  };
+  /** v3 polish: walkthrough pitch column (form strings stay in `leadForm`). */
+  walkthrough: {
+    bullets: string[];
+    trustNote: string;
+  };
+  /** v3 polish: featured video. Empty `youtubeUrl` renders the placeholder stub. */
+  videoSection: {
+    youtubeUrl: string;
   };
 }

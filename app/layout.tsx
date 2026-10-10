@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Script from 'next/script';
 import { Hind_Siliguri, Instrument_Serif, Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { ConsentBanner } from '@/components/ConsentBanner';
@@ -81,7 +82,7 @@ export const metadata: Metadata = {
   },
   robots: { index: true, follow: true },
   other: {
-    'theme-color': '#F2F3F9',
+    'theme-color': '#090A0F',
   },
 };
 
@@ -99,7 +100,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       suppressHydrationWarning
       className={`scroll-smooth ${sans.variable} ${serif.variable} ${bangla.variable} ${mono.variable}`}
     >
-      <body className="bg-[#F2F3F9] text-slate-900 antialiased selection:bg-indigo-600 selection:text-white dark:bg-[#07080E] dark:text-slate-100">
+      <body className="bg-white text-slate-900 antialiased selection:bg-indigo-600 selection:text-white dark:bg-[#090A0F] dark:text-slate-100">
+        {/* v3: apply the stored theme (default dark) before paint so the first
+            frame matches the design instead of flashing light. */}
+        <Script
+          id="ecomate-theme-init"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{if(localStorage.getItem('ecomate-theme')!=='light'){document.documentElement.classList.add('dark')}}catch(e){document.documentElement.classList.add('dark')}})();`,
+          }}
+        />
         {/* Site-wide Organization node. Rendered server-side so no JavaScript is needed for
             crawlers to see it; `serializeJsonLd` escapes `<` so content can never break out
             of the script element. */}

@@ -640,4 +640,122 @@ export interface LandingContent {
     acceptAll: string;
     essentialOnly: string;
   };
+  /** Redesign v2: stats bar under the hero. Values are display strings (CMS-owned). */
+  statsBar: {
+    items: {
+      value: string;
+      label: string;
+      trend: string;
+    }[];
+    note: string;
+  };
+  /** Redesign v2: trusted-by logo strip. Names stay Latin in both locales. */
+  trustedBy: {
+    eyebrow: string;
+    heading: string;
+    brands: {
+      name: string;
+      detail: string;
+    }[];
+    note: string;
+  };
+  /** Redesign v2: packing workspace interactive scan demo. Identifiers stay Latin. */
+  packingWorkspace: {
+    eyebrow: string;
+    heading: string;
+    subheading: string;
+    orderLabel: string;
+    items: {
+      sku: string;
+      name: string;
+    }[];
+    scanButton: string;
+    scanningText: string;
+    resetButton: string;
+    progressLabel: string;
+    successHeading: string;
+    successBody: string;
+    mismatchHeading: string;
+    mismatchBody: string;
+    blockedBadge: string;
+    verifiedBadge: string;
+    demoNote: string;
+  };
+  /** Redesign v2: revenue protection policy toggles. Amounts are display strings. */
+  revenueProtection: {
+    eyebrow: string;
+    heading: string;
+    subheading: string;
+    policies: {
+      id: string;
+      title: string;
+      detail: string;
+      monthlySavings: string;
+    }[];
+    totalLabel: string;
+    totalNote: string;
+    enabledBadge: string;
+    disabledBadge: string;
+  };
+  /** Redesign v2: logistics automation courier booking demo. Fees stay Latin digits. */
+  logisticsAutomation: {
+    eyebrow: string;
+    heading: string;
+    subheading: string;
+    couriers: {
+      id: string;
+      name: string;
+      fee: string;
+      eta: string;
+      successRate: string;
+    }[];
+    selectLabel: string;
+    bookButton: string;
+    bookedHeading: string;
+    bookedBody: string;
+    resetButton: string;
+    demoNote: string;
+  };
+  /** Redesign v2: ad budget defense CAPI mode selector. Event names stay Latin. */
+  adBudgetDefense: {
+    eyebrow: string;
+    heading: string;
+    subheading: string;
+    modes: {
+      id: string;
+      title: string;
+      description: string;
+      matchQuality: string;
+      events: string[];
+    }[];
+    recommendBadge: string;
+    dedupNote: string;
+  };
+  /** Redesign v2: multi-store & showroom toggle switches demo. */
+  storeSwitches: {
+    eyebrow: string;
+    heading: string;
+    subheading: string;
+    stores: {
+      id: string;
+      name: string;
+      meta: string;
+    }[];
+    syncedBadge: string;
+    pausedBadge: string;
+    syncNote: string;
+    allSyncedMessage: string;
+  };
+  /** Redesign v2: getting started, 3 steps. */
+  gettingStarted: {
+    eyebrow: string;
+    heading: string;
+    subheading: string;
+    steps: {
+      stepNumber: string;
+      title: string;
+      detail: string;
+    }[];
+    ctaLabel: string;
+  };
 }

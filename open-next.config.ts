@@ -1,6 +1,7 @@
 import { defineCloudflareConfig } from '@opennextjs/cloudflare';
 import r2IncrementalCache from '@opennextjs/cloudflare/overrides/incremental-cache/r2-incremental-cache';
 import doShardedTagCache from '@opennextjs/cloudflare/overrides/tag-cache/do-sharded-tag-cache';
+import doQueue from '@opennextjs/cloudflare/overrides/queue/do-queue';
 
 // Phase 3a (Item 16 / §8.6): R2 incremental cache + DO sharded tag cache.
 //
@@ -11,11 +12,16 @@ import doShardedTagCache from '@opennextjs/cloudflare/overrides/tag-cache/do-sha
 // - `tagCache` tracks `cacheTag` revalidation in the `NEXT_TAG_CACHE_DO_SHARDED`
 //   Durable Object (auto-exported by the opennext worker template) so `updateTag`
 //   from an admin mutation invalidates the R2 entries without a rebuild.
+// - `queue` runs ISR background revalidation in the `NEXT_CACHE_DO_QUEUE` Durable
+//   Object (auto-exported by the opennext worker template). Without it, a STALE page
+//   throws "Failed to revalidate stale page" and stays stale forever — R2 entries never
+//   refresh past their revalidate window and tag invalidation never re-renders.
 // - The DO factory is passed lazy (`() => T`): it is instantiated inside the Worker,
 //   never at config-evaluation time on the build machine.
 export default defineCloudflareConfig({
   incrementalCache: r2IncrementalCache,
   tagCache: doShardedTagCache,
+  queue: doQueue,
 });
 
 // ---------------------------------------------------------------------------

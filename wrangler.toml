@@ -56,9 +56,22 @@ bucket_name = "ecomate-inc-cache"
 name = "NEXT_TAG_CACHE_DO_SHARDED"
 class_name = "DOShardedTagCache"
 
+# ISR revalidation queue (2026-10-10 P0: without it STALE pages never refresh and
+# tag invalidation never re-renders). The `DOQueueHandler` class is auto-exported
+# by the opennext worker template — no app code declares it; wrangler only needs
+# the binding + sqlite migration. Configured as `queue: doQueue` in
+# open-next.config.ts.
+[[durable_objects.bindings]]
+name = "NEXT_CACHE_DO_QUEUE"
+class_name = "DOQueueHandler"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["DOShardedTagCache"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["DOQueueHandler"]
 
 # No KV namespace by decision: rate limiting runs on Cloudflare WAF rate rules
 # (dashboard, first layer) plus the per-isolate in-memory backstop. lib/rateLimit.ts
@@ -151,9 +164,18 @@ bucket_name = "ecomate-inc-cache-prod"
 name = "NEXT_TAG_CACHE_DO_SHARDED"
 class_name = "DOShardedTagCache"
 
+# Production revalidation queue. Same class/migration as above.
+[[env.production.durable_objects.bindings]]
+name = "NEXT_CACHE_DO_QUEUE"
+class_name = "DOQueueHandler"
+
 [[env.production.migrations]]
 tag = "v1"
 new_sqlite_classes = ["DOShardedTagCache"]
+
+[[env.production.migrations]]
+tag = "v2"
+new_sqlite_classes = ["DOQueueHandler"]
 
 [env.production.vars]
 NEXT_PUBLIC_SITE_URL = "https://ecomate.bd"

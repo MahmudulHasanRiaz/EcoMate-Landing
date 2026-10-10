@@ -143,11 +143,14 @@ export function LocaleThemeProvider({
   // M-31: theme persists across reloads. Lazy initializer (client-only read, no SSR
   // mismatch — this provider never server-renders differing markup from it, the class
   // sync effect below applies it to `documentElement` after mount).
+  //
+  // v3: dark is the default (the design is dark-first). Only an explicit stored
+  // 'light' choice renders light; anything else (unset, private-mode denial) is dark.
   const [theme, setTheme] = useState<Theme>(() => {
     try {
-      return window.localStorage.getItem('ecomate-theme') === 'dark' ? 'dark' : 'light';
+      return window.localStorage.getItem('ecomate-theme') === 'light' ? 'light' : 'dark';
     } catch {
-      return 'light';
+      return 'dark';
     }
   });
   const [content, setContent] = useState<LandingContent>(initialContent);

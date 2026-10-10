@@ -97,6 +97,8 @@ export interface LandingContent {
     nav: NavItem[];
     ctaBookDemo: string;
     ctaTalkSales: string;
+    /** v3 floating pill: sign-in link label. */
+    signInLabel: string;
   };
   hero: {
     badge: string;
@@ -757,5 +759,231 @@ export interface LandingContent {
       detail: string;
     }[];
     ctaLabel: string;
+  };
+  /** v3: hero console tabs (KPI rows per tab), trust strip, platform note. */
+  heroTabs: {
+    tabs: {
+      id: string;
+      label: string;
+      rows: {
+        label: string;
+        value: string;
+        highlight: boolean;
+      }[];
+    }[];
+    trustedTitle: string;
+    brands: string[];
+    platformNote: string;
+    sampleNote: string;
+  };
+  /** v3: fragmented reality before/after (mockup §01). */
+  fragmented: {
+    index: string;
+    eyebrow: string;
+    heading: string;
+    subheading: string;
+    beforeTitle: string;
+    beforeItems: string[];
+    afterTitle: string;
+    afterItems: string[];
+  };
+  /** v3: packing terminal scan demo (mockup §02). States derive from order. */
+  packingTerminal: {
+    index: string;
+    eyebrow: string;
+    heading: string;
+    subheading: string;
+    terminalTitle: string;
+    orderLabel: string;
+    orderId: string;
+    items: {
+      sku: string;
+      name: string;
+    }[];
+    waitingLabel: string;
+    matchedLabel: string;
+    wrongLabel: string;
+    boxSealLabel: string;
+    lockedLabel: string;
+    unlockedLabel: string;
+    scanCorrectLabel: string;
+    scanWrongLabel: string;
+    sampleNote: string;
+    features: string[];
+    demoCta: string;
+  };
+  /** v3: revenue protection ledger + policy radios (mockup §03). */
+  revenueLedger: {
+    index: string;
+    eyebrow: string;
+    heading: string;
+    subheading: string;
+    ledgerTitle: string;
+    phoneLabel: string;
+    phone: string;
+    totalsLabel: string;
+    totals: {
+      total: string;
+      delivered: string;
+      returned: string;
+    };
+    couriers: {
+      id: string;
+      name: string;
+      delivered: string;
+      returned: string;
+      rateNote: string;
+    }[];
+    deliveredLabel: string;
+    returnedLabel: string;
+    policyTitle: string;
+    policies: {
+      id: string;
+      label: string;
+    }[];
+    policyNote: string;
+  };
+  /** v3: logistics automation (mockup §04). */
+  logistics: {
+    index: string;
+    eyebrow: string;
+    heading: string;
+    subheading: string;
+    couriers: {
+      id: string;
+      name: string;
+    }[];
+    bulkTitle: string;
+    selectedCount: string;
+    selectedLabel: string;
+    pushLabel: string;
+    mixLabel: string;
+    mixValue: string;
+    streamTitle: string;
+    streamRows: {
+      time: string;
+      ref: string;
+      courier: string;
+      status: string;
+    }[];
+    sampleNote: string;
+  };
+  /** v3: ad budget defense CAPI modes + attribution (mockup §05). */
+  adDefense: {
+    index: string;
+    eyebrow: string;
+    heading: string;
+    subheading: string;
+    modes: {
+      id: string;
+      title: string;
+      description: string;
+      detail: string;
+      recommended: boolean;
+    }[];
+    recommendBadge: string;
+    attributionTitle: string;
+    attributionRows: {
+      label: string;
+      value: string;
+    }[];
+    demoCta: string;
+  };
+  /** v3: multi-store switches + why-different (mockup §06). */
+  storefront: {
+    index: string;
+    eyebrow: string;
+    heading: string;
+    subheading: string;
+    switchHint: string;
+    catalogTitle: string;
+    catalogSku: string;
+    catalogUnits: string;
+    stores: {
+      id: string;
+      name: string;
+    }[];
+    offLabel: string;
+    publishedLabel: string;
+    whyTitle: string;
+    whyItems: string[];
+  };
+  /** v3: omnichannel warehouse + POS (mockup §07). */
+  omnichannel: {
+    index: string;
+    eyebrow: string;
+    heading: string;
+    subheading: string;
+    warehouseTitle: string;
+    warehousePath: string[];
+    warehouseRows: string[];
+    posTitle: string;
+    posRows: string[];
+    demoCta: string;
+  };
+  /** v3: financial clarity profit breakdown + payments (mockup §08). */
+  profitClarity: {
+    index: string;
+    eyebrow: string;
+    heading: string;
+    subheading: string;
+    orderLabel: string;
+    orderId: string;
+    rows: {
+      label: string;
+      value: string;
+      tone: 'in' | 'out' | 'net';
+    }[];
+    sampleNote: string;
+    paymentsTitle: string;
+    paymentsRows: string[];
+    demoCta: string;
+  };
+  /** v3: team operations (mockup §09). */
+  teamOps: {
+    index: string;
+    eyebrow: string;
+    heading: string;
+    subheading: string;
+    features: string[];
+    timelineTitle: string;
+    timeline: {
+      time: string;
+      text: string;
+    }[];
+  };
+  /** v3: infrastructure & tracking (mockup §10). */
+  infraTrack: {
+    index: string;
+    eyebrow: string;
+    heading: string;
+    subheading: string;
+    features: string[];
+    trackingTitle: string;
+    orderLabel: string;
+    orderId: string;
+    statusLabel: string;
+    statusValue: string;
+    trackingNote: string;
+  };
+  /** v3: pricing volume-tier selector. `planIndex` is positional so the mapping
+   * survives both DB plans and the static fallback regardless of slugs. */
+  volumeTiers: {
+    label: string;
+    tiers: {
+      id: string;
+      label: string;
+      planIndex: number;
+    }[];
+  };
+  /** v3: dock (mobile) + FAB (desktop) contact actions. URLs are CMS data. */
+  dock: {
+    helpLabel: string;
+    demoLabel: string;
+    demoUrl: string;
+    whatsappUrl: string;
+    messengerUrl: string;
+    callUrl: string;
+    callLabel: string;
   };
 }

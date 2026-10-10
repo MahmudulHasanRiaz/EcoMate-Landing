@@ -233,6 +233,18 @@ export const blogPostsTable = pgTable('blog_posts', {
   category: text('category').notNull().default('Operations & Fulfillment'),
   tags: jsonb('tags').default([]),
   featuredImageUrl: text('featured_image_url').default(''),
+  /**
+   * Optional YouTube link for the post. Rendered as a responsive 16:9
+   * privacy-enhanced embed directly BELOW the hero (see MEDIA RULES in
+   * `app/[locale]/blog/[slug]/page.tsx`). Empty = no video block.
+   */
+  videoUrl: text('video_url').default(''),
+  /**
+   * Optional gallery image URLs (jsonb string array). Rendered as a grid
+   * AFTER the article body with a dependency-free lightbox. Empty = no
+   * gallery block. `featured_image_url` stays THE hero/OG image always.
+   */
+  galleryUrls: jsonb('gallery_urls').default([]),
   readTime: text('read_time').default('5 min read'),
   status: text('status').notNull().default('draft'), // draft, scheduled, published, archived
   seoTitle: text('seo_title').default(''),

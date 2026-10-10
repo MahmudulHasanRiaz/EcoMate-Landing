@@ -47,6 +47,10 @@ export const CONTENT_KEY_GROUPS: ContentKeyGroup[] = [
     ],
   },
   {
+    title: 'Blog pages',
+    keys: ['blogArchive', 'blogDetail'],
+  },
+  {
     title: 'Legal pages',
     keys: ['legal.privacy', 'legal.terms'],
   },

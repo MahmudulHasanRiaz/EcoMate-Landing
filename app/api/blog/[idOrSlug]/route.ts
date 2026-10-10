@@ -14,7 +14,7 @@ import { recordAudit } from '@/lib/audit';
 import { invalidateDomains } from '@/lib/revalidate';
 import { getRevision, recordRevision } from '@/lib/revisions';
 import { sanitizeHtml } from '@/lib/sanitize';
-import { blogPostUpdate } from '@/lib/validation';
+import { blogPostUpdate, stripUnknownKeys } from '@/lib/validation';
 import { contentRestore } from '@/lib/validation/content';
 
 /**
@@ -62,7 +62,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ idOrSlug
     const id = parseId(idOrSlug);
     if (id === null) return fail('Invalid post id', 400);
 
-    const parsed = blogPostUpdate.safeParse(await req.json().catch(() => null));
+    const parsed = blogPostUpdate.safeParse(stripUnknownKeys(blogPostUpdate, await req.json().catch(() => null)));
     if (!parsed.success) {
       return fail('Validation failed', 400, { issues: parsed.error.issues });
     }
@@ -96,6 +96,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ idOrSlug
           category: row.category,
           tags: row.tags,
           featuredImageUrl: row.featuredImageUrl,
+          videoUrl: row.videoUrl,
+          galleryUrls: row.galleryUrls,
           readTime: row.readTime,
           status: row.status,
           seoTitle: row.seoTitle,
@@ -139,7 +141,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ idOrSlu
     const id = parseId(idOrSlug);
     if (id === null) return fail('Invalid post id', 400);
 
-    const parsed = contentRestore.safeParse(await req.json().catch(() => null));
+    const parsed = contentRestore.safeParse(stripUnknownKeys(contentRestore, await req.json().catch(() => null)));
     if (!parsed.success) {
       return fail('Validation failed', 400, { issues: parsed.error.issues });
     }
@@ -156,6 +158,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ idOrSlu
       typeof value === 'string' ? value : fallback;
     const readTags = (value: unknown): string[] =>
       Array.isArray(value) ? value.filter((tag): tag is string => typeof tag === 'string') : [];
+    // Pre-media-rule revisions have no gallery key — they restore to empty, never crash.
+    const readGallery = (value: unknown): string[] =>
+      Array.isArray(value) ? value.filter((url): url is string => typeof url === 'string' && url.length > 0) : [];
 
     const applied = await getDb().transaction(async (tx) => {
       const [row] = await tx
@@ -168,6 +173,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ idOrSlu
           category: readText(payload.category, 'Operations & Fulfillment'),
           tags: readTags(payload.tags),
           featuredImageUrl: readText(payload.featuredImageUrl, ''),
+          videoUrl: readText(payload.videoUrl, ''),
+          galleryUrls: readGallery(payload.galleryUrls),
           readTime: readText(payload.readTime, '5 min read'),
           status: payload.status === 'published' ? 'published' : 'draft',
           seoTitle: readText(payload.seoTitle, ''),
@@ -189,6 +196,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ idOrSlu
           category: row.category,
           tags: row.tags,
           featuredImageUrl: row.featuredImageUrl,
+          videoUrl: row.videoUrl,
+          galleryUrls: row.galleryUrls,
           readTime: row.readTime,
           status: row.status,
           seoTitle: row.seoTitle,

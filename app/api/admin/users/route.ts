@@ -12,7 +12,7 @@ import { errorMessage, fail, isUniqueViolation, logServerError, ok } from '@/lib
 import { normalizeEmail } from '@/lib/operators';
 import { hashPassword, passwordPolicyError } from '@/lib/password';
 import { clientIp } from '@/lib/request';
-import { operatorCreate } from '@/lib/validation';
+import { operatorCreate, stripUnknownKeys } from '@/lib/validation';
 
 const OPERATOR_COLUMNS = {
   id: adminUsersTable.id,
@@ -47,7 +47,7 @@ export async function POST(request: Request): Promise<Response> {
   if (!guard.ok) return guard.response;
 
   try {
-    const parsed = operatorCreate.safeParse(await request.json().catch(() => null));
+    const parsed = operatorCreate.safeParse(stripUnknownKeys(operatorCreate, await request.json().catch(() => null)));
     if (!parsed.success) {
       return fail('Validation failed', 400, { issues: parsed.error.issues });
     }

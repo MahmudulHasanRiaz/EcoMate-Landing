@@ -6,7 +6,7 @@
  * with `landing_content` rows per locale). Interactive demos hold local state
  * only; the lead form keeps the existing `/api/leads` contract.
  */
-import React from 'react';
+import React, { useState } from 'react';
 import { useLanding } from '@/components/shell/useLanding';
 import { MkDock, MkFooter, MkHeader } from './Chrome';
 import { MkHero } from './Hero';
@@ -31,10 +31,12 @@ import { MkFaq, MkLeadForm } from './Closing';
 
 export function LandingV3() {
   const { locale } = useLanding();
+  // Mobile nav drawer state lives here so the dock can hide while it is open.
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
     <div className={`mk-page min-h-screen ${locale === 'bn' ? 'font-bangla' : ''}`}>
-      <MkHeader />
+      <MkHeader drawerOpen={drawerOpen} onDrawerChange={setDrawerOpen} />
       <main>
         <MkHero />
         <MkFragmented />
@@ -54,7 +56,7 @@ export function LandingV3() {
         <MkLeadForm />
       </main>
       <MkFooter />
-      <MkDock />
+      <MkDock drawerOpen={drawerOpen} />
     </div>
   );
 }

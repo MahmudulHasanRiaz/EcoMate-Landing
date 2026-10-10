@@ -15,6 +15,7 @@ import { CONTENT_EDITOR_ROLES, requireRole } from '@/lib/authz';
 import { errorMessage, fail, logServerError, ok, parseId } from '@/lib/json';
 import { invalidateDomains } from '@/lib/revalidate';
 import { formatRequirements, testimonialUpdate } from '@/lib/validation/testimonials';
+import { stripUnknownKeys } from '@/lib/validation';
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   // Decision 1: testimonials are CMS content — editor-allowed.
@@ -26,7 +27,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const id = parseId(rawId);
     if (id === null) return fail('Invalid testimonial id', 400);
 
-    const parsed = testimonialUpdate.safeParse(await req.json().catch(() => null));
+    const parsed = testimonialUpdate.safeParse(stripUnknownKeys(testimonialUpdate, await req.json().catch(() => null)));
     if (!parsed.success) {
       return fail('Validation failed', 400, { issues: parsed.error.issues });
     }

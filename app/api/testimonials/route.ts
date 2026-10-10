@@ -7,6 +7,7 @@ import { paginate } from '@/lib/paginate';
 import { requestId } from '@/lib/request';
 import { invalidateDomains } from '@/lib/revalidate';
 import { formatRequirements, testimonialCreate } from '@/lib/validation/testimonials';
+import { stripUnknownKeys } from '@/lib/validation';
 
 /** Paginated (Task 16 §4). Public: the landing page's customer-proof section reads this.
  * Only `isPublished` rows are served (M-4) — unpublished client quotes/names stay behind
@@ -48,7 +49,7 @@ export async function POST(req: Request) {
   if (!guard.ok) return guard.response;
 
   try {
-    const parsed = testimonialCreate.safeParse(await req.json().catch(() => null));
+    const parsed = testimonialCreate.safeParse(stripUnknownKeys(testimonialCreate, await req.json().catch(() => null)));
     if (!parsed.success) {
       return fail('Validation failed', 400, { issues: parsed.error.issues });
     }

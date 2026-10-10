@@ -38,7 +38,9 @@ import { notFound, permanentRedirect } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Clock } from 'lucide-react';
 import { BlogContent } from '@/components/BlogContent';
-import { getBlogPost, getBlogSlugById, getPublishedBlogPosts } from '@/lib/content';
+import { getBlogPost, getBlogSlugById, getLandingContent, getPublishedBlogPosts } from '@/lib/content';
+import { assembleLandingContent } from '@/lib/merge';
+import { blogGalleryUrls, blogVideoEmbed } from '@/lib/blogMedia';
 import { formatDate } from '@/lib/format';
 import { LOCALES, isLocale } from '@/lib/locales';
 import { PRERENDER_PROBE_SLUG } from '@/lib/prerender-probe';
@@ -53,6 +55,8 @@ import {
   ogLocale,
   serializeJsonLd,
 } from '@/lib/seo';
+import { GalleryLightbox, ShareButtons } from '@/src/components/blog/BlogWidgets';
+import { MkDock, MkFooter, MkHeader } from '@/src/components/v3/Chrome';
 
 interface BlogPageProps {
   params: Promise<{ locale: string; slug: string }>;
@@ -153,8 +157,30 @@ export default async function BlogPage({ params }: BlogPageProps) {
   const image = ogImageUrl(post.featuredImageUrl);
   const url = localeUrl(locale, `blog/${post.slug}`);
 
+  // MEDIA RULES (documented in `lib/blogMedia.ts`):
+  // - Hero: `featuredImageUrl` always (gradient placeholder when empty).
+  // - Video: YouTube nocookie embed directly BELOW the hero, before the body.
+  // - Gallery: grid AFTER the body, with a dependency-free lightbox.
+  // - `featuredImageUrl` stays THE hero/OG image in every combination.
+  const videoEmbed = blogVideoEmbed(post.videoUrl);
+  const gallery = blogGalleryUrls(post.galleryUrls);
+
+  // Detail chrome copy (`blogDetail` + `blogArchive` CMS keys, static fallback
+  // when the DB is out). The Blog breadcrumb label reuses the archive eyebrow
+  // so it stays CMS-driven instead of hardcoded per locale.
+  const detailSections = await getLandingContent(locale).catch(() => null);
+  const detailContent = assembleLandingContent(locale, detailSections);
+  const detail = detailContent.blogDetail;
+  const blogCrumb = detailContent.blogArchive.eyebrow;
+
+  // Related: same category, newest first, never the current post, max 3.
+  const allPosts = (await getPublishedBlogPosts().catch(() => null)) ?? [];
+  const related = allPosts
+    .filter((entry) => entry.slug !== post.slug && entry.category === post.category)
+    .slice(0, 3);
+
   return (
-    <div className="min-h-screen bg-[#F2F3F9] text-slate-900 dark:bg-[#07080E] dark:text-slate-100">
+    <div className={`mk-page min-h-screen ${locale === 'bn' ? 'font-bangla' : ''}`}>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -177,45 +203,55 @@ export default async function BlogPage({ params }: BlogPageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: serializeJsonLd(
-            // Two levels, not three: there is no `/[locale]/blog` index route, so a "Blog"
-            // crumb would carry an `item` that 404s — which is exactly what Google flags as a
-            // broken breadcrumb. The section is still conveyed, by `articleSection` on the
-            // Article node above.
+            // Three levels now: the `/[locale]/blog` index exists, so the Blog
+            // crumb resolves instead of 404ing.
             breadcrumbJsonLd(locale, [
               { name: CRUMBS[locale].home, path: '' },
+              { name: blogCrumb, path: 'blog' },
               { name: post.title, path: `blog/${post.slug}` },
             ]),
           ),
         }}
       />
 
-      <main className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 sm:py-16">
-        {/* `localeHomePath` returns a literal union (`'/' | '/en' | '/bn'`), not a bare
-            `string`, so `typedRoutes` proves it against the route manifest. */}
-        <Link
-          href={homeHref}
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          {locale === 'bn' ? 'হোম' : 'Home'}
-        </Link>
+      <MkHeader />
+      <main className="mk-w" style={{ paddingTop: 40, paddingBottom: 72 }}>
+        <nav aria-label="Breadcrumb" className="mk-strip" style={{ marginTop: 0 }}>
+          <Link href={homeHref} style={{ color: 'inherit' }}>
+            {CRUMBS[locale].home}
+          </Link>
+          {' / '}
+          <a href={localeUrl(locale, 'blog')} style={{ color: 'inherit' }}>
+            {blogCrumb}
+          </a>
+          {' / '}
+          <span aria-current="page">{post.title}</span>
+        </nav>
 
-        <article className="mt-6">
-          <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">
-            {post.category}
+        <article style={{ marginTop: 20 }}>
+          <p className="mk-eyebrow">{post.category}</p>
+          <h1 className="mk-h1" style={{ textAlign: 'left', margin: 0 }}>
+            {post.title}
+          </h1>
+          <p className="mk-sb" style={{ maxWidth: 720 }}>
+            {post.excerpt}
           </p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">{post.title}</h1>
-          <p className="mt-4 text-base text-slate-600 dark:text-slate-300">{post.excerpt}</p>
 
-          <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 border-y border-slate-200 py-3 text-xs text-slate-500 dark:border-white/10 dark:text-slate-400">
-            <span className="font-medium text-slate-700 dark:text-slate-200">{post.author}</span>
-            <time dateTime={post.publishedAt}>{formatDate(post.publishedAt, locale)}</time>
-            {post.readTime ? (
-              <span className="inline-flex items-center gap-1">
-                <Clock className="h-3.5 w-3.5" />
-                {post.readTime}
-              </span>
-            ) : null}
+          <div
+            className="mk-row"
+            style={{ marginTop: 16, fontFamily: 'inherit', fontSize: 13, flexWrap: 'wrap' }}
+          >
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 12 }}>
+              <strong style={{ color: 'var(--mk-tx)' }}>{post.author}</strong>
+              <time dateTime={post.publishedAt}>{formatDate(post.publishedAt, locale)}</time>
+              {post.readTime ? (
+                <span className="inline-flex items-center gap-1">
+                  <Clock size={13} aria-hidden="true" />
+                  {post.readTime}
+                </span>
+              ) : null}
+            </span>
+            <ShareButtons url={url} title={post.title} shareLabel={detail.shareLabel} copiedLabel={detail.copiedLabel} />
           </div>
 
           {post.featuredImageUrl ? (
@@ -226,14 +262,117 @@ export default async function BlogPage({ params }: BlogPageProps) {
             <img
               src={absoluteUrl(post.featuredImageUrl)}
               alt={post.title}
-              className="mt-6 w-full rounded-2xl border border-slate-200 dark:border-white/10"
               loading="eager"
+              style={{
+                marginTop: 20,
+                width: '100%',
+                aspectRatio: '16/8',
+                objectFit: 'cover',
+                borderRadius: 6,
+                border: '1px solid var(--mk-bd)',
+              }}
             />
-          ) : null}
+          ) : (
+            <div
+              aria-hidden="true"
+              style={{
+                marginTop: 20,
+                width: '100%',
+                aspectRatio: '16/8',
+                borderRadius: 6,
+                border: '1px solid var(--mk-bd)',
+                background: 'linear-gradient(135deg, var(--mk-s2), var(--mk-bg))',
+              }}
+            />
+          )}
 
-          <BlogContent html={post.content} className="prose prose-slate mt-8 max-w-none dark:prose-invert" />
+          {videoEmbed && (
+            <section aria-label={detail.videoLabel} style={{ marginTop: 20 }}>
+              <div className="mk-vid-frame" style={{ marginBottom: 0 }}>
+                <iframe
+                  src={videoEmbed}
+                  title={`${detail.videoLabel}: ${post.title}`}
+                  loading="lazy"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+            </section>
+          )}
+
+          <BlogContent html={post.content} className="mk-prose" />
+
+          <GalleryLightbox images={gallery} label={detail.galleryLabel} />
+
+          <section
+            aria-label={detail.authorLabel}
+            className="mk-pn"
+            style={{ marginTop: 32, display: 'flex', alignItems: 'center', gap: 14 }}
+          >
+            <span
+              aria-hidden="true"
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 8,
+                background: 'var(--mk-ac)',
+                color: '#fff',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 700,
+                fontSize: 18,
+                flex: 'none',
+              }}
+            >
+              {post.author.trim().charAt(0).toUpperCase() || 'E'}
+            </span>
+            <span>
+              <span className="mk-pt" style={{ margin: 0 }}>
+                {detail.authorLabel}
+              </span>
+              <span className="block font-bold" style={{ color: 'var(--mk-tx)' }}>
+                {post.author}
+              </span>
+            </span>
+          </section>
+
+          {related.length > 0 && (
+            <section aria-label={detail.relatedLabel} style={{ marginTop: 32 }}>
+              <p className="mk-eyebrow">{detail.relatedLabel}</p>
+              <div className="mk-g mk-c3" style={{ marginTop: 12 }}>
+                {related.map((entry) => (
+                  <a
+                    key={entry.slug}
+                    href={localeUrl(locale, `blog/${entry.slug}`)}
+                    className="mk-pn block"
+                    style={{ textDecoration: 'none' }}
+                  >
+                    <span className="mk-pt" style={{ margin: 0 }}>
+                      {entry.category}
+                    </span>
+                    <span className="block font-bold" style={{ color: 'var(--mk-tx)', marginTop: 6 }}>
+                      {entry.title}
+                    </span>
+                    <span className="mk-strip" style={{ marginTop: 8 }}>
+                      <time dateTime={entry.publishedAt}>{formatDate(entry.publishedAt, locale)}</time>
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <div style={{ marginTop: 28 }}>
+            <a href={localeUrl(locale, 'blog')} className="mk-btn">
+              <ArrowLeft size={15} aria-hidden="true" />
+              {detail.backLabel}
+            </a>
+          </div>
         </article>
       </main>
+      <MkFooter />
+      <MkDock />
     </div>
   );
 }

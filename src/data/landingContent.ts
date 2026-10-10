@@ -9,6 +9,9 @@ export const landingContent: Record<Locale, LandingContent> = {
         { label: 'Courier', href: '#courier' },
         { label: 'Warehouse & POS', href: '#warehouse' },
         { label: 'Pricing', href: '#pricing' },
+        // Locale-aware internal route (PART A5): the DB-managed `main` menu
+        // overrides this fallback when configured — add Blog there instead.
+        { label: 'Blog', href: '/en/blog' },
       ],
       ctaBookDemo: 'Demo',
       ctaTalkSales: 'Talk to Sales',
@@ -1009,6 +1012,24 @@ export const landingContent: Record<Locale, LandingContent> = {
       privacyLabel: 'Privacy Policy',
       termsLabel: 'Terms of Service',
     },
+    blogArchive: {
+      eyebrow: 'Blog',
+      heading: 'Problem-solving guides for operators.',
+      subheading: 'Field notes on packing, couriers, inventory and ad tracking — written from real operations.',
+      featuredLabel: 'Featured',
+      allLabel: 'All',
+      emptyLabel: 'No posts yet. Check back soon.',
+      loadMoreLabel: 'Load more',
+    },
+    blogDetail: {
+      backLabel: 'All posts',
+      shareLabel: 'Share',
+      relatedLabel: 'Related posts',
+      authorLabel: 'Author',
+      galleryLabel: 'Gallery',
+      videoLabel: 'Video',
+      copiedLabel: 'Link copied',
+    },
     consent: consentCopy.en,
     heroTabs: {
       tabs: [
@@ -1486,6 +1507,7 @@ export const landingContent: Record<Locale, LandingContent> = {
         { label: 'কুরিয়ার', href: '#courier' },
         { label: 'ওয়্যারহাউস ও POS', href: '#warehouse' },
         { label: 'প্রাইসিং', href: '#pricing' },
+        { label: 'ব্লগ', href: '/bn/blog' },
       ],
       ctaBookDemo: 'ডেমো',
       ctaTalkSales: 'সেলস টিমের সাথে কথা বলুন',
@@ -2484,6 +2506,24 @@ export const landingContent: Record<Locale, LandingContent> = {
       ],
       privacyLabel: 'গোপনীয়তা নীতি',
       termsLabel: 'সেবার শর্তাবলি',
+    },
+    blogArchive: {
+      eyebrow: 'ব্লগ',
+      heading: 'অপারেটরদের জন্য সমস্যা-সমাধান গাইড।',
+      subheading: 'প্যাকিং, কুরিয়ার, ইনভেন্টরি ও অ্যাড ট্র্যাকিং নিয়ে বাস্তব অভিজ্ঞতার নোট।',
+      featuredLabel: 'নির্বাচিত',
+      allLabel: 'সব',
+      emptyLabel: 'এখনো কোনো পোস্ট নেই। শীঘ্রই আসছে।',
+      loadMoreLabel: 'আরও দেখুন',
+    },
+    blogDetail: {
+      backLabel: 'সব পোস্ট',
+      shareLabel: 'শেয়ার',
+      relatedLabel: 'সম্পর্কিত পোস্ট',
+      authorLabel: 'লেখক',
+      galleryLabel: 'গ্যালারি',
+      videoLabel: 'ভিডিও',
+      copiedLabel: 'লিংক কপি হয়েছে',
     },
     consent: consentCopy.bn,
     heroTabs: {

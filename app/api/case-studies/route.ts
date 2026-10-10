@@ -9,6 +9,7 @@ import { requestId } from '@/lib/request';
 import { invalidateDomains } from '@/lib/revalidate';
 import { slugify, slugWithSuffix } from '@/lib/slug';
 import { caseStudyCreate } from '@/lib/validation/caseStudies';
+import { stripUnknownKeys } from '@/lib/validation';
 
 /**
  * Paginated (Task 16 §4).
@@ -78,7 +79,7 @@ export async function POST(req: Request) {
   if (!guard.ok) return guard.response;
 
   try {
-    const parsed = caseStudyCreate.safeParse(await req.json().catch(() => null));
+    const parsed = caseStudyCreate.safeParse(stripUnknownKeys(caseStudyCreate, await req.json().catch(() => null)));
     if (!parsed.success) {
       return fail('Validation failed', 400, { issues: parsed.error.issues });
     }

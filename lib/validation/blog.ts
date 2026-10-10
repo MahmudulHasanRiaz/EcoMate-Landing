@@ -3,6 +3,13 @@ import { BLOG_STATUSES } from '@/lib/blog';
 
 const slug = z.string().regex(/^[a-z0-9-]{2,60}$/);
 
+/**
+ * Absolute URLs (`https://…`) or same-origin media paths (`/media/…`).
+ * Gallery/video inputs come from the media library, whose URLs are relative,
+ * so a bare `z.url()` would reject every library pick.
+ */
+const mediaUrlOrEmpty = z.union([z.url(), z.literal(''), z.string().regex(/^\/[^\s]*$/)]);
+
 const base = {
   title: z.string().min(1).max(200),
   slug,
@@ -12,6 +19,10 @@ const base = {
   category: z.string().max(80),
   tags: z.array(z.string().max(60)).max(20),
   featuredImageUrl: z.union([z.url(), z.literal('')]),
+  /** Optional YouTube link — rendered as a nocookie embed below the hero. */
+  videoUrl: mediaUrlOrEmpty,
+  /** Optional gallery image URLs — rendered as a grid after the body. */
+  galleryUrls: z.array(z.string().min(1).max(500)).max(24),
   readTime: z.string().max(40),
   status: z.enum(BLOG_STATUSES),
   seoTitle: z.string().max(70),
@@ -32,6 +43,8 @@ export const blogPostCreate = z.strictObject({
   category: base.category.optional(),
   tags: base.tags.optional(),
   featuredImageUrl: base.featuredImageUrl.optional(),
+  videoUrl: base.videoUrl.optional(),
+  galleryUrls: base.galleryUrls.optional(),
   readTime: base.readTime.optional(),
   status: base.status.optional(),
   seoTitle: base.seoTitle.optional(),
@@ -49,6 +62,8 @@ export const blogPostUpdate = z.strictObject({
   category: base.category.optional(),
   tags: base.tags.optional(),
   featuredImageUrl: base.featuredImageUrl.optional(),
+  videoUrl: base.videoUrl.optional(),
+  galleryUrls: base.galleryUrls.optional(),
   readTime: base.readTime.optional(),
   status: base.status.optional(),
   seoTitle: base.seoTitle.optional(),

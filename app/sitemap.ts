@@ -64,6 +64,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // from `localeHomePath` would publish a sitemap of 404s for the default locale.
     const prefix = localeRoutePrefix(locale);
 
+    // The article index itself (PART A3) — weekly, above individual posts.
+    entries.push({
+      url: `${SITE_URL}${prefix}/blog`,
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    });
+
     for (const post of posts ?? []) {
       const path = `${prefix}/blog/${post.slug}`;
       entries.push({

@@ -18,7 +18,7 @@ import { errorMessage, fail, logServerError, ok } from '@/lib/json';
 import { requestId } from '@/lib/request';
 import { ADMIN_ONLY_ROLES, requireRole } from '@/lib/authz';
 import { isLocale } from '@/lib/locales';
-import { menuCreate, menuReplace, type MENU_KEYS } from '@/lib/validation';
+import { menuCreate, menuReplace, stripUnknownKeys, type MENU_KEYS } from '@/lib/validation';
 import { invalidateMenus } from '@/lib/revalidate';
 import type { Locale } from '@/src/types/landing';
 
@@ -98,7 +98,7 @@ export async function POST(req: Request) {
   if (!guard.ok) return guard.response;
 
   try {
-    const parsed = menuCreate.safeParse(await req.json().catch(() => null));
+    const parsed = menuCreate.safeParse(stripUnknownKeys(menuCreate, await req.json().catch(() => null)));
     if (!parsed.success) {
       return fail('Validation failed', 400, { issues: parsed.error.issues });
     }
@@ -144,7 +144,7 @@ export async function PUT(req: Request) {
   if (!guard.ok) return guard.response;
 
   try {
-    const parsed = menuReplace.safeParse(await req.json().catch(() => null));
+    const parsed = menuReplace.safeParse(stripUnknownKeys(menuReplace, await req.json().catch(() => null)));
     if (!parsed.success) {
       return fail('Validation failed', 400, { issues: parsed.error.issues });
     }

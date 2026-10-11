@@ -458,21 +458,14 @@ export function BlogPostEditor({
                   No featured image selected
                 </p>
                 <p className="text-[11px] text-slate-400">
-                  Click to open media picker or enter direct URL below
+                  Click to browse or upload from Media Library
                 </p>
               </div>
             )}
 
-            <div className="text-xs">
-              <input
-                type="url"
-                value={post.featuredImageUrl || ''}
-                onChange={(e) => setPost({ ...post, featuredImageUrl: e.target.value })}
-                placeholder="Or paste direct image URL (https://… or /media/…)"
-                className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-black/30 text-slate-900 dark:text-white font-mono"
-              />
+            {errors.featuredImageUrl && (
               <FieldError id="post-featured-error" message={errors.featuredImageUrl} />
-            </div>
+            )}
           </div>
 
           {/* Video Player Box */}

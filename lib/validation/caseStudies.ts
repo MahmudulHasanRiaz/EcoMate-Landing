@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 const slug = z.string().regex(/^[a-z0-9-]{2,60}$/);
-const urlOrEmpty = z.union([z.url(), z.literal('')]);
+const urlOrEmpty = z.union([z.url(), z.literal(''), z.string().regex(/^\/[^\s]*$/)]);
 const metric = z.strictObject({
   label: z.string().max(120),
   stat: z.string().max(120),

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const urlOrEmpty = z.union([z.url(), z.literal('')]);
+const urlOrEmpty = z.union([z.url(), z.literal(''), z.string().regex(/^\/[^\s]*$/)]);
 const metric = z.strictObject({
   label: z.string().max(120),
   stat: z.string().max(120),

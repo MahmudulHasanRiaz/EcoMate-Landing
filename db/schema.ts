@@ -227,8 +227,11 @@ export const blogPostsTable = pgTable('blog_posts', {
   // reuse after a soft delete impossible.
   slug: text('slug').notNull(),
   title: text('title').notNull(),
+  titleBn: text('title_bn').default(''),
   excerpt: text('excerpt').notNull(),
+  excerptBn: text('excerpt_bn').default(''),
   content: text('content').notNull(),
+  contentBn: text('content_bn').default(''),
   author: text('author').notNull().default('EcoMate Engineering Team'),
   category: text('category').notNull().default('Operations & Fulfillment'),
   tags: jsonb('tags').default([]),
@@ -249,7 +252,9 @@ export const blogPostsTable = pgTable('blog_posts', {
   categoryId: integer('category_id'),
   status: text('status').notNull().default('draft'), // draft, scheduled, published, archived
   seoTitle: text('seo_title').default(''),
+  seoTitleBn: text('seo_title_bn').default(''),
   seoDescription: text('seo_description').default(''),
+  seoDescriptionBn: text('seo_description_bn').default(''),
   canonicalUrl: text('canonical_url').default(''),
   deletedAt: timestamp('deleted_at'), // soft delete: hard-deleting a live URL is an SEO 404
   publishedAt: timestamp('published_at'),
@@ -631,8 +636,10 @@ export const turnstileDailyStatsTable = pgTable('turnstile_daily_stats', {
 export const blogCategoriesTable = pgTable('blog_categories', {
   id: serial('id').primaryKey(),
   name: text('name').notNull(),
+  nameBn: text('name_bn').default(''),
   slug: text('slug').unique().notNull(),
   description: text('description').default(''),
+  descriptionBn: text('description_bn').default(''),
   parentId: integer('parent_id'),
   sortOrder: integer('sort_order').notNull().default(0),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -647,8 +654,10 @@ export const blogCategoriesTable = pgTable('blog_categories', {
 export const blogTagsTable = pgTable('blog_tags', {
   id: serial('id').primaryKey(),
   name: text('name').notNull(),
+  nameBn: text('name_bn').default(''),
   slug: text('slug').unique().notNull(),
   description: text('description').default(''),
+  descriptionBn: text('description_bn').default(''),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (t) => [
   index('blog_tags_slug_idx').on(t.slug),

@@ -65,7 +65,7 @@ export async function POST(req: Request) {
       return fail('Validation failed', 400, { issues: parsed.error.issues });
     }
 
-    const { name, description, slug: preferredSlug } = parsed.data;
+    const { name, nameBn, description, descriptionBn, slug: preferredSlug } = parsed.data;
 
     const slug = await resolveTagSlug(name, preferredSlug);
     if (!slug) {
@@ -81,8 +81,10 @@ export async function POST(req: Request) {
       .insert(blogTagsTable)
       .values({
         name,
+        nameBn: nameBn ?? '',
         slug,
         description: description ?? '',
+        descriptionBn: descriptionBn ?? '',
       })
       .returning();
 

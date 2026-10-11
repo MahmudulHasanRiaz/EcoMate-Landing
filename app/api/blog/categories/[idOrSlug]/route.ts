@@ -72,7 +72,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ idOrSlug
       return fail('Validation failed', 400, { issues: parsed.error.issues });
     }
 
-    const { name, parentId, description, sortOrder, slug: newSlug } = parsed.data;
+    const { name, nameBn, parentId, description, descriptionBn, sortOrder, slug: newSlug } = parsed.data;
 
     if (parentId !== undefined && parentId !== null) {
       if (parentId === id) {
@@ -95,9 +95,11 @@ export async function PUT(req: Request, { params }: { params: Promise<{ idOrSlug
       .update(blogCategoriesTable)
       .set({
         ...(name !== undefined ? { name } : {}),
+        ...(nameBn !== undefined ? { nameBn } : {}),
         ...(finalSlug !== undefined ? { slug: finalSlug } : {}),
         ...(parentId !== undefined ? { parentId } : {}),
         ...(description !== undefined ? { description } : {}),
+        ...(descriptionBn !== undefined ? { descriptionBn } : {}),
         ...(sortOrder !== undefined ? { sortOrder } : {}),
         updatedAt: new Date(),
       })

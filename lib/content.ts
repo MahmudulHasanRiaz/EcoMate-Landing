@@ -162,7 +162,9 @@ export function getMenu(key: MenuKey, locale: Locale): Promise<MenuItem[] | null
 export interface BlogPostSummary {
   slug: string;
   title: string;
+  titleBn?: string;
   excerpt: string;
+  excerptBn?: string;
   author: string;
   category: string;
   tags: string[];
@@ -173,7 +175,9 @@ export interface BlogPostSummary {
   galleryUrls: string[];
   readTime: string;
   seoTitle: string;
+  seoTitleBn?: string;
   seoDescription: string;
+  seoDescriptionBn?: string;
   /** ISO 8601, for `<time>` and the Article node. Falls back to `createdAt` when a post was
    *  published without stamping `published_at`. */
   publishedAt: string;
@@ -183,7 +187,9 @@ export interface BlogPostSummary {
 const BLOG_SELECT = {
   slug: blogPostsTable.slug,
   title: blogPostsTable.title,
+  titleBn: blogPostsTable.titleBn,
   excerpt: blogPostsTable.excerpt,
+  excerptBn: blogPostsTable.excerptBn,
   author: blogPostsTable.author,
   category: blogPostsTable.category,
   tags: blogPostsTable.tags,
@@ -192,7 +198,9 @@ const BLOG_SELECT = {
   galleryUrls: blogPostsTable.galleryUrls,
   readTime: blogPostsTable.readTime,
   seoTitle: blogPostsTable.seoTitle,
+  seoTitleBn: blogPostsTable.seoTitleBn,
   seoDescription: blogPostsTable.seoDescription,
+  seoDescriptionBn: blogPostsTable.seoDescriptionBn,
   publishedAt: blogPostsTable.publishedAt,
   updatedAt: blogPostsTable.updatedAt,
   createdAt: blogPostsTable.createdAt,
@@ -216,7 +224,9 @@ function toIsoDate(val: unknown): string {
 function toBlogSummary(row: {
   slug: string;
   title: string;
+  titleBn?: string | null;
   excerpt: string;
+  excerptBn?: string | null;
   author: string;
   category: string;
   tags: unknown;
@@ -225,7 +235,9 @@ function toBlogSummary(row: {
   galleryUrls: unknown;
   readTime: string | null;
   seoTitle: string | null;
+  seoTitleBn?: string | null;
   seoDescription: string | null;
+  seoDescriptionBn?: string | null;
   publishedAt: Date | string | null;
   updatedAt: Date | string;
   createdAt: Date | string;
@@ -241,7 +253,9 @@ function toBlogSummary(row: {
   return {
     slug: row.slug,
     title: row.title,
+    titleBn: row.titleBn ?? '',
     excerpt: row.excerpt,
+    excerptBn: row.excerptBn ?? '',
     author: row.author,
     category: row.category,
     tags,
@@ -250,7 +264,9 @@ function toBlogSummary(row: {
     galleryUrls,
     readTime: row.readTime ?? '',
     seoTitle: row.seoTitle ?? '',
+    seoTitleBn: row.seoTitleBn ?? '',
     seoDescription: row.seoDescription ?? '',
+    seoDescriptionBn: row.seoDescriptionBn ?? '',
     publishedAt: toIsoDate(published),
     lastModified: toIsoDate(row.updatedAt),
   };
@@ -285,10 +301,10 @@ export function getPublishedBlogPosts(): Promise<BlogPostSummary[] | null> {
 }
 
 /** One published post by slug, with its body. `null` when absent, draft or soft-deleted. */
-async function _getBlogPost(slug: string): Promise<BlogPostSummary & { content: string } | null> {
+async function _getBlogPost(slug: string): Promise<BlogPostSummary & { content: string; contentBn?: string } | null> {
   try {
     const [row] = await withTimeout(getDb()
-      .select({ ...BLOG_SELECT, content: blogPostsTable.content })
+      .select({ ...BLOG_SELECT, content: blogPostsTable.content, contentBn: blogPostsTable.contentBn })
       .from(blogPostsTable)
       .where(and(eq(blogPostsTable.slug, slug), BLOG_PUBLIC))
       .limit(1), 'getBlogPost');
@@ -298,14 +314,14 @@ async function _getBlogPost(slug: string): Promise<BlogPostSummary & { content: 
     if (!row) {
       return null;
     }
-    return { ...toBlogSummary(row), content: row.content };
+    return { ...toBlogSummary(row), content: row.content, contentBn: row.contentBn ?? '' };
   } catch (e) {
     logOnce('warn', 'content:blog-post', `[content] blog post "${slug}" read failed, skipping cache:`, errorMessage(e));
     throw e;
   }
 }
 
-export function getBlogPost(slug: string): Promise<BlogPostSummary & { content: string } | null> {
+export function getBlogPost(slug: string): Promise<BlogPostSummary & { content: string; contentBn?: string } | null> {
   return unstable_cache(_getBlogPost, ['blog-post', slug], {
     tags: ['blog', `blog:${slug}`],
     revalidate: REVALIDATE_LONG,

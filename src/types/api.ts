@@ -201,8 +201,11 @@ export interface BlogPost {
   id: number;
   slug: string;
   title: string;
+  titleBn?: string;
   excerpt: string;
+  excerptBn?: string;
   content: string;
+  contentBn?: string;
   author: string;
   category: string;
   categoryId?: number | null;
@@ -213,7 +216,9 @@ export interface BlogPost {
   readTime: string;
   status: 'draft' | 'scheduled' | 'published' | 'archived';
   seoTitle: string;
+  seoTitleBn?: string;
   seoDescription: string;
+  seoDescriptionBn?: string;
   canonicalUrl: string;
   publishedAt: string;
 }
@@ -221,8 +226,10 @@ export interface BlogPost {
 export interface BlogCategory {
   id: number;
   name: string;
+  nameBn?: string;
   slug: string;
   description?: string | null;
+  descriptionBn?: string | null;
   parentId?: number | null;
   sortOrder?: number;
   createdAt?: string;
@@ -233,8 +240,10 @@ export interface BlogCategory {
 export interface BlogTag {
   id: number;
   name: string;
+  nameBn?: string;
   slug: string;
   description?: string | null;
+  descriptionBn?: string | null;
   createdAt?: string;
 }
 

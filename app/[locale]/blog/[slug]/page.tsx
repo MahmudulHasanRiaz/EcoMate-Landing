@@ -66,6 +66,7 @@ import {
   serializeJsonLd,
 } from '@/lib/seo';
 import { GalleryLightbox, ShareButtons } from '@/src/components/blog/BlogWidgets';
+import { BlogVideoPlayer } from '@/src/components/blog/BlogVideoPlayer';
 import { MkDock, MkFooter, MkHeader } from '@/src/components/v3/Chrome';
 
 interface BlogPageProps {
@@ -100,7 +101,7 @@ export async function generateStaticParams() {
     : LOCALES.map((locale) => ({ locale, slug: PRERENDER_PROBE_SLUG }));
 }
 
-async function resolvePost(slug: string): Promise<(BlogPostSummary & { content: string }) | null> {
+async function resolvePost(slug: string): Promise<(BlogPostSummary & { content: string; contentBn?: string }) | null> {
   const cached = await getBlogPost(slug).catch(() => null);
   if (cached) return cached;
 
@@ -133,8 +134,11 @@ async function resolvePost(slug: string): Promise<(BlogPostSummary & { content: 
     return {
       slug: row.slug,
       title: row.title,
+      titleBn: row.titleBn ?? '',
       excerpt: row.excerpt,
+      excerptBn: row.excerptBn ?? '',
       content: row.content,
+      contentBn: row.contentBn ?? '',
       author: row.author,
       category: row.category,
       tags,
@@ -143,7 +147,9 @@ async function resolvePost(slug: string): Promise<(BlogPostSummary & { content: 
       galleryUrls,
       readTime: row.readTime ?? '',
       seoTitle: row.seoTitle ?? '',
+      seoTitleBn: row.seoTitleBn ?? '',
       seoDescription: row.seoDescription ?? '',
+      seoDescriptionBn: row.seoDescriptionBn ?? '',
       publishedAt: pub,
       lastModified: mod,
     };
@@ -162,8 +168,14 @@ export async function generateMetadata({ params }: BlogPageProps): Promise<Metad
     return { robots: { index: false, follow: true } };
   }
 
-  const title = post.seoTitle || post.title;
-  const description = post.seoDescription || post.excerpt;
+  const isBn = locale === 'bn';
+  const displayTitle = (isBn && post.titleBn?.trim()) ? post.titleBn : post.title;
+  const displayExcerpt = (isBn && post.excerptBn?.trim()) ? post.excerptBn : post.excerpt;
+  const displaySeoTitle = (isBn && post.seoTitleBn?.trim()) ? post.seoTitleBn : post.seoTitle;
+  const displaySeoDesc = (isBn && post.seoDescriptionBn?.trim()) ? post.seoDescriptionBn : post.seoDescription;
+
+  const title = displaySeoTitle || displayTitle;
+  const description = displaySeoDesc || displayExcerpt;
   const image = ogImageUrl(post.featuredImageUrl);
   const path = `blog/${post.slug}`;
 
@@ -219,12 +231,16 @@ export default async function BlogPage({ params }: BlogPageProps) {
   const image = ogImageUrl(post.featuredImageUrl);
   const url = localeUrl(locale, `blog/${post.slug}`);
 
+  const isBn = locale === 'bn';
+  const displayTitle = (isBn && post.titleBn?.trim()) ? post.titleBn : post.title;
+  const displayExcerpt = (isBn && post.excerptBn?.trim()) ? post.excerptBn : post.excerpt;
+  const displayContent = (isBn && post.contentBn?.trim()) ? post.contentBn : post.content;
+
   // MEDIA RULES (documented in `lib/blogMedia.ts`):
   // - Hero: `featuredImageUrl` always (gradient placeholder when empty).
-  // - Video: YouTube nocookie embed directly BELOW the hero, before the body.
+  // - Video: High-quality, noise-free responsive BlogVideoPlayer directly below the hero.
   // - Gallery: grid AFTER the body, with a dependency-free lightbox.
   // - `featuredImageUrl` stays THE hero/OG image in every combination.
-  const videoEmbed = blogVideoEmbed(post.videoUrl);
   const gallery = blogGalleryUrls(post.galleryUrls);
 
   // Detail chrome copy (`blogDetail` + `blogArchive` CMS keys, static fallback
@@ -248,14 +264,14 @@ export default async function BlogPage({ params }: BlogPageProps) {
         dangerouslySetInnerHTML={{
           __html: serializeJsonLd(
             articleJsonLd({
-              title: post.title,
-              description: post.seoDescription || post.excerpt,
+              title: displayTitle,
+              description: (isBn && post.seoDescriptionBn?.trim()) ? post.seoDescriptionBn : (post.seoDescription || displayExcerpt),
               url,
               author: post.author,
               datePublished: post.publishedAt,
               dateModified: post.lastModified,
               ...(image ? { imageUrl: image } : {}),
-              ...(videoEmbed ? { videoUrl: videoEmbed } : {}),
+              ...(post.videoUrl ? { videoUrl: post.videoUrl } : {}),
               galleryUrls: gallery,
               section: post.category,
               tags: post.tags,
@@ -273,7 +289,7 @@ export default async function BlogPage({ params }: BlogPageProps) {
             breadcrumbJsonLd(locale, [
               { name: CRUMBS[locale].home, path: '' },
               { name: blogCrumb, path: 'blog' },
-              { name: post.title, path: `blog/${post.slug}` },
+              { name: displayTitle, path: `blog/${post.slug}` },
             ]),
           ),
         }}
@@ -290,16 +306,16 @@ export default async function BlogPage({ params }: BlogPageProps) {
             {blogCrumb}
           </a>
           {' / '}
-          <span aria-current="page">{post.title}</span>
+          <span aria-current="page">{displayTitle}</span>
         </nav>
 
         <article style={{ marginTop: 20 }}>
           <p className="mk-eyebrow">{post.category}</p>
           <h1 className="mk-h1" style={{ textAlign: 'left', margin: 0 }}>
-            {post.title}
+            {displayTitle}
           </h1>
           <p className="mk-sb" style={{ maxWidth: 720 }}>
-            {post.excerpt}
+            {displayExcerpt}
           </p>
 
           <div
@@ -316,12 +332,12 @@ export default async function BlogPage({ params }: BlogPageProps) {
                 </span>
               ) : null}
             </span>
-            <ShareButtons url={url} title={post.title} shareLabel={detail.shareLabel} copiedLabel={detail.copiedLabel} />
+            <ShareButtons url={url} title={displayTitle} shareLabel={detail.shareLabel} copiedLabel={detail.copiedLabel} />
           </div>
 
           {/* Media Presentation:
               - If featuredImageUrl: Hero image always.
-              - If videoEmbed: Video frame directly below hero (or as hero if no image).
+              - If videoUrl: Ultra-clean, noise-free responsive BlogVideoPlayer.
               - If neither: Subtle clean gradient placeholder. */}
           {post.featuredImageUrl ? (
             // A plain `img` rather than `next/image`: the URL is an arbitrary admin-entered
@@ -330,7 +346,7 @@ export default async function BlogPage({ params }: BlogPageProps) {
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={absoluteUrl(post.featuredImageUrl)}
-              alt={post.title}
+              alt={displayTitle}
               loading="eager"
               style={{
                 marginTop: 20,
@@ -341,7 +357,7 @@ export default async function BlogPage({ params }: BlogPageProps) {
                 border: '1px solid var(--mk-bd)',
               }}
             />
-          ) : !videoEmbed ? (
+          ) : !post.videoUrl ? (
             <div
               aria-hidden="true"
               style={{
@@ -355,21 +371,18 @@ export default async function BlogPage({ params }: BlogPageProps) {
             />
           ) : null}
 
-          {videoEmbed && (
+          {post.videoUrl && (
             <section aria-label={detail.videoLabel} style={{ marginTop: 20 }}>
-              <div className="mk-vid-frame" style={{ marginBottom: 0 }}>
-                <iframe
-                  src={videoEmbed}
-                  title={`${detail.videoLabel}: ${post.title}`}
-                  loading="lazy"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                />
-              </div>
+              <BlogVideoPlayer
+                videoUrl={post.videoUrl}
+                title={displayTitle}
+                poster={post.featuredImageUrl}
+                ariaLabel={detail.videoLabel}
+              />
             </section>
           )}
 
-          <BlogContent html={post.content} className="mk-prose" />
+          <BlogContent html={displayContent} className="mk-prose" />
 
           {post.tags && post.tags.length > 0 && (
             <div className="mk-strip" style={{ marginTop: 24, gap: 8, flexWrap: 'wrap' }}>
@@ -429,24 +442,27 @@ export default async function BlogPage({ params }: BlogPageProps) {
             <section aria-label={detail.relatedLabel} style={{ marginTop: 32 }}>
               <p className="mk-eyebrow">{detail.relatedLabel}</p>
               <div className="mk-g mk-c3" style={{ marginTop: 12 }}>
-                {related.map((entry) => (
-                  <a
-                    key={entry.slug}
-                    href={localeUrl(locale, `blog/${entry.slug}`)}
-                    className="mk-pn block"
-                    style={{ textDecoration: 'none' }}
-                  >
-                    <span className="mk-pt" style={{ margin: 0 }}>
-                      {entry.category}
-                    </span>
-                    <span className="block font-bold" style={{ color: 'var(--mk-tx)', marginTop: 6 }}>
-                      {entry.title}
-                    </span>
-                    <span className="mk-strip" style={{ marginTop: 8 }}>
-                      <time dateTime={entry.publishedAt}>{formatDate(entry.publishedAt, locale)}</time>
-                    </span>
-                  </a>
-                ))}
+                {related.map((entry) => {
+                  const entryTitle = (isBn && entry.titleBn?.trim()) ? entry.titleBn : entry.title;
+                  return (
+                    <a
+                      key={entry.slug}
+                      href={localeUrl(locale, `blog/${entry.slug}`)}
+                      className="mk-pn block"
+                      style={{ textDecoration: 'none' }}
+                    >
+                      <span className="mk-pt" style={{ margin: 0 }}>
+                        {entry.category}
+                      </span>
+                      <span className="block font-bold" style={{ color: 'var(--mk-tx)', marginTop: 6 }}>
+                        {entryTitle}
+                      </span>
+                      <span className="mk-strip" style={{ marginTop: 8 }}>
+                        <time dateTime={entry.publishedAt}>{formatDate(entry.publishedAt, locale)}</time>
+                      </span>
+                    </a>
+                  );
+                })}
               </div>
             </section>
           )}

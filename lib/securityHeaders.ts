@@ -37,7 +37,10 @@ const CONTENT_SECURITY_POLICY = [
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com",
   // The Turnstile widget is an iframe served from challenges.cloudflare.com.
-  "frame-src 'self' https://challenges.cloudflare.com",
+  // Video embeds from YouTube (standard & nocookie) and Vimeo.
+  "frame-src 'self' https://challenges.cloudflare.com https://www.youtube-nocookie.com https://www.youtube.com https://player.vimeo.com",
+  // Direct video/audio media streams (MP4/WebM, R2/S3, blob, data).
+  "media-src 'self' https: data: blob:",
   ...(IS_PRODUCTION ? ['upgrade-insecure-requests'] : []),
 ].join('; ');
 

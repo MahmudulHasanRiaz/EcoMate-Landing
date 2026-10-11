@@ -144,6 +144,23 @@ export async function proxy(request: NextRequest, event: Parameters<NextMiddlewa
         // whose own numeric handling (redirect or not-found UI) still applies.
       }
     }
+
+    // Clean redirect for non-locale blog and case-studies URLs:
+    // /blog -> /en/blog (or DEFAULT_LOCALE)
+    // /blog/:slug -> /en/blog/:slug
+    // /case-studies/:slug -> /en/case-studies/:slug
+    const nonLocaleMatch = pathname.match(/^\/(blog|case-studies)(\/.*)?$/);
+    if (nonLocaleMatch) {
+      const [, kind, suffix = ''] = nonLocaleMatch;
+      const destination = new URL(`/${DEFAULT_LOCALE}/${kind}${suffix}`, request.url);
+      destination.search = request.nextUrl.search;
+      const response = NextResponse.redirect(destination, 308);
+      applySecurityHeaders(response.headers);
+      response.headers.set('Content-Language', DEFAULT_LOCALE);
+      response.headers.set('Cache-Control', 'no-store');
+      response.headers.set('x-request-id', requestId);
+      return response;
+    }
     // Timeout + failure-memo live INSIDE findManagedRedirect (5s bound, 10min memo
     // on timeout): a single slow backend costs one request, not every request. Do not
     // wrap another timeout here — nested timers only obscure which layer fired.

@@ -115,7 +115,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ idOrSlug
     if (!updated) return fail('Blog post not found', 404);
     // Flipping `status` to `published` (or away from it) is the edit that matters: it decides
     // whether the article page and its sitemap entry exist at all.
-    invalidateDomains('blog');
+    invalidateDomains('blog', 'en', updated.slug);
     return ok(updated);
   } catch (e) {
     logServerError('PUT /api/blog/[idOrSlug]', e);
@@ -213,7 +213,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ idOrSlu
       return { row, newVersion };
     });
     if (!applied) return fail('Blog post not found', 404);
-    invalidateDomains('blog');
+    invalidateDomains('blog', 'en', applied.row.slug);
     await recordAudit({
       actorId: guard.actorId,
       action: 'CONTENT_RESTORE',

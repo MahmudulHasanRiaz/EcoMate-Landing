@@ -328,7 +328,6 @@ export default async function BlogPage({ params }: BlogPageProps) {
               ))}
             </div>
           )}
-
           <GalleryLightbox images={gallery} label={detail.galleryLabel} />
 
           <section

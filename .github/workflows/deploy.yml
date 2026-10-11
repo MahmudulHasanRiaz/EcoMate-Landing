@@ -104,6 +104,13 @@ jobs:
         env:
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
 
+      - name: Apply DB migrations before build
+        # Journal-driven runner applies pending migrations before OpenNext builds,
+        # ensuring cached data functions and static pages query the up-to-date schema.
+        run: npm run db:migrate
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+
       - name: Build production bundle
         # DIRECT_URL (session pooler :5432) arrives via secret,
         # required so cached data functions prerender real content.

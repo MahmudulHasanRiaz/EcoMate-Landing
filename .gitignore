@@ -30,3 +30,6 @@ blob-report/
 # Python bytecode (deploy helper scripts)
 __pycache__/
 *.pyc
+
+# Local editor / agent metadata
+.commandcode/

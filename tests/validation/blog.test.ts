@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { blogPostCreate, blogPostUpdate } from '@/lib/validation';
+import {
+  blogPostCreate,
+  blogPostUpdate,
+  blogCategoryCreate,
+  blogCategoryUpdate,
+  blogTagCreate,
+  blogTagUpdate,
+} from '@/lib/validation';
 
 const valid = {
   title: 'How to reconcile COD at scale',
@@ -55,3 +62,26 @@ describe('blogPostUpdate', () => {
     expect(blogPostUpdate.safeParse({ slug: 'new-slug' }).success).toBe(false);
   });
 });
+
+describe('blogCategoryCreate and blogCategoryUpdate', () => {
+  it('validates category creation and nested parentId', () => {
+    expect(blogCategoryCreate.safeParse({ name: 'Logistics' }).success).toBe(true);
+    expect(blogCategoryCreate.safeParse({ name: 'Sub-cat', parentId: 4, slug: 'sub-cat' }).success).toBe(true);
+    expect(blogCategoryCreate.safeParse({ name: '' }).success).toBe(false);
+    expect(blogCategoryCreate.safeParse({ name: 'Valid', unknownProp: 123 }).success).toBe(false);
+  });
+
+  it('validates category updates', () => {
+    expect(blogCategoryUpdate.safeParse({ name: 'Updated' }).success).toBe(true);
+    expect(blogCategoryUpdate.safeParse({ parentId: null }).success).toBe(true);
+  });
+});
+
+describe('blogTagCreate and blogTagUpdate', () => {
+  it('validates tag creation and updates', () => {
+    expect(blogTagCreate.safeParse({ name: 'delivery' }).success).toBe(true);
+    expect(blogTagCreate.safeParse({ name: '' }).success).toBe(false);
+    expect(blogTagUpdate.safeParse({ description: 'About parcel delivery' }).success).toBe(true);
+  });
+});
+

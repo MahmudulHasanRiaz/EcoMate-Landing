@@ -7,6 +7,8 @@ import type {
   Testimonial,
   CaseStudy,
   BlogPost,
+  BlogCategory,
+  BlogTag,
   MediaAsset,
   IntegrationLog,
   I18nReport,
@@ -428,6 +430,80 @@ export async function updateBlogPost(id: number, post: Partial<BlogPost>): Promi
   });
   if (!res.ok) await throwApiError(res, 'Failed to update post');
   return res.json();
+}
+
+export async function deleteBlogPost(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/blog/${id}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) await throwApiError(res, 'Failed to delete post');
+}
+
+export async function getBlogCategories(tree = false): Promise<BlogCategory[]> {
+  const query = tree ? '?tree=1' : '';
+  const res = await fetch(`${API_BASE}/blog/categories${query}`);
+  if (!res.ok) throw new Error('Failed to fetch blog categories');
+  return res.json();
+}
+
+export async function createBlogCategory(data: Partial<BlogCategory>): Promise<BlogCategory> {
+  const res = await fetch(`${API_BASE}/blog/categories`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) await throwApiError(res, 'Failed to create category');
+  return res.json();
+}
+
+export async function updateBlogCategory(id: number, data: Partial<BlogCategory>): Promise<BlogCategory> {
+  const res = await fetch(`${API_BASE}/blog/categories/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) await throwApiError(res, 'Failed to update category');
+  return res.json();
+}
+
+export async function deleteBlogCategory(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/blog/categories/${id}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) await throwApiError(res, 'Failed to delete category');
+}
+
+export async function getBlogTags(): Promise<BlogTag[]> {
+  const res = await fetch(`${API_BASE}/blog/tags`);
+  if (!res.ok) throw new Error('Failed to fetch blog tags');
+  return res.json();
+}
+
+export async function createBlogTag(data: Partial<BlogTag>): Promise<BlogTag> {
+  const res = await fetch(`${API_BASE}/blog/tags`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) await throwApiError(res, 'Failed to create tag');
+  return res.json();
+}
+
+export async function updateBlogTag(id: number, data: Partial<BlogTag>): Promise<BlogTag> {
+  const res = await fetch(`${API_BASE}/blog/tags/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) await throwApiError(res, 'Failed to update tag');
+  return res.json();
+}
+
+export async function deleteBlogTag(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/blog/tags/${id}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) await throwApiError(res, 'Failed to delete tag');
 }
 
 export async function getMediaAssets(params?: PageParams): Promise<MediaAsset[]> {

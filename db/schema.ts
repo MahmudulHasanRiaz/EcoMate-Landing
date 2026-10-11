@@ -246,6 +246,7 @@ export const blogPostsTable = pgTable('blog_posts', {
    */
   galleryUrls: jsonb('gallery_urls').default([]),
   readTime: text('read_time').default('5 min read'),
+  categoryId: integer('category_id'),
   status: text('status').notNull().default('draft'), // draft, scheduled, published, archived
   seoTitle: text('seo_title').default(''),
   seoDescription: text('seo_description').default(''),
@@ -256,6 +257,7 @@ export const blogPostsTable = pgTable('blog_posts', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => [
   uniqueIndex('blog_posts_slug_live_idx').on(t.slug).where(sql`${t.deletedAt} IS NULL`),
+  index('blog_posts_category_id_idx').on(t.categoryId),
   // The list route sorts on `coalesce(published_at, created_at)`, so the index has to be an
   // expression index on that same expression — a plain index on `published_at` cannot serve the
   // sort, and Postgres falls back to sorting the whole filtered set before slicing.
@@ -624,3 +626,31 @@ export const turnstileDailyStatsTable = pgTable('turnstile_daily_stats', {
   skipped: integer('skipped').notNull().default(0),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).defaultNow().notNull(),
 });
+
+// 23. Blog Categories Table (Hierarchical tree structure: Category -> Sub-category -> Sub-sub-category)
+export const blogCategoriesTable = pgTable('blog_categories', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  slug: text('slug').unique().notNull(),
+  description: text('description').default(''),
+  parentId: integer('parent_id'),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  index('blog_categories_slug_idx').on(t.slug),
+  index('blog_categories_parent_id_idx').on(t.parentId),
+  index('blog_categories_sort_order_idx').on(t.sortOrder),
+]);
+
+// 24. Blog Tags Table (Taxonomy tags for search, discovery, and AI SEO)
+export const blogTagsTable = pgTable('blog_tags', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  slug: text('slug').unique().notNull(),
+  description: text('description').default(''),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  index('blog_tags_slug_idx').on(t.slug),
+]);
+

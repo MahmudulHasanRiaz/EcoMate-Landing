@@ -193,8 +193,11 @@ export default async function BlogPage({ params }: BlogPageProps) {
               datePublished: post.publishedAt,
               dateModified: post.lastModified,
               ...(image ? { imageUrl: image } : {}),
+              ...(videoEmbed ? { videoUrl: videoEmbed } : {}),
+              galleryUrls: gallery,
               section: post.category,
               tags: post.tags,
+              locale: locale as any,
             }),
           ),
         }}
@@ -254,6 +257,10 @@ export default async function BlogPage({ params }: BlogPageProps) {
             <ShareButtons url={url} title={post.title} shareLabel={detail.shareLabel} copiedLabel={detail.copiedLabel} />
           </div>
 
+          {/* Media Presentation:
+              - If featuredImageUrl: Hero image always.
+              - If videoEmbed: Video frame directly below hero (or as hero if no image).
+              - If neither: Subtle clean gradient placeholder. */}
           {post.featuredImageUrl ? (
             // A plain `img` rather than `next/image`: the URL is an arbitrary admin-entered
             // R2 host that `images.remotePatterns` does not enumerate, and a misconfigured
@@ -272,7 +279,7 @@ export default async function BlogPage({ params }: BlogPageProps) {
                 border: '1px solid var(--mk-bd)',
               }}
             />
-          ) : (
+          ) : !videoEmbed ? (
             <div
               aria-hidden="true"
               style={{
@@ -284,7 +291,7 @@ export default async function BlogPage({ params }: BlogPageProps) {
                 background: 'linear-gradient(135deg, var(--mk-s2), var(--mk-bg))',
               }}
             />
-          )}
+          ) : null}
 
           {videoEmbed && (
             <section aria-label={detail.videoLabel} style={{ marginTop: 20 }}>
@@ -302,6 +309,25 @@ export default async function BlogPage({ params }: BlogPageProps) {
 
           <BlogContent html={post.content} className="mk-prose" />
 
+          {post.tags && post.tags.length > 0 && (
+            <div className="mk-strip" style={{ marginTop: 24, gap: 8, flexWrap: 'wrap' }}>
+              {post.tags.map((tag) => (
+                <span
+                  key={tag}
+                  style={{
+                    padding: '3px 8px',
+                    borderRadius: 4,
+                    fontSize: 12,
+                    border: '1px solid var(--mk-bd)',
+                    background: 'var(--mk-s1)',
+                    color: 'var(--mk-mu)',
+                  }}
+                >
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          )}
           <GalleryLightbox images={gallery} label={detail.galleryLabel} />
 
           <section

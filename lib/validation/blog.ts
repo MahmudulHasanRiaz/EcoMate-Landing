@@ -30,6 +30,7 @@ const base = {
   canonicalUrl: z.union([z.url(), z.literal('')]),
   ogImageUrl: z.union([z.url(), z.literal('')]),
   publishedAt: z.iso.datetime(),
+  categoryId: z.union([z.number().int().positive(), z.null()]),
 };
 
 export const blogPostCreate = z.strictObject({
@@ -41,6 +42,7 @@ export const blogPostCreate = z.strictObject({
   excerpt: base.excerpt.optional(),
   author: base.author.optional(),
   category: base.category.optional(),
+  categoryId: base.categoryId.optional(),
   tags: base.tags.optional(),
   featuredImageUrl: base.featuredImageUrl.optional(),
   videoUrl: base.videoUrl.optional(),
@@ -60,6 +62,7 @@ export const blogPostUpdate = z.strictObject({
   content: z.string().min(1).max(100_000).optional(),
   author: base.author.optional(),
   category: base.category.optional(),
+  categoryId: base.categoryId.optional(),
   tags: base.tags.optional(),
   featuredImageUrl: base.featuredImageUrl.optional(),
   videoUrl: base.videoUrl.optional(),
@@ -74,3 +77,32 @@ export const blogPostUpdate = z.strictObject({
   // string touches the column, anything else leaves it alone.
   publishedAt: z.union([base.publishedAt, z.null()]).optional(),
 });
+
+export const blogCategoryCreate = z.strictObject({
+  name: z.string().min(1).max(100),
+  slug: base.slug.optional(),
+  parentId: z.union([z.number().int().positive(), z.null()]).optional(),
+  description: z.string().max(500).optional(),
+  sortOrder: z.number().int().optional(),
+});
+
+export const blogCategoryUpdate = z.strictObject({
+  name: z.string().min(1).max(100).optional(),
+  slug: base.slug.optional(),
+  parentId: z.union([z.number().int().positive(), z.null()]).optional(),
+  description: z.string().max(500).optional(),
+  sortOrder: z.number().int().optional(),
+});
+
+export const blogTagCreate = z.strictObject({
+  name: z.string().min(1).max(60),
+  slug: base.slug.optional(),
+  description: z.string().max(300).optional(),
+});
+
+export const blogTagUpdate = z.strictObject({
+  name: z.string().min(1).max(60).optional(),
+  slug: base.slug.optional(),
+  description: z.string().max(300).optional(),
+});
+

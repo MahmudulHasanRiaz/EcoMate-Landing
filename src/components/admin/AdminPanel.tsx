@@ -22,6 +22,9 @@ import { BlogMediaFields } from './BlogMediaFields';
 import { CaseStudyEditor } from './CaseStudyEditor';
 import { MediaLibrary } from './MediaLibrary';
 import { TestimonialCard } from '../TestimonialCard';
+import { BlogPostEditor } from './BlogPostEditor';
+import { BlogCategoryManager } from './BlogCategoryManager';
+import { BlogTagManager } from './BlogTagManager';
 import {
   LayoutDashboard,
   Users,
@@ -57,13 +60,7 @@ import {
   Clock,
 } from 'lucide-react';
 
-interface AdminPanelProps {
-  onClose: () => void;
-  locale: 'en' | 'bn';
-  theme: 'light' | 'dark';
-}
-
-type AdminTab =
+export type AdminTab =
   | 'dashboard'
   | 'leads'
   | 'sections'
@@ -75,6 +72,13 @@ type AdminTab =
   | 'settings'
   | 'integrations';
 
+interface AdminPanelProps {
+  onClose: () => void;
+  locale: 'en' | 'bn';
+  theme: 'light' | 'dark';
+  initialTab?: AdminTab;
+}
+
 /** Inline validation message rendered against its input (Task 17 §5). Exported for the form islands. */
 export const FieldError: React.FC<{ id: string; message?: string }> = ({ id, message }) => {
   if (!message) return null;
@@ -85,8 +89,14 @@ export const FieldError: React.FC<{ id: string; message?: string }> = ({ id, mes
   );
 };
 
-export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }) => {
-  const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
+export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, initialTab = 'dashboard' }) => {
+  const [activeTab, setActiveTab] = useState<AdminTab>(initialTab);
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
   const [isLoading, setIsLoading] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   /**
@@ -171,6 +181,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
     readTime: '5 min read',
     tags: ['ecommerce', 'operations'],
   });
+  const [blogSubTab, setBlogSubTab] = useState<'posts' | 'categories' | 'tags'>('posts');
+  const [isBlogSaving, setIsBlogSaving] = useState(false);
+  const [blogSearchQuery, setBlogSearchQuery] = useState('');
+  const [blogStatusFilter, setBlogStatusFilter] = useState<string>('all');
 
   // Testimonial + case-study CMS state (H-19/H-20). A null draft means the list view;
   // a draft with no `id` is a create, with an `id` an edit.
@@ -607,15 +621,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
     }
   };
 
-  const handleSaveBlogPost = async (e: React.FormEvent) => {    e.preventDefault();
+  const handleSaveBlogPost = async (postToSave: Partial<BlogPost>) => {
     setBlogErrors({});
+    setIsBlogSaving(true);
     try {
-      if (editingPost.id) {
-        await api.updateBlogPost(editingPost.id, editingPost);
+      if (postToSave.id) {
+        await api.updateBlogPost(postToSave.id, postToSave);
         showNotification('Article updated successfully');
       } else {
-        await api.createBlogPost(editingPost);
-        showNotification('New article published successfully');
+        await api.createBlogPost(postToSave);
+        showNotification('New article created successfully');
       }
       setIsEditingBlog(false);
       const bData = await api.getAllBlogPosts({ limit: api.ADMIN_LIST_LIMIT });
@@ -623,6 +638,20 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
     } catch (err: unknown) {
       setBlogErrors(fieldErrorsOf(err));
       showNotification(`Error saving post: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setIsBlogSaving(false);
+    }
+  };
+
+  const handleDeleteBlogPost = async (id: number, title: string) => {
+    if (!window.confirm(`Are you sure you want to delete article "${title}"?`)) return;
+    try {
+      await api.deleteBlogPost(id);
+      showNotification(`Article "${title}" deleted`);
+      const bData = await api.getAllBlogPosts({ limit: api.ADMIN_LIST_LIMIT });
+      setBlogPosts(bData);
+    } catch (err: unknown) {
+      showNotification(`Error deleting post: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   };
 
@@ -988,53 +1017,163 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar Tabs */}
         <aside className="w-56 sm:w-64 border-r border-slate-200 dark:border-white/10 bg-white dark:bg-[#090B14] p-3 flex flex-col justify-between shrink-0 overflow-y-auto">
-          <nav className="space-y-1">
-            {[
-              { id: 'dashboard', label: 'Dashboard Overview', icon: LayoutDashboard },
-              { id: 'leads', label: 'Lead Management', icon: Users, count: leads.filter((l) => l.status === 'New').length },
-              { id: 'sections', label: 'Landing Sections CMS', icon: FileText },
-              {
-                id: 'content',
-                label: 'Bilingual Content',
-                icon: Languages,
-                // The translation-gap badge. `count > 0` is what makes the pill render, so a
-                // fully-translated site shows none and an editor's 403 shows none.
-                count: i18nReport?.gapCount ?? 0,
-              },
-              { id: 'pricing', label: 'Dynamic Pricing', icon: DollarSign },
-              { id: 'testimonials', label: 'Testimonials & Proof', icon: MessageSquareQuote },
-              { id: 'blog', label: 'Blog & SEO Articles', icon: BookOpen },
-              { id: 'media', label: 'Media Library Slots', icon: Image },
-              { id: 'integrations', label: 'License Portal Queue', icon: Share2 },
-              { id: 'settings', label: 'System & Branding', icon: Settings },
-            ].map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => {
-                    setActiveTab(tab.id as AdminTab);
-                    setIsEditingBlog(false);
-                  }}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
-                    isActive
-                      ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-600 dark:text-white shadow-2xs font-bold'
-                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <Icon className="h-4 w-4 shrink-0" />
-                    <span>{tab.label}</span>
-                  </div>
-                  {tab.count !== undefined && tab.count > 0 && (
-                    <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500 text-white">
-                      {tab.count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+          <nav className="space-y-4">
+            {/* Group 1: Operations */}
+            <div>
+              <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
+                Operations
+              </p>
+              <div className="space-y-0.5">
+                {[
+                  { id: 'dashboard', label: 'Dashboard Overview', icon: LayoutDashboard },
+                  { id: 'leads', label: 'Lead CRM', icon: Users, count: leads.filter((l) => l.status === 'New').length },
+                ].map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => {
+                        setActiveTab(tab.id as AdminTab);
+                        setIsEditingBlog(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                        isActive
+                          ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-600 dark:text-white shadow-2xs font-bold'
+                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <Icon className="h-4 w-4 shrink-0" />
+                        <span>{tab.label}</span>
+                      </div>
+                      {tab.count !== undefined && tab.count > 0 && (
+                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500 text-white">
+                          {tab.count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Group 2: Editorial & Blog */}
+            <div>
+              <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
+                Editorial &amp; Media
+              </p>
+              <div className="space-y-0.5">
+                {[
+                  { id: 'blog', label: 'Blog & Articles', icon: BookOpen, count: blogPosts.length },
+                  { id: 'media', label: 'Media Library', icon: Image },
+                ].map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => {
+                        setActiveTab(tab.id as AdminTab);
+                        setIsEditingBlog(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                        isActive
+                          ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-600 dark:text-white shadow-2xs font-bold'
+                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <Icon className="h-4 w-4 shrink-0" />
+                        <span>{tab.label}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Group 3: Marketing CMS */}
+            <div>
+              <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
+                Marketing CMS
+              </p>
+              <div className="space-y-0.5">
+                {[
+                  { id: 'sections', label: 'Landing Sections', icon: FileText },
+                  {
+                    id: 'content',
+                    label: 'Bilingual Strings',
+                    icon: Languages,
+                    count: i18nReport?.gapCount ?? 0,
+                  },
+                  { id: 'pricing', label: 'Dynamic Pricing', icon: DollarSign },
+                  { id: 'testimonials', label: 'Testimonials', icon: MessageSquareQuote },
+                ].map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => {
+                        setActiveTab(tab.id as AdminTab);
+                        setIsEditingBlog(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                        isActive
+                          ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-600 dark:text-white shadow-2xs font-bold'
+                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <Icon className="h-4 w-4 shrink-0" />
+                        <span>{tab.label}</span>
+                      </div>
+                      {tab.count !== undefined && tab.count > 0 && (
+                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500 text-white">
+                          {tab.count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Group 4: System */}
+            <div>
+              <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
+                System
+              </p>
+              <div className="space-y-0.5">
+                {[
+                  { id: 'integrations', label: 'License Portal Queue', icon: Share2 },
+                  { id: 'settings', label: 'System & Branding', icon: Settings },
+                ].map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => {
+                        setActiveTab(tab.id as AdminTab);
+                        setIsEditingBlog(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                        isActive
+                          ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-600 dark:text-white shadow-2xs font-bold'
+                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <Icon className="h-4 w-4 shrink-0" />
+                        <span>{tab.label}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </nav>
 
           {/* Database & Integration Status Badge */}
@@ -1986,183 +2125,239 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme }
           {/* TAB 6: BLOG & SEO PLATFORM */}
           {activeTab === 'blog' && (
             <div className="space-y-6 max-w-6xl mx-auto">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Authoritative Blog & SEO Platform</h2>
-                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-0.5">
-                    Publish high-intent problem-solving guides for search engines and AI research bots.
-                  </p>
-                </div>
-
-                {!isEditingBlog && (
-                  <button
-                    onClick={() => {
-                      setEditingPost({
-                        title: '',
-                        slug: '',
-                        excerpt: '',
-                        content: '',
-                        category: 'Logistics & Economics',
-                        author: 'EcoMate Operations Research',
-                        status: 'draft',
-                        readTime: '5 min read',
-                        tags: ['courier', 'ecommerce', 'bangladesh'],
-                      });
-                      setBlogErrors({});
-                      setIsEditingBlog(true);
-                    }}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 text-white font-semibold text-xs shadow-xs hover:bg-indigo-700 transition-colors cursor-pointer"
-                  >
-                    <Plus className="h-4 w-4" />
-                    <span>Write Article</span>
-                  </button>
-                )}
-              </div>
-
               {isEditingBlog ? (
-                <form onSubmit={handleSaveBlogPost} className="p-6 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1B] space-y-4">
-                  <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/5 pb-3">
-                    <h3 className="font-bold text-base text-slate-900 dark:text-white">
-                      {editingPost.id ? 'Edit Article' : 'Create New Problem-Solving Article'}
-                    </h3>
-                    <button
-                      type="button"
-                      onClick={() => setIsEditingBlog(false)}
-                      className="text-xs text-slate-600 hover:text-slate-900 dark:hover:text-white dark:text-slate-300"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                    <div>
-                      <label htmlFor="blog-title" className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Article Title</label>
-                      <input
-                        id="blog-title"
-                        type="text"
-                        required
-                        value={editingPost.title}
-                        onChange={(e) => setEditingPost({ ...editingPost, title: e.target.value })}
-                        aria-describedby={blogErrors.title ? 'blog-title-error' : undefined}
-                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
-                      />
-                      <FieldError id="blog-title-error" message={blogErrors.title} />
-                    </div>
-                    <div>
-                      <label htmlFor="blog-slug" className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">URL Slug</label>
-                      <input
-                        id="blog-slug"
-                        type="text"
-                        required
-                        value={editingPost.slug}
-                        onChange={(e) => setEditingPost({ ...editingPost, slug: e.target.value })}
-                        aria-describedby={blogErrors.slug ? 'blog-slug-error' : undefined}
-                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white font-mono"
-                      />
-                      <FieldError id="blog-slug-error" message={blogErrors.slug} />
-                    </div>
-                  </div>
-
-                  <div className="text-xs">
-                    <label htmlFor="blog-excerpt" className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Excerpt (Meta Description)</label>
-                    <textarea
-                      id="blog-excerpt"
-                      rows={2}
-                      required
-                      value={editingPost.excerpt}
-                      onChange={(e) => setEditingPost({ ...editingPost, excerpt: e.target.value })}
-                      aria-describedby={blogErrors.excerpt ? 'blog-excerpt-error' : undefined}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white resize-none"
-                    />
-                    <FieldError id="blog-excerpt-error" message={blogErrors.excerpt} />
-                  </div>
-
-                  <div className="text-xs">
-                    <label htmlFor="blog-content" className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Markdown Body Content</label>
-                    <textarea
-                      id="blog-content"
-                      rows={8}
-                      required
-                      value={editingPost.content}
-                      onChange={(e) => setEditingPost({ ...editingPost, content: e.target.value })}
-                      aria-describedby={blogErrors.content ? 'blog-content-error' : undefined}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white font-mono text-xs"
-                    />
-                    <FieldError id="blog-content-error" message={blogErrors.content} />
-                  </div>
-
-                  <BlogMediaFields
-                    videoUrl={editingPost.videoUrl ?? ''}
-                    galleryUrls={editingPost.galleryUrls ?? []}
-                    errors={blogErrors}
-                    onVideoUrl={(value) => setEditingPost({ ...editingPost, videoUrl: value })}
-                    onGallery={(value) => setEditingPost({ ...editingPost, galleryUrls: value })}
-                  />
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                    <div>
-                      <label htmlFor="blog-status" className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Status (archived hides the article without deleting its URL history)</label>
-                      <select
-                        id="blog-status"
-                        value={editingPost.status ?? 'draft'}
-                        onChange={(e) => setEditingPost({ ...editingPost, status: e.target.value as BlogPost['status'] })}
-                        aria-describedby={blogErrors.status ? 'blog-status-error' : undefined}
-                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white cursor-pointer"
-                      >
-                        <option value="draft">Draft (hidden)</option>
-                        <option value="scheduled">Scheduled</option>
-                        <option value="published">Published</option>
-                        <option value="archived">Archived (hidden, keeps history)</option>
-                      </select>
-                      <FieldError id="blog-status-error" message={blogErrors.status} />
-                    </div>
-                  </div>
-
-                  <div className="pt-2 flex justify-end gap-2">
-                    <button
-                      type="submit"
-                      className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-xs cursor-pointer"
-                    >
-                      {editingPost.id || editingPost.status !== 'published' ? 'Save Article' : 'Publish Article to CMS'}
-                    </button>
-                  </div>
-                </form>
+                <BlogPostEditor
+                  post={editingPost}
+                  errors={blogErrors}
+                  onSave={handleSaveBlogPost}
+                  onCancel={() => setIsEditingBlog(false)}
+                  saving={isBlogSaving}
+                />
               ) : (
-                <div className="space-y-4">
-                  {blogPosts.map((post) => (
-                    <div key={post.id} className="p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1B] flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">
-                            {post.category}
-                          </span>
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${
-                            post.status === 'published'
-                              ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
-                              : 'bg-amber-50 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300'
-                          }`}>
-                            {post.status}
-                          </span>
-                          <span className="text-xs text-slate-400 font-mono">/blog/{post.slug}</span>
-                        </div>
-                        <h3 className="font-bold text-base text-slate-900 dark:text-white">{post.title}</h3>
-                        <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 line-clamp-1">{post.excerpt}</p>
+                <div className="space-y-5">
+                  {/* Sub-navigation bar */}
+                  <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 dark:border-white/10 pb-4">
+                    <div>
+                      <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+                        Blog &amp; Knowledge Engine
+                      </h2>
+                      <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-0.5">
+                        Publish high-authority guides optimized for 2026 AI search (Gemini, ChatGPT) and search engines.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className="flex rounded-lg border border-slate-200 dark:border-white/10 p-0.5 bg-slate-100 dark:bg-white/5">
+                        <button
+                          type="button"
+                          onClick={() => setBlogSubTab('posts')}
+                          className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+                            blogSubTab === 'posts'
+                              ? 'bg-white dark:bg-white/10 text-slate-900 dark:text-white shadow-xs'
+                              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                          }`}
+                        >
+                          Articles ({blogPosts.length})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setBlogSubTab('categories')}
+                          className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+                            blogSubTab === 'categories'
+                              ? 'bg-white dark:bg-white/10 text-slate-900 dark:text-white shadow-xs'
+                              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                          }`}
+                        >
+                          Categories &amp; Tree
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setBlogSubTab('tags')}
+                          className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+                            blogSubTab === 'tags'
+                              ? 'bg-white dark:bg-white/10 text-slate-900 dark:text-white shadow-xs'
+                              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                          }`}
+                        >
+                          Tags
+                        </button>
                       </div>
 
-                      <div className="flex items-center gap-3 shrink-0">
+                      {blogSubTab === 'posts' && (
                         <button
+                          type="button"
                           onClick={() => {
-                            setEditingPost(post);
+                            setEditingPost({
+                              title: '',
+                              slug: '',
+                              excerpt: '',
+                              content: '',
+                              category: 'Operations & Fulfillment',
+                              categoryId: null,
+                              author: 'EcoMate Operations Research',
+                              status: 'draft',
+                              readTime: '5 min read',
+                              tags: ['ecommerce', 'operations'],
+                              featuredImageUrl: '',
+                              videoUrl: '',
+                              galleryUrls: [],
+                              seoTitle: '',
+                              seoDescription: '',
+                              canonicalUrl: '',
+                            });
                             setBlogErrors({});
                             setIsEditingBlog(true);
                           }}
-                          className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-white/5 cursor-pointer"
+                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs shadow-xs transition-colors cursor-pointer"
                         >
-                          Edit
+                          <Plus className="h-4 w-4" />
+                          <span>Write Article</span>
                         </button>
-                      </div>
+                      )}
                     </div>
-                  ))}
+                  </div>
+
+                  {/* Sub-tab 1: Articles list */}
+                  {blogSubTab === 'posts' && (
+                    <div className="space-y-4">
+                      {/* Filter Bar */}
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="relative flex-1 min-w-[220px]">
+                          <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                          <input
+                            type="text"
+                            value={blogSearchQuery}
+                            onChange={(e) => setBlogSearchQuery(e.target.value)}
+                            placeholder="Search articles by title, slug, or category…"
+                            className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-black/30 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:border-indigo-500"
+                          />
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={blogStatusFilter}
+                            onChange={(e) => setBlogStatusFilter(e.target.value)}
+                            className="px-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-black/30 text-slate-900 dark:text-white cursor-pointer"
+                          >
+                            <option value="all">All Statuses</option>
+                            <option value="published">Published Live</option>
+                            <option value="draft">Drafts</option>
+                            <option value="scheduled">Scheduled</option>
+                            <option value="archived">Archived</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Articles List */}
+                      {blogPosts.length === 0 ? (
+                        <div className="text-center py-16 rounded-xl border border-dashed border-slate-200 dark:border-white/10 text-xs text-slate-500">
+                          No blog posts found. Click &quot;Write Article&quot; to publish your first post.
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {blogPosts
+                            .filter((post) => {
+                              const matchesStatus =
+                                blogStatusFilter === 'all' || post.status === blogStatusFilter;
+                              const matchesQuery =
+                                !blogSearchQuery ||
+                                post.title.toLowerCase().includes(blogSearchQuery.toLowerCase()) ||
+                                post.slug.toLowerCase().includes(blogSearchQuery.toLowerCase()) ||
+                                post.category.toLowerCase().includes(blogSearchQuery.toLowerCase());
+                              return matchesStatus && matchesQuery;
+                            })
+                            .map((post) => (
+                              <div
+                                key={post.id}
+                                className="p-4 sm:p-5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1B] flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-slate-300 dark:hover:border-white/20 transition-all shadow-2xs"
+                              >
+                                <div className="flex items-start gap-3.5 min-w-0">
+                                  {post.featuredImageUrl ? (
+                                    <div className="relative h-14 w-20 shrink-0 rounded-lg overflow-hidden border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-black/40">
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img
+                                        src={post.featuredImageUrl}
+                                        alt=""
+                                        className="h-full w-full object-cover"
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div className="h-14 w-20 shrink-0 rounded-lg border border-slate-200 dark:border-white/10 bg-gradient-to-br from-indigo-500/20 to-purple-500/10 flex items-center justify-center text-indigo-500 text-xs font-mono font-bold">
+                                      POST
+                                    </div>
+                                  )}
+
+                                  <div className="min-w-0">
+                                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 border border-indigo-200/50 dark:border-indigo-500/30">
+                                        {post.category}
+                                      </span>
+                                      <span
+                                        className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${
+                                          post.status === 'published'
+                                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
+                                            : 'bg-amber-50 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300'
+                                        }`}
+                                      >
+                                        {post.status}
+                                      </span>
+                                      <span className="text-[11px] text-slate-400 font-mono">
+                                        /blog/{post.slug}
+                                      </span>
+                                    </div>
+                                    <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white truncate">
+                                      {post.title}
+                                    </h3>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1 max-w-2xl">
+                                      {post.excerpt}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                                  {post.status === 'published' && (
+                                    <a
+                                      href={`/en/blog/${post.slug}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="p-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-white/5 transition-colors"
+                                      title="Open live post"
+                                    >
+                                      <ExternalLink className="h-4 w-4" />
+                                    </a>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingPost(post);
+                                      setBlogErrors({});
+                                      setIsEditingBlog(true);
+                                    }}
+                                    className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteBlogPost(post.id, post.title)}
+                                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                                    title="Delete article"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Sub-tab 2: Categories manager */}
+                  {blogSubTab === 'categories' && <BlogCategoryManager />}
+
+                  {/* Sub-tab 3: Tags manager */}
+                  {blogSubTab === 'tags' && <BlogTagManager />}
                 </div>
               )}
             </div>

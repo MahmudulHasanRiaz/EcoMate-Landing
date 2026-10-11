@@ -1,14 +1,14 @@
 'use client';
 
 /**
- * Blog archive island: featured post + category chips + card grid + load more.
+ * Blog archive island: featured post + category chips + search filter + card grid + load more.
  *
  * Filtering and paging are pure client state over the server-fetched post
  * list — no refetch, no backend. Every string arrives via props from the CMS
  * `blogArchive` key; categories derive from the posts themselves.
  */
 import { useMemo, useState } from 'react';
-import { ArrowRight, Clock } from 'lucide-react';
+import { ArrowRight, Clock, Search, Video, FileText } from 'lucide-react';
 import type { BlogPostSummary } from '@/lib/content';
 import { formatDate } from '@/lib/format';
 import type { LandingContent, Locale } from '@/src/types/landing';
@@ -19,25 +19,50 @@ const PAGE_SIZE = 6;
 type Copy = LandingContent['blogArchive'];
 
 function PostImage({ post, large }: { post: BlogPostSummary; large?: boolean }) {
+  const hasVideo = Boolean(post.videoUrl && post.videoUrl.trim());
+
   if (!post.featuredImageUrl) {
+    if (hasVideo) {
+      return (
+        <div
+          aria-hidden="true"
+          className={`relative w-full ${large ? 'aspect-[16/8]' : 'aspect-[16/9]'} rounded-t-md bg-gradient-to-br from-indigo-950 via-slate-900 to-black flex items-center justify-center border-b border-[var(--mk-bd)]`}
+        >
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-xs text-white text-xs font-semibold">
+            <Video size={14} className="text-red-400" />
+            <span>Video Article</span>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div
         aria-hidden="true"
-        className={`w-full ${large ? 'aspect-[16/8]' : 'aspect-[16/9]'} rounded-t-md bg-gradient-to-br from-indigo-600/40 via-purple-600/25 to-transparent`}
+        className={`w-full ${large ? 'aspect-[16/8]' : 'aspect-[16/9]'} rounded-t-md bg-gradient-to-br from-indigo-600/30 via-purple-600/20 to-transparent border-b border-[var(--mk-bd)]`}
       />
     );
   }
-  // Plain `img`: admin-entered R2 hosts are not enumerated in
-  // `images.remotePatterns`, and a misconfigured host must degrade to a
-  // broken card, never throw at render time.
-  // eslint-disable-next-line @next/next/no-img-element
+
   return (
-    <img
-      src={absoluteUrl(post.featuredImageUrl)}
-      alt=""
-      loading="lazy"
-      className={`w-full ${large ? 'aspect-[16/8]' : 'aspect-[16/9]'} rounded-t-md object-cover`}
-    />
+    <div className="relative w-full overflow-hidden">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={absoluteUrl(post.featuredImageUrl)}
+        alt=""
+        loading="lazy"
+        className={`w-full ${large ? 'aspect-[16/8]' : 'aspect-[16/9]'} rounded-t-md object-cover transition-transform duration-300 hover:scale-[1.02]`}
+      />
+      {hasVideo && (
+        <span
+          className="absolute bottom-2.5 right-2.5 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold text-white shadow-xs"
+          style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)' }}
+        >
+          <Video size={12} className="text-red-400" />
+          <span>Video</span>
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -65,6 +90,7 @@ export function BlogArchive({
   locale: Locale;
 }) {
   const [category, setCategory] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [visible, setVisible] = useState(PAGE_SIZE);
 
   const categories = useMemo(() => {
@@ -76,101 +102,235 @@ export function BlogArchive({
     return [...seen.keys()].sort();
   }, [posts]);
 
-  const filtered = category ? posts.filter((post) => post.category === category) : posts;
+  const filtered = useMemo(() => {
+    return posts.filter((post) => {
+      const matchesCat = !category || post.category === category;
+      const q = searchQuery.trim().toLowerCase();
+      const matchesQuery =
+        !q ||
+        post.title.toLowerCase().includes(q) ||
+        post.excerpt.toLowerCase().includes(q) ||
+        post.category.toLowerCase().includes(q) ||
+        (post.tags && post.tags.some((t) => t.toLowerCase().includes(q)));
+      return matchesCat && matchesQuery;
+    });
+  }, [posts, category, searchQuery]);
+
   const [featured, ...rest] = filtered;
   const shown = rest.slice(0, visible);
   const base = `/${locale}/blog`;
 
+  const searchPlaceholder =
+    locale === 'bn' ? 'আর্টিকেল খুঁজুন (শিরোনাম বা বিষয়)…' : 'Search problem-solving guides…';
+
   return (
     <div>
-      {featured && (
-        <a
-          href={`${base}/${featured.slug}`}
-          className="mk-pn mk-pn-hl block overflow-hidden p-0 no-underline"
-          style={{ textDecoration: 'none', padding: 0 }}
+      {/* Search Bar & Category Controls */}
+      <div style={{ marginTop: 24, marginBottom: 20 }}>
+        <div
+          style={{
+            position: 'relative',
+            maxWidth: 480,
+            marginBottom: 16,
+          }}
         >
-          <PostImage post={featured} large />
-          <span className="block p-5">
-            <span className="mk-eyebrow">
-              {copy.featuredLabel} · {featured.category}
-            </span>
-            <span className="mk-h2 block" style={{ fontSize: 24 }}>
-              {featured.title}
-            </span>
-            <span className="mk-sb block">{featured.excerpt}</span>
-            <Meta post={featured} locale={locale} />
-          </span>
-        </a>
-      )}
-
-      {categories.length > 1 && (
-        <div className="mk-tabs" role="group" aria-label={copy.allLabel} style={{ margin: '20px 0 4px' }}>
-          <button
-            type="button"
-            data-on={category === null}
-            className="mk-tab"
-            aria-pressed={category === null}
-            onClick={() => {
-              setCategory(null);
+          <Search
+            size={15}
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              left: 14,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: 'var(--mk-mu)',
+            }}
+          />
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
               setVisible(PAGE_SIZE);
             }}
-          >
-            {copy.allLabel}
-          </button>
-          {categories.map((entry) => (
+            placeholder={searchPlaceholder}
+            style={{
+              width: '100%',
+              padding: '10px 14px 10px 38px',
+              borderRadius: 8,
+              border: '1px solid var(--mk-bd)',
+              background: 'var(--mk-s1)',
+              color: 'var(--mk-tx)',
+              fontSize: 13,
+              outline: 'none',
+              fontFamily: 'inherit',
+            }}
+          />
+        </div>
+
+        {categories.length > 1 && (
+          <div className="mk-tabs" role="group" aria-label={copy.allLabel} style={{ margin: 0 }}>
             <button
-              key={entry}
               type="button"
-              data-on={category === entry}
+              data-on={category === null}
               className="mk-tab"
-              aria-pressed={category === entry}
+              aria-pressed={category === null}
               onClick={() => {
-                setCategory(entry);
+                setCategory(null);
                 setVisible(PAGE_SIZE);
               }}
             >
-              {entry}
+              {copy.allLabel}
             </button>
-          ))}
-        </div>
-      )}
+            {categories.map((entry) => (
+              <button
+                key={entry}
+                type="button"
+                data-on={category === entry}
+                className="mk-tab"
+                aria-pressed={category === entry}
+                onClick={() => {
+                  setCategory(entry);
+                  setVisible(PAGE_SIZE);
+                }}
+              >
+                {entry}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       {filtered.length === 0 ? (
-        <p style={{ marginTop: 20, color: 'var(--mk-mu)' }}>
-          {copy.emptyLabel}
-        </p>
+        <div
+          className="mk-pn"
+          style={{
+            marginTop: 32,
+            padding: '48px 24px',
+            textAlign: 'center',
+            borderRadius: 8,
+            border: '1px dashed var(--mk-bd)',
+          }}
+        >
+          <FileText size={32} style={{ margin: '0 auto 12px', color: 'var(--mk-mu)' }} />
+          <p style={{ margin: 0, fontWeight: 600, color: 'var(--mk-tx)' }}>
+            {copy.emptyLabel}
+          </p>
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="mk-btn"
+              style={{ marginTop: 16 }}
+            >
+              {locale === 'bn' ? 'ফিল্টার মুছুন' : 'Clear search'}
+            </button>
+          )}
+        </div>
       ) : (
-        <div className="mk-g mk-c3" style={{ marginTop: 16 }}>
-          {shown.map((post) => (
+        <>
+          {featured && (
             <a
-              key={post.slug}
-              href={`${base}/${post.slug}`}
-              className="mk-pn block overflow-hidden"
+              href={`${base}/${featured.slug}`}
+              className="mk-pn mk-pn-hl block overflow-hidden p-0 no-underline"
               style={{ textDecoration: 'none', padding: 0 }}
             >
-              <PostImage post={post} />
-              <span className="block p-4">
-                <span className="mk-eyebrow">{post.category}</span>
-                <span className="block font-bold" style={{ color: 'var(--mk-tx)', marginTop: 6 }}>
-                  {post.title}
+              <PostImage post={featured} large />
+              <span className="block p-5 sm:p-6">
+                <span className="mk-eyebrow">
+                  {copy.featuredLabel} · {featured.category}
                 </span>
-                <span className="block text-sm" style={{ marginTop: 6, color: 'var(--mk-mu)' }}>
-                  {post.excerpt}
+                <span className="mk-h2 block" style={{ fontSize: 24, marginTop: 4 }}>
+                  {featured.title}
                 </span>
-                <Meta post={post} locale={locale} />
+                <span className="mk-sb block" style={{ marginTop: 8 }}>
+                  {featured.excerpt}
+                </span>
+
+                {featured.tags && featured.tags.length > 0 && (
+                  <span className="mk-strip" style={{ marginTop: 12, gap: 6 }}>
+                    {featured.tags.slice(0, 4).map((tag) => (
+                      <span
+                        key={tag}
+                        style={{
+                          fontSize: 11,
+                          padding: '2px 6px',
+                          borderRadius: 4,
+                          background: 'var(--mk-s2)',
+                          color: 'var(--mk-mu)',
+                        }}
+                      >
+                        #{tag}
+                      </span>
+                    ))}
+                  </span>
+                )}
+
+                <Meta post={featured} locale={locale} />
               </span>
             </a>
-          ))}
-        </div>
-      )}
+          )}
 
-      {rest.length > visible && (
-        <div style={{ marginTop: 20, textAlign: 'center' }}>
-          <button type="button" className="mk-btn" onClick={() => setVisible((count) => count + PAGE_SIZE)}>
-            {copy.loadMoreLabel}
-            <ArrowRight size={15} aria-hidden="true" />
-          </button>
-        </div>
+          {shown.length > 0 && (
+            <div className="mk-g mk-c3" style={{ marginTop: 24 }}>
+              {shown.map((post) => (
+                <a
+                  key={post.slug}
+                  href={`${base}/${post.slug}`}
+                  className="mk-pn block overflow-hidden"
+                  style={{ textDecoration: 'none', padding: 0 }}
+                >
+                  <PostImage post={post} />
+                  <span className="block p-4 sm:p-5">
+                    <span className="mk-eyebrow">{post.category}</span>
+                    <span
+                      className="block font-bold"
+                      style={{ color: 'var(--mk-tx)', marginTop: 6, fontSize: 16, lineHeight: 1.35 }}
+                    >
+                      {post.title}
+                    </span>
+                    <span className="block text-sm" style={{ marginTop: 8, color: 'var(--mk-mu)', lineHeight: 1.5 }}>
+                      {post.excerpt}
+                    </span>
+
+                    {post.tags && post.tags.length > 0 && (
+                      <span className="mk-strip" style={{ marginTop: 10, gap: 4 }}>
+                        {post.tags.slice(0, 3).map((tag) => (
+                          <span
+                            key={tag}
+                            style={{
+                              fontSize: 10,
+                              padding: '2px 5px',
+                              borderRadius: 3,
+                              background: 'var(--mk-s2)',
+                              color: 'var(--mk-mu)',
+                            }}
+                          >
+                            #{tag}
+                          </span>
+                        ))}
+                      </span>
+                    )}
+
+                    <Meta post={post} locale={locale} />
+                  </span>
+                </a>
+              ))}
+            </div>
+          )}
+
+          {rest.length > visible && (
+            <div style={{ marginTop: 32, textAlign: 'center' }}>
+              <button
+                type="button"
+                className="mk-btn"
+                onClick={() => setVisible((count) => count + PAGE_SIZE)}
+              >
+                {copy.loadMoreLabel}
+                <ArrowRight size={15} aria-hidden="true" />
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

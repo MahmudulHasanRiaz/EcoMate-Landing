@@ -94,6 +94,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ idOrSlug
           content: row.content,
           author: row.author,
           category: row.category,
+          categoryId: row.categoryId,
           tags: row.tags,
           featuredImageUrl: row.featuredImageUrl,
           videoUrl: row.videoUrl,

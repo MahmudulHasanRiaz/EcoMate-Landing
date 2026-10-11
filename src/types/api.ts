@@ -205,6 +205,7 @@ export interface BlogPost {
   content: string;
   author: string;
   category: string;
+  categoryId?: number | null;
   tags: string[];
   featuredImageUrl: string;
   videoUrl: string;
@@ -215,6 +216,26 @@ export interface BlogPost {
   seoDescription: string;
   canonicalUrl: string;
   publishedAt: string;
+}
+
+export interface BlogCategory {
+  id: number;
+  name: string;
+  slug: string;
+  description?: string | null;
+  parentId?: number | null;
+  sortOrder?: number;
+  createdAt?: string;
+  updatedAt?: string;
+  children?: BlogCategory[];
+}
+
+export interface BlogTag {
+  id: number;
+  name: string;
+  slug: string;
+  description?: string | null;
+  createdAt?: string;
 }
 
 export interface MediaAsset {

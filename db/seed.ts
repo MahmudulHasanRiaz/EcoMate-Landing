@@ -16,7 +16,7 @@
  * empty one, because it looks populated.
  */
 import { drizzle } from 'drizzle-orm/postgres-js';
-import { sql } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import postgres from 'postgres';
 import * as schema from './schema';
 import { landingContent } from '../src/data/landingContent';
@@ -448,73 +448,460 @@ async function main() {
       .onConflictDoNothing();
 
     // ---------------------------------------------------------------------------------
-    // 7. Blog posts — 2 rows, keyed by the (partial) unique live `slug`
+    // 7a. Blog categories & subcategories (Hierarchical taxonomy)
     // ---------------------------------------------------------------------------------
-    await tx
-      .insert(schema.blogPostsTable)
-      .values([
-        {
-          slug: 'why-ecommerce-businesses-lose-money-on-courier-returns',
-          title:
-            'The Hidden Drain: Why Growing E-commerce Brands Lose ৳1,00,000+ Monthly on Courier Returns',
-          excerpt:
-            'Most founders treat courier return costs as an inevitable cost of business. Here is the operational breakdown of preventable vs unpreventable returns.',
-          content: `When an e-commerce business in Bangladesh processes 300 to 800 orders daily, Cash on Delivery (COD) return rates can quietly drain 15% to 25% of gross operational profit.
+    const rootCategories = [
+      {
+        name: 'Logistics & Courier Intelligence',
+        slug: 'logistics-courier',
+        description: 'Courier performance analytics, return rate reduction, and cash-on-delivery reconciliation across Steadfast, Pathao, and RedX.',
+        parentId: null,
+        sortOrder: 1,
+      },
+      {
+        name: 'Operations & Fulfillment',
+        slug: 'operations-fulfillment',
+        description: 'Warehouse bin mapping, smart barcode packing workstations, and zero-mispack dispatch operations.',
+        parentId: null,
+        sortOrder: 2,
+      },
+      {
+        name: 'Omnichannel & POS',
+        slug: 'omnichannel-pos',
+        description: 'Synchronizing retail showroom POS checkout counters with online WooCommerce stores with real-time central stock lock.',
+        parentId: null,
+        sortOrder: 3,
+      },
+      {
+        name: 'Finance & Reconciliation',
+        slug: 'finance-reconciliation',
+        description: 'Automated COD bank statement matching, courier billing audits, and realized cash accounting.',
+        parentId: null,
+        sortOrder: 4,
+      },
+    ];
+
+    const categoryIdBySlug = new Map<string, number>();
+
+    for (const cat of rootCategories) {
+      const existing = await tx
+        .select({ id: schema.blogCategoriesTable.id })
+        .from(schema.blogCategoriesTable)
+        .where(eq(schema.blogCategoriesTable.slug, cat.slug))
+        .limit(1);
+
+      if (existing.length > 0) {
+        categoryIdBySlug.set(cat.slug, existing[0].id);
+        await tx
+          .update(schema.blogCategoriesTable)
+          .set({
+            name: cat.name,
+            description: cat.description,
+            sortOrder: cat.sortOrder,
+            updatedAt: new Date(),
+          })
+          .where(eq(schema.blogCategoriesTable.id, existing[0].id));
+      } else {
+        const [inserted] = await tx
+          .insert(schema.blogCategoriesTable)
+          .values(cat)
+          .returning({ id: schema.blogCategoriesTable.id });
+        if (inserted) {
+          categoryIdBySlug.set(cat.slug, inserted.id);
+        }
+      }
+    }
+
+    const subCategories = [
+      {
+        name: 'Courier Fraud & Return Defense',
+        slug: 'courier-fraud-defense',
+        description: 'Pre-dispatch buyer verification, delivery scoring, and fake order blacklisting.',
+        parentSlug: 'logistics-courier',
+        sortOrder: 1,
+      },
+      {
+        name: 'Smart Packing & Dispatch',
+        slug: 'smart-packing-dispatch',
+        description: 'Barcode verification scans, digital bin picking, and automated courier manifest generation.',
+        parentSlug: 'operations-fulfillment',
+        sortOrder: 2,
+      },
+    ];
+
+    for (const sub of subCategories) {
+      const parentId = categoryIdBySlug.get(sub.parentSlug) ?? null;
+      const existing = await tx
+        .select({ id: schema.blogCategoriesTable.id })
+        .from(schema.blogCategoriesTable)
+        .where(eq(schema.blogCategoriesTable.slug, sub.slug))
+        .limit(1);
+
+      if (existing.length > 0) {
+        categoryIdBySlug.set(sub.slug, existing[0].id);
+        await tx
+          .update(schema.blogCategoriesTable)
+          .set({
+            name: sub.name,
+            description: sub.description,
+            parentId,
+            sortOrder: sub.sortOrder,
+            updatedAt: new Date(),
+          })
+          .where(eq(schema.blogCategoriesTable.id, existing[0].id));
+      } else {
+        const [inserted] = await tx
+          .insert(schema.blogCategoriesTable)
+          .values({
+            name: sub.name,
+            slug: sub.slug,
+            description: sub.description,
+            parentId,
+            sortOrder: sub.sortOrder,
+          })
+          .returning({ id: schema.blogCategoriesTable.id });
+        if (inserted) {
+          categoryIdBySlug.set(sub.slug, inserted.id);
+        }
+      }
+    }
+
+    // ---------------------------------------------------------------------------------
+    // 7b. Blog tags (Taxonomy for search and discovery)
+    // ---------------------------------------------------------------------------------
+    const blogTags = [
+      { name: 'Smart Packing', slug: 'smart-packing', description: 'Barcode-driven packing station workflows' },
+      { name: 'Courier Returns', slug: 'courier-returns', description: 'Preventing COD parcel delivery failures' },
+      { name: 'COD Reconciliation', slug: 'cod-reconciliation', description: 'Automated parcel-level bank matching' },
+      { name: 'Showroom POS', slug: 'showroom-pos', description: 'Retail physical store checkout counters' },
+      { name: 'Inventory Sync', slug: 'inventory-sync', description: 'Real-time multi-channel inventory lock' },
+      { name: 'Fraud Defense', slug: 'fraud-defense', description: 'Serial fake buyer blacklisting & score checks' },
+      { name: 'Bangladesh E-commerce', slug: 'bangladesh-ecommerce', description: 'Operating models tailored for Bangladeshi businesses' },
+      { name: 'Loss Prevention', slug: 'loss-prevention', description: 'Stop profit leaks from operational errors' },
+      { name: 'Logistics Automation', slug: 'logistics-automation', description: 'Auto-booking, label printing, and tracking' },
+      { name: 'Warehouse Management', slug: 'warehouse-management', description: 'Bin mapping, stock audits, and COGS tracking' },
+    ];
+
+    for (const tag of blogTags) {
+      const existing = await tx
+        .select({ id: schema.blogTagsTable.id })
+        .from(schema.blogTagsTable)
+        .where(eq(schema.blogTagsTable.slug, tag.slug))
+        .limit(1);
+
+      if (existing.length === 0) {
+        await tx.insert(schema.blogTagsTable).values(tag);
+      } else {
+        await tx
+          .update(schema.blogTagsTable)
+          .set({ name: tag.name, description: tag.description })
+          .where(eq(schema.blogTagsTable.id, existing[0].id));
+      }
+    }
+
+    // ---------------------------------------------------------------------------------
+    // 7c. Blog posts — 6 varied posts covering all media combinations:
+    //     1. Thumbnail image only + writeup
+    //     2. Thumbnail image + image gallery + writeup
+    //     3. Video only (no thumbnail image) + writeup
+    //     4. Thumbnail image + video embed + writeup
+    //     5. Thumbnail image + video embed + image gallery + writeup (full multimedia suite)
+    //     6. Thumbnail image + deep analytical guide + writeup
+    // ---------------------------------------------------------------------------------
+    const blogPosts = [
+      {
+        slug: 'why-ecommerce-businesses-lose-money-on-courier-returns',
+        title:
+          'The Hidden Drain: Why Growing E-commerce Brands Lose ৳1,00,000+ Monthly on Courier Returns',
+        excerpt:
+          'Most founders treat courier return costs as an inevitable cost of business. Here is the operational breakdown of preventable vs unpreventable returns in Bangladesh.',
+        content: `When an e-commerce business in Bangladesh processes 300 to 800 orders daily, Cash on Delivery (COD) return rates can quietly drain 15% to 25% of gross operational profit.
 
 ### The Two Types of Courier Returns
-1. **Unpreventable Returns**: Customer genuine emergencies or mind-changes at doorstep.
+1. **Unpreventable Returns**: Customer genuine emergencies, travel, or change of mind at doorstep.
 2. **Preventable Operational Returns**:
    - Dispatch of wrong size or color (100% preventable via barcode verification).
    - Delivery to impulsive fake buyers with proven serial return history across Steadfast or Pathao networks.
    - Dispatch delays caused by warehouse bin confusion.
 
 ### How Much Does a Preventable Return Really Cost?
-Forward delivery charge (৳130) + Return transit penalty (৳70) + Packaging materials wasted (৳40) + Locked capital holding cost (৳150) = **৳390 to ৳450 per mistake**.
+- Forward delivery charge: **৳130**
+- Return transit penalty: **৳70**
+- Packaging materials wasted: **৳40**
+- Locked capital holding cost: **৳150**
+- **Total Direct Loss:** **৳390 to ৳450 per mistake**
 
 When 10 orders per day suffer preventable issues, that is **৳1,20,000 in direct cash drain every month**. EcoMate's smart packing workstation and pre-dispatch fraud verification turn this loss back into net realized margin.`,
-          author: 'EcoMate Operations Research',
-          category: 'Logistics & Economics',
-          tags: ['courier', 'smart-packing', 'cod-reconciliation', 'bangladesh-ecommerce'],
-          featuredImageUrl: '',
-          readTime: '6 min read',
-          status: 'published',
-          seoTitle: 'Why E-commerce Brands Lose Money on Courier Returns | EcoMate Guide',
-          seoDescription:
-            'Complete breakdown of courier return costs in Bangladesh e-commerce, and how barcode verification stops operational cash leaks.',
-          canonicalUrl:
-            'https://ecomate.bd/blog/why-ecommerce-businesses-lose-money-on-courier-returns',
-          publishedAt: new Date(Date.now() - HOUR * 72),
-        },
-        {
-          slug: 'multi-store-and-showroom-inventory-synchronization',
-          title: 'Connecting Showrooms and Online Stores: The Zero-Overselling Blueprint',
-          excerpt:
-            'How leading lifestyle brands eliminate the nightmare of selling floor stock that online customers simultaneously checked out.',
-          content: `Retailers expanding from online to physical showrooms face immediate stock desynchronization if floor registers operate on disconnected POS software.
+        author: 'EcoMate Operations Research',
+        category: 'Logistics & Courier Intelligence',
+        categoryId: categoryIdBySlug.get('courier-fraud-defense') ?? categoryIdBySlug.get('logistics-courier') ?? null,
+        tags: ['courier-returns', 'cod-reconciliation', 'bangladesh-ecommerce', 'loss-prevention'],
+        featuredImageUrl:
+          'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1200&q=80',
+        videoUrl: '',
+        galleryUrls: [],
+        readTime: '6 min read',
+        status: 'published',
+        seoTitle: 'Why E-commerce Brands Lose Money on Courier Returns | EcoMate Guide',
+        seoDescription:
+          'Complete breakdown of courier return costs in Bangladesh e-commerce, and how barcode verification stops operational cash leaks.',
+        canonicalUrl:
+          'https://ecomate.bd/blog/why-ecommerce-businesses-lose-money-on-courier-returns',
+        publishedAt: new Date(Date.now() - HOUR * 72),
+      },
+      {
+        slug: 'inside-modern-high-volume-dispatch-station-bin-maps',
+        title:
+          'Inside the Modern High-Volume Dispatch Station: Bin Maps, Barcode Verification, and Zero-Mispack Flow',
+        excerpt:
+          'How top fashion and electronics brands in Dhaka process 1,200+ parcels daily with zero picking mistakes using structured bin maps and barcode lock stations.',
+        content: `In a high-paced fulfillment warehouse handling 1,000+ parcels a day, chaos is the default state unless every physical movement is governed by software.
 
-### The Central Inventory Lock
-When a cashier at your Gulshan or Dhanmondi showroom scans a pair of shoes for checkout, EcoMate immediately:
-1. Decrements showroom floor inventory in real-time.
-2. Sends an instant allocation update to your WooCommerce catalog to prevent overselling.
-3. Automatically writes the split payment (Cash + bKash) into the daily register ledger.
-4. Updates COGS in the double-entry financial system.
+### The Problem With Paper Picklists
+Traditional Bangladeshi e-commerce warehouses hand pickers long paper sheets. Pickers wander through rows of unmapped racks, search for sizes by eye, and bring piles to the packing table. 
 
-This eliminates end-of-day phone calls between warehouse managers and showroom cashiers.`,
-          author: 'EcoMate Engineering Team',
-          category: 'Omnichannel & POS',
-          tags: ['pos', 'showrooms', 'multi-store', 'inventory-management'],
-          featuredImageUrl: '',
-          readTime: '5 min read',
-          status: 'published',
-          seoTitle: 'Connecting Showrooms and Online Stores — Zero-Overselling Blueprint',
-          seoDescription:
-            'Step-by-step architecture for synchronizing retail showroom POS registers with online WooCommerce stores in real-time.',
-          canonicalUrl:
-            'https://ecomate.bd/blog/multi-store-and-showroom-inventory-synchronization',
-          publishedAt: new Date(Date.now() - HOUR * 120),
-        },
-      ])
-      .onConflictDoNothing();
+This results in:
+- Up to 8% mispack rate (wrong color, wrong SKU, or missing bonus gift).
+- Packers wasting 45 seconds per parcel trying to read handwriting.
+- Frequent inventory discrepancies between physical shelves and online stock.
+
+### The Three Pillars of a Zero-Mispack Dispatch Station
+
+#### 1. Digital Bin Mapping (A-Z Racks with Numbered Bins)
+Every single item has a home. When a product is received, it is scanned into a bin (e.g., \`Bin B-04-A\`). When an order is released for batch picking, the mobile app creates the shortest walking path through the warehouse.
+
+#### 2. The Barcode Scan Lock
+At the packing station, no shipping label can be printed until the packer physically scans:
+1. The invoice barcode.
+2. The exact barcode on each item inside the box.
+
+If a picker mistakenly brought an "L" instead of an "M", the terminal buzzes with a red alert and locks the label printer. It is physically impossible to pack the wrong item.
+
+#### 3. Instant Courier Manifest Handover
+Once the parcel is sealed, EcoMate auto-generates the manifest for Steadfast, Pathao, or RedX. The courier rider signs one consolidated digital sheet, and tracking SMS is automatically queued to the customer.`,
+        author: 'EcoMate Fulfillment Team',
+        category: 'Operations & Fulfillment',
+        categoryId: categoryIdBySlug.get('smart-packing-dispatch') ?? categoryIdBySlug.get('operations-fulfillment') ?? null,
+        tags: ['smart-packing', 'warehouse-management', 'loss-prevention', 'bangladesh-ecommerce'],
+        featuredImageUrl:
+          'https://images.unsplash.com/photo-1553413077-190dd305871c?auto=format&fit=crop&w=1200&q=80',
+        videoUrl: '',
+        galleryUrls: [
+          'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1200&q=80',
+          'https://images.unsplash.com/photo-1587293852726-70cdb56c2866?auto=format&fit=crop&w=1200&q=80',
+          'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=1200&q=80',
+          'https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?auto=format&fit=crop&w=1200&q=80',
+        ],
+        readTime: '7 min read',
+        status: 'published',
+        seoTitle: 'Inside High-Volume E-commerce Dispatch Stations | EcoMate Operational Guide',
+        seoDescription:
+          'Explore the architecture of modern packing stations with bin mapping, barcode scan locks, and automated courier manifest generation.',
+        canonicalUrl:
+          'https://ecomate.bd/blog/inside-modern-high-volume-dispatch-station-bin-maps',
+        publishedAt: new Date(Date.now() - HOUR * 48),
+      },
+      {
+        slug: 'automated-cod-courier-reconciliation-video-walkthrough',
+        title: 'Video Walkthrough: Automated COD Courier Reconciliation vs. Bank Deposits',
+        excerpt:
+          'Stop spending 3 days every month manually matching courier spreadsheets with bank statements. Watch how parcel-level reconciliation identifies hidden deductions instantly.',
+        content: `Reconciling courier Cash on Delivery (COD) payments against bank deposits is notoriously one of the most painful tasks in Bangladeshi e-commerce.
+
+### The Hidden Deductions in Courier Statements
+Couriers provide weekly payout statements containing thousands of transactions. Buried inside these statements are:
+- Weight discrepancies (where a 0.5kg parcel was billed as 1.5kg).
+- COD collection commissions (typically 1%).
+- Return handling charges.
+- Delayed payment cycles where money remains floating for days.
+
+### How Manual Excel Checking Fails
+Most merchants rely on junior accountants manually cross-checking Excel sheets against bank SMS alerts. This process:
+- Takes 2 to 4 full workdays every single month.
+- Misses subtle weight overcharges that silently cost ৳20,000 to ৳50,000 monthly.
+- Leaves unverified parcels in limbo when couriers report them as "delivered" but the cash never arrives in the bank account.
+
+### Automated Parcel-by-Parcel Reconciliation
+EcoMate ingests the courier statement CSV directly or pulls transaction logs via courier API, comparing every parcel against its recorded consignment:
+1. **Immediate Discrepancy Flagging**: Any parcel with unexpected weight charges is highlighted for dispute.
+2. **Bank Statement Matching**: Matches courier payout batch IDs against actual bank deposits.
+3. **Automated Ledger Posting**: Credits Cash-in-Transit and debits Bank Accounts with zero manual data entry.`,
+        author: 'EcoMate Finance Systems',
+        category: 'Finance & Reconciliation',
+        categoryId: categoryIdBySlug.get('finance-reconciliation') ?? null,
+        tags: ['cod-reconciliation', 'finance-reconciliation', 'bangladesh-ecommerce', 'logistics-automation'],
+        featuredImageUrl: '',
+        videoUrl: 'https://www.youtube.com/watch?v=kJQP7kiw5Fk',
+        galleryUrls: [],
+        readTime: '4 min watch & read',
+        status: 'published',
+        seoTitle: 'Automated COD Courier Reconciliation Walkthrough | EcoMate Video',
+        seoDescription:
+          'Watch how automated courier reconciliation reconciles Steadfast, Pathao, and RedX statements against bank deposits in under 15 minutes.',
+        canonicalUrl:
+          'https://ecomate.bd/blog/automated-cod-courier-reconciliation-video-walkthrough',
+        publishedAt: new Date(Date.now() - HOUR * 36),
+      },
+      {
+        slug: 'multi-store-and-showroom-inventory-synchronization',
+        title: 'Connecting Showrooms and Online Stores: The Zero-Overselling Blueprint',
+        excerpt:
+          'How leading lifestyle brands eliminate the nightmare of selling floor stock that online customers simultaneously checked out.',
+        content: `Retailers expanding from online to physical showrooms face immediate stock desynchronization if floor registers operate on disconnected POS software.
+
+### The Double-Selling Crisis
+Imagine this common scenario:
+- Your last premium leather jacket (Size XL) is displayed on the mannequin in your Banani showroom.
+- At 3:15 PM, an online customer orders that exact jacket on your website.
+- At 3:20 PM, a walk-in customer in Banani buys the jacket and pays at the counter.
+
+When your warehouse team goes to pack the online order, the jacket is gone. You are forced to call the customer, apologize, issue a refund, or cancel the order. This damages brand reputation and wastes customer acquisition cost.
+
+### The Real-Time Central Inventory Lock
+EcoMate bridges the gap between showroom POS terminals and online sales channels:
+1. **Millisecond Stock Reservation**: The moment an item barcode is scanned at the showroom cash counter, central stock is decremented immediately across WooCommerce, Shopify, and marketplace feeds.
+2. **Cross-Branch Stock Visibility**: If a customer in Dhanmondi asks for a size not on the floor, the cashier sees instantly that 2 units exist in Banani and 5 in the Tejgaon central warehouse.
+3. **Split Payment Processing**: Native support for Cash, bKash, and Card payments in a single transaction with automatic daily register reconciliation.`,
+        author: 'EcoMate Engineering Team',
+        category: 'Omnichannel & POS',
+        categoryId: categoryIdBySlug.get('omnichannel-pos') ?? null,
+        tags: ['showroom-pos', 'inventory-sync', 'bangladesh-ecommerce', 'omnichannel-pos'],
+        featuredImageUrl:
+          'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1200&q=80',
+        videoUrl: 'https://www.youtube.com/watch?v=7wtfhZwyrcc',
+        galleryUrls: [],
+        readTime: '5 min read',
+        status: 'published',
+        seoTitle: 'Connecting Showrooms and Online Stores — Zero-Overselling Blueprint',
+        seoDescription:
+          'Step-by-step architecture for synchronizing retail showroom POS registers with online WooCommerce stores in real-time.',
+        canonicalUrl:
+          'https://ecomate.bd/blog/multi-store-and-showroom-inventory-synchronization',
+        publishedAt: new Date(Date.now() - HOUR * 120),
+      },
+      {
+        slug: 'complete-ecommerce-fulfillment-blueprint-order-to-cash',
+        title:
+          'The Complete Order-to-Cash Blueprint: Scaled Fulfillment Architecture for 500+ Orders Daily',
+        excerpt:
+          'From pre-dispatch customer risk checks to automated courier manifest generation and bank reconciliation — the complete step-by-step operational pipeline.',
+        content: `Processing 500+ orders a day requires more than just marketing spend; it requires an airtight operational system that connects advertising spend directly to verified cash in the bank.
+
+### Step 1: Pre-Dispatch Buyer Verification & Risk Scoring
+Not every order placed on Cash on Delivery should be shipped blindly. EcoMate calculates an instant Delivery Success Score based on nationwide delivery histories:
+- **Score > 85%**: Auto-approved for instant priority packing.
+- **Score 50% - 85%**: Flagged for confirmation call or WhatsApp OTP verification.
+- **Score < 50%**: Requires partial advance delivery fee payment via bKash to protect capital.
+
+### Step 2: Intelligent Multi-Courier Routing
+Instead of relying on a single courier, EcoMate dynamically routes parcels:
+- Fastest metropolitan delivery (Same-day Dhaka) -> Routed to Pathao.
+- Highest national delivery success rate for rural districts -> Routed to Steadfast.
+- Bulky and heavy freight -> Routed to specialized line-haul carriers.
+
+### Step 3: Barcode-Verified Assembly & Weighing
+Every parcel passes through an inspection scale. Barcode scan confirms correct SKUs, while integrated digital scale records exact gross weight before label generation. This prevents courier weight disputes before they can happen.
+
+### Step 4: Live Telemetry & Automated SMS Delivery Alerts
+Customers receive automated branded SMS notifications at key milestones:
+1. Parcel dispatched with live tracking URL.
+2. Parcel out for delivery with rider contact details.
+3. Automated delivery confirmation.
+
+### Step 5: Post-Delivery COD Bank Reconciliation
+When the courier remits funds, every consignment is automatically matched to the bank deposit statement down to the last taka.`,
+        author: 'EcoMate Architecture Group',
+        category: 'Operations & Fulfillment',
+        categoryId: categoryIdBySlug.get('operations-fulfillment') ?? null,
+        tags: ['logistics-automation', 'smart-packing', 'cod-reconciliation', 'bangladesh-ecommerce', 'loss-prevention'],
+        featuredImageUrl:
+          'https://images.unsplash.com/photo-1556742049-0a67c5574f73?auto=format&fit=crop&w=1200&q=80',
+        videoUrl: 'https://www.youtube.com/watch?v=L_LUpnjgPso',
+        galleryUrls: [
+          'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1200&q=80',
+          'https://images.unsplash.com/photo-1616401784845-180882ba9ba8?auto=format&fit=crop&w=1200&q=80',
+          'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80',
+          'https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?auto=format&fit=crop&w=1200&q=80',
+        ],
+        readTime: '9 min deep dive',
+        status: 'published',
+        seoTitle: 'The Complete E-commerce Fulfillment Pipeline | EcoMate Master Guide',
+        seoDescription:
+          'Master the 7-step fulfillment architecture designed for scaling Bangladeshi brands: fraud screening, barcode packing, auto-routing, and bank audit.',
+        canonicalUrl:
+          'https://ecomate.bd/blog/complete-ecommerce-fulfillment-blueprint-order-to-cash',
+        publishedAt: new Date(Date.now() - HOUR * 24),
+      },
+      {
+        slug: 'stop-burning-ad-budget-server-side-meta-capi-bangladesh',
+        title:
+          'Stop Scaling Ads on Phantom Clicks: Why Server-Side Meta CAPI and Realized ROAS Matter',
+        excerpt:
+          'Browser pixel drops up to 35% of events due to iOS restrictions and network timeouts in Bangladesh. Learn how server-side Conversions API matches ad spend to actual delivered cash.',
+        content: `Most Bangladeshi e-commerce founders look at their Meta Ads Manager and celebrate a reported ROAS of 6.5x. But when they check their bank account at the end of the month, the net profit simply is not there.
+
+### The Illusion of Browser Pixel Tracking
+Browser-based Meta pixels face severe data loss:
+- iOS 14.5+ App Tracking Transparency and Safari ITP block browser cookies.
+- Ad blockers drop between 20% and 35% of conversion events.
+- Spotty mobile network connections in Bangladesh cause frontend tracking scripts to timeout before the "Thank You" page finishes loading.
+
+More importantly: **The browser pixel counts every "Order Placed" button click as a purchase**, regardless of whether the buyer ever receives the parcel or pays for it.
+
+### What Happens With High Return Rates?
+If you generate 100 orders with a browser ROAS of 6x:
+- 25 orders are fake or refused at the door.
+- 5 orders are returned due to wrong sizes.
+- **Result**: You paid ad spend on 100 orders, but only collected cash on 70. Your real cash ROAS is drastically lower than what Facebook reports.
+
+### The Power of Meta Conversions API (CAPI) Tied to Delivered Cash
+EcoMate implements server-side Conversions API paired with courier delivery telemetry:
+1. **Deduplicated Server Events**: Events are sent directly from the server with persistent event IDs, completely bypassing ad-blockers and browser drop-offs.
+2. **Delivered Parcel Optimization**: You can train your ad algorithms to optimize for actual delivered and collected parcels, rather than empty clicks.
+3. **Net Cash Realized ROAS**: View accurate marketing dashboards showing exact ad spend matched against net money deposited in your bank.`,
+        author: 'EcoMate Growth Analytics',
+        category: 'Logistics & Courier Intelligence',
+        categoryId: categoryIdBySlug.get('logistics-courier') ?? null,
+        tags: ['fraud-defense', 'logistics-automation', 'bangladesh-ecommerce', 'loss-prevention'],
+        featuredImageUrl:
+          'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80',
+        videoUrl: '',
+        galleryUrls: [],
+        readTime: '8 min read',
+        status: 'published',
+        seoTitle: 'Meta Conversions API (CAPI) for Bangladesh E-commerce | EcoMate Guide',
+        seoDescription:
+          'How server-side Meta Conversions API connected with courier delivery reconciliation eliminates ad budget waste and reports true cash ROAS.',
+        canonicalUrl:
+          'https://ecomate.bd/blog/stop-burning-ad-budget-server-side-meta-capi-bangladesh',
+        publishedAt: new Date(Date.now() - HOUR * 12),
+      },
+    ];
+
+    for (const post of blogPosts) {
+      const existing = await tx
+        .select({ id: schema.blogPostsTable.id })
+        .from(schema.blogPostsTable)
+        .where(
+          and(
+            eq(schema.blogPostsTable.slug, post.slug),
+            isNull(schema.blogPostsTable.deletedAt),
+          ),
+        )
+        .limit(1);
+
+      if (existing.length > 0) {
+        await tx
+          .update(schema.blogPostsTable)
+          .set({
+            ...post,
+            updatedAt: new Date(),
+          })
+          .where(eq(schema.blogPostsTable.id, existing[0].id));
+      } else {
+        await tx.insert(schema.blogPostsTable).values(post);
+      }
+    }
 
     // ---------------------------------------------------------------------------------
     // 8. Media assets — 3 rows, keyed by the unique `key`

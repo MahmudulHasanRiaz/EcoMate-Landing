@@ -18,7 +18,7 @@ import * as api from '../../services/api';
 import { CONTENT_KEY_GROUPS } from '@/lib/contentKeys';
 import { fieldErrorsOf, type FieldErrors } from './fieldErrors';
 import { TestimonialForm } from './TestimonialForm';
-import { BlogMediaFields } from './BlogMediaFields';
+import { ImagePickerField } from './ImagePickerField';
 import { CaseStudyEditor } from './CaseStudyEditor';
 import { MediaLibrary } from './MediaLibrary';
 import { TestimonialCard } from '../TestimonialCard';
@@ -2460,33 +2460,28 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                  <div>
-                    <label htmlFor="settings-logoUrl" className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Header Logo (absolute URL or /media path, blank for built-in mark)</label>
-                    <input
-                      id="settings-logoUrl"
-                      type="text"
-                      value={settings.logoUrl}
-                      onChange={(e) => setSettings({ ...settings, logoUrl: e.target.value })}
-                      aria-describedby={settingsErrors.logoUrl ? 'settings-logoUrl-error' : undefined}
-                      placeholder="/assets/ecomate-logo.svg"
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white font-mono"
-                    />
-                    <FieldError id="settings-logoUrl-error" message={settingsErrors.logoUrl} />
-                  </div>
+                  <ImagePickerField
+                    id="settings-logoUrl"
+                    label="Header Logo"
+                    value={settings.logoUrl}
+                    onChange={(url) => setSettings({ ...settings, logoUrl: url })}
+                    error={settingsErrors.logoUrl}
+                    placeholder="Choose Header Logo"
+                    helperText="Logo used in header navigation & footer (leave empty for built-in EcoMate mark)."
+                    modalTitle="Select Header Logo"
+                  />
 
-                  <div>
-                    <label htmlFor="settings-faviconUrl" className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Favicon (absolute URL or /media path, blank for default)</label>
-                    <input
-                      id="settings-faviconUrl"
-                      type="text"
-                      value={settings.faviconUrl}
-                      onChange={(e) => setSettings({ ...settings, faviconUrl: e.target.value })}
-                      aria-describedby={settingsErrors.faviconUrl ? 'settings-faviconUrl-error' : undefined}
-                      placeholder="/assets/favicon.svg"
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white font-mono"
-                    />
-                    <FieldError id="settings-faviconUrl-error" message={settingsErrors.faviconUrl} />
-                  </div>
+                  <ImagePickerField
+                    id="settings-faviconUrl"
+                    label="Favicon"
+                    value={settings.faviconUrl}
+                    onChange={(url) => setSettings({ ...settings, faviconUrl: url })}
+                    error={settingsErrors.faviconUrl}
+                    aspectRatio="square"
+                    placeholder="Choose Favicon"
+                    helperText="Browser tab icon (leave empty for default favicon)."
+                    modalTitle="Select Favicon"
+                  />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">

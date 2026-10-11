@@ -21,7 +21,7 @@ const base = {
   author: z.string().max(120),
   category: z.string().max(80),
   tags: z.array(z.string().max(60)).max(20),
-  featuredImageUrl: z.union([z.url(), z.literal('')]),
+  featuredImageUrl: mediaUrlOrEmpty,
   /** Optional YouTube link — rendered as a nocookie embed below the hero. */
   videoUrl: mediaUrlOrEmpty,
   /** Optional gallery image URLs — rendered as a grid after the body. */

@@ -11,6 +11,7 @@
 import { useState } from 'react';
 import type { CaseStudy } from '@/src/types/api';
 import { FieldError } from '@/src/components/admin/AdminPanel';
+import { ImagePickerField } from './ImagePickerField';
 import type { FieldErrors } from './fieldErrors';
 
 const inputClass =
@@ -90,9 +91,18 @@ export function CaseStudyEditor({
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-        <div>
-          <label htmlFor="cs-featuredImage" className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Featured image URL</label>
-          <input id="cs-featuredImage" type="text" value={draft.featuredImageUrl ?? ''} onChange={(e) => set('featuredImageUrl', e.target.value)} className={`${inputClass} font-mono`} />
+        <div className="sm:col-span-3">
+          <ImagePickerField
+            id="cs-featuredImage"
+            label="Featured Cover Image"
+            value={draft.featuredImageUrl}
+            onChange={(url) => set('featuredImageUrl', url)}
+            error={errors.featuredImageUrl}
+            aspectRatio="16/9"
+            placeholder="Select Case Study Cover Image"
+            helperText="Main preview image shown on proof cards and case study hero."
+            modalTitle="Select Case Study Cover Image"
+          />
         </div>
         <div>
           <label htmlFor="cs-videoUrl" className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Video URL</label>

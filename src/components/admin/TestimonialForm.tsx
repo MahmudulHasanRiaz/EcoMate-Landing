@@ -12,6 +12,7 @@
 import { useState } from 'react';
 import type { Testimonial } from '@/src/types/api';
 import { FieldError } from '@/src/components/admin/AdminPanel';
+import { ImagePickerField } from './ImagePickerField';
 import type { FieldErrors } from './fieldErrors';
 
 export type TestimonialDraft = Partial<Testimonial> & { metricsText?: string };
@@ -152,11 +153,18 @@ export function TestimonialForm({
       )}
 
       {isImage && (
-        <div className="text-xs">
-          <label htmlFor="tm-imageUrl" className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Photo URL *</label>
-          <input id="tm-imageUrl" type="url" required={isImage} value={draft.imageUrl ?? ''} onChange={(e) => set('imageUrl', e.target.value)} className={`${inputClass} font-mono`} />
-          <FieldError id="tm-imageUrl-error" message={errors.imageUrl} />
-        </div>
+        <ImagePickerField
+          id="tm-imageUrl"
+          label="Client / Testimonial Photo"
+          required
+          value={draft.imageUrl}
+          onChange={(url) => set('imageUrl', url)}
+          error={errors.imageUrl}
+          aspectRatio="square"
+          placeholder="Select Client Photo"
+          helperText="Photo of the client or verification artifact."
+          modalTitle="Select Client Photo"
+        />
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
@@ -165,8 +173,16 @@ export function TestimonialForm({
           <input id="tm-websiteUrl" type="text" value={draft.websiteUrl ?? ''} onChange={(e) => set('websiteUrl', e.target.value)} className={`${inputClass} font-mono`} />
         </div>
         <div>
-          <label htmlFor="tm-logoUrl" className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Logo URL</label>
-          <input id="tm-logoUrl" type="text" value={draft.logoUrl ?? ''} onChange={(e) => set('logoUrl', e.target.value)} className={`${inputClass} font-mono`} />
+          <ImagePickerField
+            id="tm-logoUrl"
+            label="Company Logo"
+            value={draft.logoUrl}
+            onChange={(url) => set('logoUrl', url)}
+            error={errors.logoUrl}
+            placeholder="Select Logo"
+            helperText="Company brand mark (leave empty if none)."
+            modalTitle="Select Company Logo"
+          />
         </div>
         <div>
           <label htmlFor="tm-rating" className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Rating</label>

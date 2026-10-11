@@ -85,6 +85,8 @@ export interface ArticleJsonLdInput {
   /** Absolute image URL. Omitted from the output when absent — a broken `image` URL is
    *  worse than no image node. */
   imageUrl?: string;
+  videoUrl?: string;
+  galleryUrls?: readonly string[];
   section?: string;
   tags?: readonly string[];
   /** BCP-47 language of the article body. Omitted when unknown rather than guessed. */
@@ -105,6 +107,26 @@ export function articleJsonLd(input: ArticleJsonLdInput): JsonLdObject {
     author: { '@type': 'Person', name: input.author },
     publisher: { '@id': `${SITE_URL}#organization` },
     ...(input.imageUrl ? { image: [input.imageUrl] } : {}),
+    ...(input.videoUrl
+      ? {
+          video: {
+            '@type': 'VideoObject',
+            name: input.title,
+            description: input.description,
+            uploadDate: input.datePublished,
+            embedUrl: input.videoUrl,
+            ...(input.imageUrl ? { thumbnailUrl: [input.imageUrl] } : {}),
+          },
+        }
+      : {}),
+    ...(input.galleryUrls && input.galleryUrls.length > 0
+      ? {
+          associatedMedia: input.galleryUrls.map((gUrl) => ({
+            '@type': 'ImageObject',
+            contentUrl: gUrl,
+          })),
+        }
+      : {}),
     ...(input.section ? { articleSection: input.section } : {}),
     ...(input.tags && input.tags.length > 0 ? { keywords: input.tags.join(', ') } : {}),
     ...(input.locale ? { inLanguage: input.locale } : {}),

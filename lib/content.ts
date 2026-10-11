@@ -264,7 +264,7 @@ async function _getPublishedBlogPosts(): Promise<BlogPostSummary[] | null> {
     return rows.map(toBlogSummary);
   } catch (e) {
     logOnce('warn', 'content:blog-index', '[content] blog index read failed, serving static sitemap only:', errorMessage(e));
-    return null;
+    throw e;
   }
 }
 

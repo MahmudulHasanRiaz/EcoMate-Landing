@@ -7,7 +7,7 @@
  * list — no refetch, no backend. Every string arrives via props from the CMS
  * `blogArchive` key; categories derive from the posts themselves.
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, Clock, Search, Video, FileText } from 'lucide-react';
 import type { BlogPostSummary } from '@/lib/content';
 import { formatDate } from '@/lib/format';
@@ -81,7 +81,7 @@ function Meta({ post, locale }: { post: BlogPostSummary; locale: Locale }) {
 }
 
 export function BlogArchive({
-  posts,
+  posts: initialPosts,
   copy,
   locale,
 }: {
@@ -89,9 +89,74 @@ export function BlogArchive({
   copy: Copy;
   locale: Locale;
 }) {
+  const [posts, setPosts] = useState<BlogPostSummary[]>(initialPosts);
   const [category, setCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [visible, setVisible] = useState(PAGE_SIZE);
+
+  useEffect(() => {
+    if (initialPosts && initialPosts.length > 0) {
+      setPosts(initialPosts);
+      return;
+    }
+
+    let cancelled = false;
+    fetch('/api/blog')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body: unknown) => {
+        if (cancelled || typeof body !== 'object' || body === null) return;
+        const candidate = body as { data?: unknown };
+        const rawList = Array.isArray(candidate.data)
+          ? candidate.data
+          : Array.isArray(body)
+            ? (body as unknown[])
+            : [];
+        if (rawList.length > 0) {
+          const mapped: BlogPostSummary[] = rawList
+            .filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null)
+            .map((item) => {
+              const tags = Array.isArray(item.tags)
+                ? item.tags.filter((t): t is string => typeof t === 'string')
+                : [];
+              const galleryUrls = Array.isArray(item.galleryUrls)
+                ? item.galleryUrls.filter((g): g is string => typeof g === 'string')
+                : [];
+              const pub =
+                typeof item.publishedAt === 'string'
+                  ? item.publishedAt
+                  : typeof item.createdAt === 'string'
+                    ? item.createdAt
+                    : new Date().toISOString();
+              const mod =
+                typeof item.updatedAt === 'string'
+                  ? item.updatedAt
+                  : pub;
+              return {
+                slug: String(item.slug || ''),
+                title: String(item.title || ''),
+                excerpt: String(item.excerpt || ''),
+                author: String(item.author || 'EcoMate Operations Research'),
+                category: String(item.category || 'Operations & Fulfillment'),
+                tags,
+                featuredImageUrl: typeof item.featuredImageUrl === 'string' ? item.featuredImageUrl : '',
+                videoUrl: typeof item.videoUrl === 'string' ? item.videoUrl : '',
+                galleryUrls,
+                readTime: typeof item.readTime === 'string' ? item.readTime : '',
+                seoTitle: typeof item.seoTitle === 'string' ? item.seoTitle : '',
+                seoDescription: typeof item.seoDescription === 'string' ? item.seoDescription : '',
+                publishedAt: pub,
+                lastModified: mod,
+              };
+            });
+          setPosts(mapped);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [initialPosts]);
 
   const categories = useMemo(() => {
     const seen = new Map<string, number>();

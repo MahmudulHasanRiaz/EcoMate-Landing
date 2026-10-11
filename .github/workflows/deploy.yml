@@ -106,9 +106,10 @@ jobs:
 
       - name: Build production bundle
         # DIRECT_URL (session pooler :5432) arrives via secret,
-        # required here under `cacheComponents: true` so cached
-        # data functions prerender real content.
+        # required so cached data functions prerender real content.
         run: npx opennextjs-cloudflare build
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
 
       - name: Verify build artifact integrity
         run: |

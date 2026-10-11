@@ -105,11 +105,14 @@ export function invalidateDomains(
 ): void {
   const domains = Array.isArray(domain) ? domain : [domain as Domain];
   const tags = domains.flatMap((entry) => tagsFor(entry, locale, slug));
-  try {
-    for (const tag of tags) updateTag(tag);
-  } catch (e) {
-    logServerError(`revalidate (updateTag: ${tags.join(', ')})`, e);
-  }
+    for (const tag of tags) {
+      try {
+        updateTag(tag);
+      } catch {}
+      try {
+        revalidateTag(tag, { expire: 0 });
+      } catch {}
+    }
 }
 
 /**

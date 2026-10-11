@@ -18,13 +18,14 @@ import {
   Check,
   AlertCircle,
   ExternalLink,
+  Languages,
 } from 'lucide-react';
 import type { BlogPost, BlogCategory, BlogTag } from '@/src/types/api';
 import * as api from '@/src/services/api';
 import { slugify } from '@/lib/slug';
 import { absoluteUrl } from '@/lib/seo';
-import { youtubeEmbedUrl } from '@/lib/contact';
 import { moveGalleryItem } from '@/lib/blogMedia';
+import { BlogVideoPlayer } from '@/src/components/blog/BlogVideoPlayer';
 import { RichBlogEditor } from './RichBlogEditor';
 import { MediaPickerModal } from './MediaPickerModal';
 import { FieldError } from './AdminPanel';
@@ -45,11 +46,15 @@ export function BlogPostEditor({
   onCancel,
   saving = false,
 }: BlogPostEditorProps) {
+  const [activeLang, setActiveLang] = useState<'en' | 'bn'>('en');
   const [post, setPost] = useState<Partial<BlogPost>>({
     title: '',
+    titleBn: '',
     slug: '',
     excerpt: '',
+    excerptBn: '',
     content: '',
+    contentBn: '',
     author: 'EcoMate Operations Research',
     category: 'Operations & Fulfillment',
     categoryId: null,
@@ -60,7 +65,9 @@ export function BlogPostEditor({
     readTime: '5 min read',
     status: 'draft',
     seoTitle: '',
+    seoTitleBn: '',
     seoDescription: '',
+    seoDescriptionBn: '',
     canonicalUrl: '',
     ...initialPost,
   });
@@ -144,7 +151,6 @@ export function BlogPostEditor({
     setActiveMediaTarget(null);
   };
 
-  const videoEmbed = post.videoUrl ? youtubeEmbedUrl(post.videoUrl) : null;
   const isPublished = post.status === 'published';
 
   return (
@@ -184,15 +190,28 @@ export function BlogPostEditor({
 
         <div className="flex items-center gap-2">
           {post.slug && post.status === 'published' && (
-            <a
-              href={`/en/blog/${post.slug}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
-            >
-              <ExternalLink className="h-3.5 w-3.5" />
-              <span>View Live</span>
-            </a>
+            <div className="flex items-center gap-1.5">
+              <a
+                href={`/en/blog/${post.slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
+                title="View live English article"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                <span>Live (EN)</span>
+              </a>
+              <a
+                href={`/bn/blog/${post.slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
+                title="View live Bengali article"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                <span>Live (BN)</span>
+              </a>
+            </div>
           )}
           <button
             type="button"
@@ -228,23 +247,82 @@ export function BlogPostEditor({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left column: 8 cols */}
         <div className="lg:col-span-8 space-y-5">
+          {/* Language Switcher Tabs */}
+          <div className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0c0e17]">
+            <div className="flex items-center gap-2">
+              <Languages className="h-4 w-4 text-indigo-500" />
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                Content Language:
+              </span>
+            </div>
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-white/5 p-1 rounded-lg">
+              <button
+                type="button"
+                onClick={() => setActiveLang('en')}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                  activeLang === 'en'
+                    ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <span>🇬🇧</span>
+                <span>English Content</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveLang('bn')}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                  activeLang === 'bn'
+                    ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <span>🇧🇩</span>
+                <span>বাংলা কন্টেন্ট</span>
+              </button>
+            </div>
+          </div>
+
           {/* Title & Slug */}
           <div className="space-y-3 p-5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0c0e17]">
-            <div>
-              <label htmlFor="post-title" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Article Title *
-              </label>
-              <input
-                id="post-title"
-                type="text"
-                required
-                value={post.title || ''}
-                onChange={(e) => handleTitleChange(e.target.value)}
-                placeholder="e.g. How High-Volume E-Commerce Brands Eliminate Courier COD Losses"
-                className="w-full px-3.5 py-2 text-sm font-semibold rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-black/30 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:border-indigo-500"
-              />
-              <FieldError id="post-title-error" message={errors.title} />
-            </div>
+            {activeLang === 'en' ? (
+              <div>
+                <label htmlFor="post-title" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Article Title (English) *
+                </label>
+                <input
+                  id="post-title"
+                  type="text"
+                  required
+                  value={post.title || ''}
+                  onChange={(e) => handleTitleChange(e.target.value)}
+                  placeholder="e.g. How High-Volume E-Commerce Brands Eliminate Courier COD Losses"
+                  className="w-full px-3.5 py-2 text-sm font-semibold rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-black/30 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:border-indigo-500"
+                />
+                <FieldError id="post-title-error" message={errors.title} />
+              </div>
+            ) : (
+              <div>
+                <label htmlFor="post-title-bn" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  আর্টিকেলের শিরোনাম (বাংলা)
+                </label>
+                <input
+                  id="post-title-bn"
+                  type="text"
+                  value={post.titleBn || ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setPost((prev) => ({
+                      ...prev,
+                      titleBn: val,
+                      seoTitleBn: prev.seoTitleBn ? prev.seoTitleBn : val.slice(0, 70),
+                    }));
+                  }}
+                  placeholder="যেমন: ই-কমার্স বিজনেসে কুরিয়ার ক্যাশ অন ডেলিভারি (COD) ক্ষতি প্রতিরোধের আধুনিক কৌশল"
+                  className="w-full px-3.5 py-2 text-sm font-semibold rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-black/30 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:border-indigo-500 font-bangla"
+                />
+              </div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div>
@@ -279,26 +357,51 @@ export function BlogPostEditor({
             </div>
 
             <div>
-              <label htmlFor="post-excerpt" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Excerpt / Executive Summary *
-              </label>
-              <textarea
-                id="post-excerpt"
-                rows={2}
-                required
-                value={post.excerpt || ''}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setPost({
-                    ...post,
-                    excerpt: val,
-                    seoDescription: post.seoDescription ? post.seoDescription : val.slice(0, 160),
-                  });
-                }}
-                placeholder="A concise summary of the problem and practical solution. This appears on the archive card and search engine result snippets."
-                className="w-full px-3.5 py-2 text-xs rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-black/30 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:border-indigo-500 resize-none"
-              />
-              <FieldError id="post-excerpt-error" message={errors.excerpt} />
+              {activeLang === 'en' ? (
+                <>
+                  <label htmlFor="post-excerpt" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Excerpt / Executive Summary (English) *
+                  </label>
+                  <textarea
+                    id="post-excerpt"
+                    rows={2}
+                    required
+                    value={post.excerpt || ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setPost({
+                        ...post,
+                        excerpt: val,
+                        seoDescription: post.seoDescription ? post.seoDescription : val.slice(0, 160),
+                      });
+                    }}
+                    placeholder="A concise summary of the problem and practical solution. This appears on the archive card and search engine result snippets."
+                    className="w-full px-3.5 py-2 text-xs rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-black/30 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:border-indigo-500 resize-none"
+                  />
+                  <FieldError id="post-excerpt-error" message={errors.excerpt} />
+                </>
+              ) : (
+                <>
+                  <label htmlFor="post-excerpt-bn" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    সারসংক্ষেপ / এক্সার্পট (বাংলা)
+                  </label>
+                  <textarea
+                    id="post-excerpt-bn"
+                    rows={2}
+                    value={post.excerptBn || ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setPost({
+                        ...post,
+                        excerptBn: val,
+                        seoDescriptionBn: post.seoDescriptionBn ? post.seoDescriptionBn : val.slice(0, 160),
+                      });
+                    }}
+                    placeholder="আর্টিকেলের একটি সংক্ষিপ্ত ও আকর্ষণীয় সারসংক্ষেপ যা বাংলা ভার্সনের ব্লগ কার্ড ও সার্চ রেজাল্টে দেখা যাবে…"
+                    className="w-full px-3.5 py-2 text-xs rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-black/30 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:border-indigo-500 resize-none font-bangla"
+                  />
+                </>
+              )}
             </div>
           </div>
 
@@ -372,35 +475,33 @@ export function BlogPostEditor({
             </div>
           </div>
 
-          {/* Video (YouTube embed) */}
+          {/* Video Player Box */}
           <div className="p-5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0c0e17] space-y-3">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
                 <Video className="h-4 w-4 text-red-500" />
-                YouTube Video (Optional)
+                Featured Video (YouTube, Vimeo, or MP4)
               </label>
               <span className="text-[11px] text-slate-400">
-                Embeds prominently directly below hero / before body
+                Ultra-clean responsive player directly below hero
               </span>
             </div>
 
             <input
-              type="url"
+              type="text"
               value={post.videoUrl || ''}
               onChange={(e) => setPost({ ...post, videoUrl: e.target.value })}
-              placeholder="https://www.youtube.com/watch?v=…"
+              placeholder="https://www.youtube.com/watch?v=… or https://vimeo.com/… or direct video URL"
               className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-black/30 text-slate-900 dark:text-white font-mono"
             />
             <FieldError id="post-video-error" message={errors.videoUrl} />
 
-            {videoEmbed && (
-              <div className="relative aspect-16/9 w-full rounded-lg overflow-hidden border border-slate-200 dark:border-white/10">
-                <iframe
-                  src={videoEmbed}
-                  title="Video Preview"
-                  className="w-full h-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
+            {post.videoUrl && (
+              <div className="mt-3">
+                <BlogVideoPlayer
+                  videoUrl={post.videoUrl}
+                  title={post.title || 'Video preview'}
+                  poster={post.featuredImageUrl}
                 />
               </div>
             )}
@@ -409,20 +510,33 @@ export function BlogPostEditor({
           {/* Rich Content Editor */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                Article Body Content *
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                <span>Article Body Content</span>
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/40">
+                  {activeLang === 'en' ? '🇬🇧 English' : '🇧🇩 বাংলা'}
+                </span>
               </label>
               <span className="text-[11px] text-slate-400">
                 Supports Markdown, Semantic HTML, Images &amp; Tables
               </span>
             </div>
-            <RichBlogEditor
-              value={post.content || ''}
-              onChange={(content) => setPost((prev) => ({ ...prev, content }))}
-              onReadTimeChange={(time) => setPost((prev) => ({ ...prev, readTime: time }))}
-              minHeight="420px"
-            />
-            <FieldError id="post-content-error" message={errors.content} />
+            {activeLang === 'en' ? (
+              <>
+                <RichBlogEditor
+                  value={post.content || ''}
+                  onChange={(content) => setPost((prev) => ({ ...prev, content }))}
+                  onReadTimeChange={(time) => setPost((prev) => ({ ...prev, readTime: time }))}
+                  minHeight="420px"
+                />
+                <FieldError id="post-content-error" message={errors.content} />
+              </>
+            ) : (
+              <RichBlogEditor
+                value={post.contentBn || ''}
+                onChange={(contentBn) => setPost((prev) => ({ ...prev, contentBn }))}
+                minHeight="420px"
+              />
+            )}
           </div>
 
           {/* Image Gallery */}
@@ -676,50 +790,101 @@ export function BlogPostEditor({
 
           {/* 2026 AI Search & SEO Meta Box */}
           <div className="p-5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0c0e17] space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-              <Globe className="h-3.5 w-3.5 text-indigo-500" />
-              SEO &amp; AI Search Optimization
-            </h4>
-
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label htmlFor="post-seoTitle" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  SEO Meta Title
-                </label>
-                <span className="text-[10px] text-slate-400">
-                  {(post.seoTitle || post.title || '').length}/70
-                </span>
-              </div>
-              <input
-                id="post-seoTitle"
-                type="text"
-                maxLength={70}
-                value={post.seoTitle || ''}
-                onChange={(e) => setPost({ ...post, seoTitle: e.target.value })}
-                placeholder="Targeted title for Google & AI search bots"
-                className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-black/30 text-slate-900 dark:text-white"
-              />
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                <Globe className="h-3.5 w-3.5 text-indigo-500" />
+                SEO &amp; Search Optimization
+              </h4>
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/40">
+                {activeLang === 'en' ? '🇬🇧 EN Meta' : '🇧🇩 BN মেটা'}
+              </span>
             </div>
 
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label htmlFor="post-seoDesc" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  SEO Meta Description
-                </label>
-                <span className="text-[10px] text-slate-400">
-                  {(post.seoDescription || post.excerpt || '').length}/160
-                </span>
-              </div>
-              <textarea
-                id="post-seoDesc"
-                rows={3}
-                maxLength={200}
-                value={post.seoDescription || ''}
-                onChange={(e) => setPost({ ...post, seoDescription: e.target.value })}
-                placeholder="High-intent summary shown under search engine listings"
-                className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-black/30 text-slate-900 dark:text-white resize-none"
-              />
-            </div>
+            {activeLang === 'en' ? (
+              <>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label htmlFor="post-seoTitle" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      SEO Meta Title (English)
+                    </label>
+                    <span className="text-[10px] text-slate-400">
+                      {(post.seoTitle || post.title || '').length}/70
+                    </span>
+                  </div>
+                  <input
+                    id="post-seoTitle"
+                    type="text"
+                    maxLength={70}
+                    value={post.seoTitle || ''}
+                    onChange={(e) => setPost({ ...post, seoTitle: e.target.value })}
+                    placeholder="Targeted title for Google & AI search bots"
+                    className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-black/30 text-slate-900 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label htmlFor="post-seoDesc" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      SEO Meta Description (English)
+                    </label>
+                    <span className="text-[10px] text-slate-400">
+                      {(post.seoDescription || post.excerpt || '').length}/160
+                    </span>
+                  </div>
+                  <textarea
+                    id="post-seoDesc"
+                    rows={3}
+                    maxLength={200}
+                    value={post.seoDescription || ''}
+                    onChange={(e) => setPost({ ...post, seoDescription: e.target.value })}
+                    placeholder="High-intent summary shown under search engine listings"
+                    className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-black/30 text-slate-900 dark:text-white resize-none"
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label htmlFor="post-seoTitle-bn" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      এসইও মেটা টাইটেল (বাংলা)
+                    </label>
+                    <span className="text-[10px] text-slate-400">
+                      {(post.seoTitleBn || post.titleBn || '').length}/70
+                    </span>
+                  </div>
+                  <input
+                    id="post-seoTitle-bn"
+                    type="text"
+                    maxLength={70}
+                    value={post.seoTitleBn || ''}
+                    onChange={(e) => setPost({ ...post, seoTitleBn: e.target.value })}
+                    placeholder="গুগল ও সার্চ ইঞ্জিনের জন্য বাংলা মেটা শিরোনাম"
+                    className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-black/30 text-slate-900 dark:text-white font-bangla"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label htmlFor="post-seoDesc-bn" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      এসইও মেটা ডেসক্রিপশন (বাংলা)
+                    </label>
+                    <span className="text-[10px] text-slate-400">
+                      {(post.seoDescriptionBn || post.excerptBn || '').length}/160
+                    </span>
+                  </div>
+                  <textarea
+                    id="post-seoDesc-bn"
+                    rows={3}
+                    maxLength={200}
+                    value={post.seoDescriptionBn || ''}
+                    onChange={(e) => setPost({ ...post, seoDescriptionBn: e.target.value })}
+                    placeholder="গুগল সার্চ ফলাফলে প্রদর্শনের জন্য বাংলা ডেসক্রিপশন"
+                    className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-black/30 text-slate-900 dark:text-white resize-none font-bangla"
+                  />
+                </div>
+              </>
+            )}
 
             <div>
               <label htmlFor="post-canonical" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -738,16 +903,20 @@ export function BlogPostEditor({
             {/* Google / AI Snippet Preview */}
             <div className="mt-4 p-3 rounded-lg bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 space-y-1">
               <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-1">
-                Google / AI Search Preview
+                Google / AI Search Preview ({activeLang === 'en' ? 'EN' : 'BN'})
               </span>
               <div className="text-[11px] text-slate-500 font-mono truncate">
-                https://ecomate.bd › blog › {post.slug || 'article-slug'}
+                https://ecomate.bd › {activeLang} › blog › {post.slug || 'article-slug'}
               </div>
               <div className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer truncate">
-                {post.seoTitle || post.title || 'Untitled Article'}
+                {activeLang === 'en'
+                  ? (post.seoTitle || post.title || 'Untitled Article')
+                  : (post.seoTitleBn || post.titleBn || 'শিরোনামহীন আর্টিকেল')}
               </div>
               <p className="text-[11px] text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
-                {post.seoDescription || post.excerpt || 'Article summary will appear here…'}
+                {activeLang === 'en'
+                  ? (post.seoDescription || post.excerpt || 'Article summary will appear here…')
+                  : (post.seoDescriptionBn || post.excerptBn || 'বাংলা আর্টিকেলের সারসংক্ষেপ এখানে প্রদর্শিত হবে…')}
               </p>
             </div>
           </div>

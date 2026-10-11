@@ -56,7 +56,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       return fail('Validation failed', 400, { issues: parsed.error.issues });
     }
 
-    const { name, description, slug: newSlug } = parsed.data;
+    const { name, nameBn, description, descriptionBn, slug: newSlug } = parsed.data;
 
     let finalSlug: string | undefined = undefined;
     if (newSlug && newSlug !== existing.slug) {
@@ -69,8 +69,10 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       .update(blogTagsTable)
       .set({
         ...(name !== undefined ? { name } : {}),
+        ...(nameBn !== undefined ? { nameBn } : {}),
         ...(finalSlug !== undefined ? { slug: finalSlug } : {}),
         ...(description !== undefined ? { description } : {}),
+        ...(descriptionBn !== undefined ? { descriptionBn } : {}),
       })
       .where(eq(blogTagsTable.id, id))
       .returning();

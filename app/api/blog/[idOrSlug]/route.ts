@@ -68,7 +68,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ idOrSlug
     }
     // `slug` is not updatable (stable, indexed, SEO-visible identifier) and has no column
     // `og_image_url` — both are stripped before the write rather than spread in.
-    const { ogImageUrl: _ogImage, publishedAt, content, ...rest } = parsed.data;
+    // `slug` is not updatable (stable, indexed, SEO-visible identifier) and has no column
+    // `og_image_url` — both are stripped before the write rather than spread in.
+    const { ogImageUrl: _ogImage, publishedAt, content, contentBn, ...rest } = parsed.data;
     void _ogImage;
     // The row write and its revision go through one transaction (Task 19 §2): a post
     // without its history row is untraceable, exactly what `content_revisions` forbids.
@@ -78,6 +80,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ idOrSlug
         .set({
           ...rest,
           ...(content !== undefined ? { content: sanitizeHtml(content) } : {}),
+          ...(contentBn !== undefined ? { contentBn: sanitizeHtml(contentBn) } : {}),
           // `null` (or absent) leaves the column alone — never silently re-dated.
           ...(typeof publishedAt === 'string' ? { publishedAt: new Date(publishedAt) } : {}),
           updatedAt: new Date(),
@@ -90,8 +93,11 @@ export async function PUT(req: Request, { params }: { params: Promise<{ idOrSlug
         entityKey: String(id),
         payload: {
           title: row.title,
+          titleBn: row.titleBn,
           excerpt: row.excerpt,
+          excerptBn: row.excerptBn,
           content: row.content,
+          contentBn: row.contentBn,
           author: row.author,
           category: row.category,
           categoryId: row.categoryId,
@@ -102,7 +108,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ idOrSlug
           readTime: row.readTime,
           status: row.status,
           seoTitle: row.seoTitle,
+          seoTitleBn: row.seoTitleBn,
           seoDescription: row.seoDescription,
+          seoDescriptionBn: row.seoDescriptionBn,
           canonicalUrl: row.canonicalUrl,
           publishedAt: row.publishedAt?.toISOString() ?? null,
         },
@@ -116,6 +124,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ idOrSlug
     // Flipping `status` to `published` (or away from it) is the edit that matters: it decides
     // whether the article page and its sitemap entry exist at all.
     invalidateDomains('blog', 'en', updated.slug);
+    invalidateDomains('blog', 'bn', updated.slug);
     return ok(updated);
   } catch (e) {
     logServerError('PUT /api/blog/[idOrSlug]', e);
@@ -168,8 +177,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ idOrSlu
         .update(blogPostsTable)
         .set({
           title: readText(payload.title, ''),
+          titleBn: readText(payload.titleBn, ''),
           excerpt: readText(payload.excerpt, ''),
+          excerptBn: readText(payload.excerptBn, ''),
           content: sanitizeHtml(readText(payload.content, '')),
+          contentBn: sanitizeHtml(readText(payload.contentBn, '')),
           author: readText(payload.author, 'EcoMate Engineering Team'),
           category: readText(payload.category, 'Operations & Fulfillment'),
           tags: readTags(payload.tags),
@@ -179,7 +191,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ idOrSlu
           readTime: readText(payload.readTime, '5 min read'),
           status: payload.status === 'published' ? 'published' : 'draft',
           seoTitle: readText(payload.seoTitle, ''),
+          seoTitleBn: readText(payload.seoTitleBn, ''),
           seoDescription: readText(payload.seoDescription, ''),
+          seoDescriptionBn: readText(payload.seoDescriptionBn, ''),
           canonicalUrl: readText(payload.canonicalUrl, ''),
           updatedAt: new Date(),
         })
@@ -191,8 +205,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ idOrSlu
         entityKey: String(id),
         payload: {
           title: row.title,
+          titleBn: row.titleBn,
           excerpt: row.excerpt,
+          excerptBn: row.excerptBn,
           content: row.content,
+          contentBn: row.contentBn,
           author: row.author,
           category: row.category,
           tags: row.tags,
@@ -202,7 +219,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ idOrSlu
           readTime: row.readTime,
           status: row.status,
           seoTitle: row.seoTitle,
+          seoTitleBn: row.seoTitleBn,
           seoDescription: row.seoDescription,
+          seoDescriptionBn: row.seoDescriptionBn,
           canonicalUrl: row.canonicalUrl,
           publishedAt: row.publishedAt?.toISOString() ?? null,
         },
@@ -214,6 +233,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ idOrSlu
     });
     if (!applied) return fail('Blog post not found', 404);
     invalidateDomains('blog', 'en', applied.row.slug);
+    invalidateDomains('blog', 'bn', applied.row.slug);
     await recordAudit({
       actorId: guard.actorId,
       action: 'CONTENT_RESTORE',

@@ -453,29 +453,37 @@ async function main() {
     const rootCategories = [
       {
         name: 'Logistics & Courier Intelligence',
+        nameBn: 'লজিস্টিকস ও কুরিয়ার ইন্টেলিজেন্স',
         slug: 'logistics-courier',
         description: 'Courier performance analytics, return rate reduction, and cash-on-delivery reconciliation across Steadfast, Pathao, and RedX.',
+        descriptionBn: 'স্টিডফাস্ট, পাঠাও ও রেডএক্সের পারফরম্যান্স অ্যানালিটিক্স, রিটার্ন রেট কমানো এবং সিওডি রিকনসিলিয়েশন।',
         parentId: null,
         sortOrder: 1,
       },
       {
         name: 'Operations & Fulfillment',
+        nameBn: 'অপারেশনস ও ফুলফিলমেন্ট',
         slug: 'operations-fulfillment',
         description: 'Warehouse bin mapping, smart barcode packing workstations, and zero-mispack dispatch operations.',
+        descriptionBn: 'ওয়্যারহাউস বিন ম্যাপিং, স্মার্ট বারকোড প্যাকিং ও জিরো-মিসপ্যাক ডেলিভারি অপারেশন।',
         parentId: null,
         sortOrder: 2,
       },
       {
         name: 'Omnichannel & POS',
+        nameBn: 'অমনিচ্যানেল ও পিওএস',
         slug: 'omnichannel-pos',
         description: 'Synchronizing retail showroom POS checkout counters with online WooCommerce stores with real-time central stock lock.',
+        descriptionBn: 'রিটেল শোরুম পিওএস কাউন্টার এবং অনলাইন উকমার্স স্টোরের রিয়েল-টাইম সেন্ট্রাল স্টক লক।',
         parentId: null,
         sortOrder: 3,
       },
       {
         name: 'Finance & Reconciliation',
+        nameBn: 'ফাইন্যান্স ও রিকনসিলিয়েশন',
         slug: 'finance-reconciliation',
         description: 'Automated COD bank statement matching, courier billing audits, and realized cash accounting.',
+        descriptionBn: 'অটোমেটেড সিওডি ব্যাংক স্টেটমেন্ট ম্যাচিং, কুরিয়ার বিলিং অডিট এবং রিয়ালাইজড ক্যাশ অ্যাকাউন্টিং।',
         parentId: null,
         sortOrder: 4,
       },
@@ -496,7 +504,9 @@ async function main() {
           .update(schema.blogCategoriesTable)
           .set({
             name: cat.name,
+            nameBn: cat.nameBn,
             description: cat.description,
+            descriptionBn: cat.descriptionBn,
             sortOrder: cat.sortOrder,
             updatedAt: new Date(),
           })
@@ -515,15 +525,19 @@ async function main() {
     const subCategories = [
       {
         name: 'Courier Fraud & Return Defense',
+        nameBn: 'কুরিয়ার ফ্রড ও রিটার্ন প্রতিরোধ',
         slug: 'courier-fraud-defense',
         description: 'Pre-dispatch buyer verification, delivery scoring, and fake order blacklisting.',
+        descriptionBn: 'প্রি-ডিসপ্যাচ বায়ার ভেরিফিকেশন, ডেলিভারি স্কোরিং এবং ফেক অর্ডার ব্ল্যাকলিস্টিং।',
         parentSlug: 'logistics-courier',
         sortOrder: 1,
       },
       {
         name: 'Smart Packing & Dispatch',
+        nameBn: 'স্মার্ট প্যাকিং ও ডিসপ্যাচ',
         slug: 'smart-packing-dispatch',
         description: 'Barcode verification scans, digital bin picking, and automated courier manifest generation.',
+        descriptionBn: 'বারকোড ভেরিফিকেশন স্ক্যান, ডিজিটাল বিন পিকিং এবং অটোমেটেড কুরিয়ার ম্যানিফেস্ট।',
         parentSlug: 'operations-fulfillment',
         sortOrder: 2,
       },
@@ -543,7 +557,9 @@ async function main() {
           .update(schema.blogCategoriesTable)
           .set({
             name: sub.name,
+            nameBn: sub.nameBn,
             description: sub.description,
+            descriptionBn: sub.descriptionBn,
             parentId,
             sortOrder: sub.sortOrder,
             updatedAt: new Date(),
@@ -554,8 +570,10 @@ async function main() {
           .insert(schema.blogCategoriesTable)
           .values({
             name: sub.name,
+            nameBn: sub.nameBn,
             slug: sub.slug,
             description: sub.description,
+            descriptionBn: sub.descriptionBn,
             parentId,
             sortOrder: sub.sortOrder,
           })
@@ -570,16 +588,16 @@ async function main() {
     // 7b. Blog tags (Taxonomy for search and discovery)
     // ---------------------------------------------------------------------------------
     const blogTags = [
-      { name: 'Smart Packing', slug: 'smart-packing', description: 'Barcode-driven packing station workflows' },
-      { name: 'Courier Returns', slug: 'courier-returns', description: 'Preventing COD parcel delivery failures' },
-      { name: 'COD Reconciliation', slug: 'cod-reconciliation', description: 'Automated parcel-level bank matching' },
-      { name: 'Showroom POS', slug: 'showroom-pos', description: 'Retail physical store checkout counters' },
-      { name: 'Inventory Sync', slug: 'inventory-sync', description: 'Real-time multi-channel inventory lock' },
-      { name: 'Fraud Defense', slug: 'fraud-defense', description: 'Serial fake buyer blacklisting & score checks' },
-      { name: 'Bangladesh E-commerce', slug: 'bangladesh-ecommerce', description: 'Operating models tailored for Bangladeshi businesses' },
-      { name: 'Loss Prevention', slug: 'loss-prevention', description: 'Stop profit leaks from operational errors' },
-      { name: 'Logistics Automation', slug: 'logistics-automation', description: 'Auto-booking, label printing, and tracking' },
-      { name: 'Warehouse Management', slug: 'warehouse-management', description: 'Bin mapping, stock audits, and COGS tracking' },
+      { name: 'Smart Packing', nameBn: 'স্মার্ট প্যাকিং', slug: 'smart-packing', description: 'Barcode-driven packing station workflows', descriptionBn: 'বারকোড-চালিত প্যাকিং স্টেশন ওয়ার্কফ্লো' },
+      { name: 'Courier Returns', nameBn: 'কুরিয়ার রিটার্ন', slug: 'courier-returns', description: 'Preventing COD parcel delivery failures', descriptionBn: 'ক্যাশ অন ডেলিভারি পার্সেল ব্যর্থতা প্রতিরোধ' },
+      { name: 'COD Reconciliation', nameBn: 'সিওডি রিকনসিলিয়েশন', slug: 'cod-reconciliation', description: 'Automated parcel-level bank matching', descriptionBn: 'অটোমেটেড পার্সেল ব্যাংক হিসাব মেলানো' },
+      { name: 'Showroom POS', nameBn: 'শোরুম পিওএস', slug: 'showroom-pos', description: 'Retail physical store checkout counters', descriptionBn: 'রিটেল শোরুম ক্যাশ কাউন্টার' },
+      { name: 'Inventory Sync', nameBn: 'ইনভেন্টরি সিঙ্ক', slug: 'inventory-sync', description: 'Real-time multi-channel inventory lock', descriptionBn: 'রিয়েল-টাইম মাল্টি-চ্যানেল স্টক লক' },
+      { name: 'Fraud Defense', nameBn: 'ফ্রড ডিফেন্স', slug: 'fraud-defense', description: 'Serial fake buyer blacklisting & score checks', descriptionBn: 'ভুয়া ক্রেতা ব্ল্যাকলিস্টিং ও স্কোর চেক' },
+      { name: 'Bangladesh E-commerce', nameBn: 'বাংলাদেশ ই-কমার্স', slug: 'bangladesh-ecommerce', description: 'Operating models tailored for Bangladeshi businesses', descriptionBn: 'বাংলাদেশি ব্যবসার উপযোগী অপারেটিং মডেল' },
+      { name: 'Loss Prevention', nameBn: 'ক্ষতি প্রতিরোধ', slug: 'loss-prevention', description: 'Stop profit leaks from operational errors', descriptionBn: 'অপারেশনাল ভুলের কারণে ক্ষতি রোধ' },
+      { name: 'Logistics Automation', nameBn: 'লজিস্টিকস অটোমেশন', slug: 'logistics-automation', description: 'Auto-booking, label printing, and tracking', descriptionBn: 'অটো-বুকিং, লেবেল প্রিন্টিং ও ট্র্যাকিং' },
+      { name: 'Warehouse Management', nameBn: 'ওয়্যারহাউস ম্যানেজমেন্ট', slug: 'warehouse-management', description: 'Bin mapping, stock audits, and COGS tracking', descriptionBn: 'বিন ম্যাপিং, স্টক অডিট ও ইনভেন্টরি ট্র্যাকিং' },
     ];
 
     for (const tag of blogTags) {
@@ -594,7 +612,7 @@ async function main() {
       } else {
         await tx
           .update(schema.blogTagsTable)
-          .set({ name: tag.name, description: tag.description })
+          .set({ name: tag.name, nameBn: tag.nameBn, description: tag.description, descriptionBn: tag.descriptionBn })
           .where(eq(schema.blogTagsTable.id, existing[0].id));
       }
     }
@@ -613,8 +631,10 @@ async function main() {
         slug: 'why-ecommerce-businesses-lose-money-on-courier-returns',
         title:
           'The Hidden Drain: Why Growing E-commerce Brands Lose ৳1,00,000+ Monthly on Courier Returns',
+        titleBn: 'কুরিয়ার রিটার্নের নীরব ক্ষতি: কেন প্রতি মাসে ১,০০,০০০+ টাকা অপচয় হয় এবং তা বন্ধের উপায়',
         excerpt:
           'Most founders treat courier return costs as an inevitable cost of business. Here is the operational breakdown of preventable vs unpreventable returns in Bangladesh.',
+        excerptBn: 'অধিকাংশ ই-কমার্স উদ্যোক্তা কুরিয়ার রিটার্নকে ব্যবসার সাধারণ ক্ষতি হিসেবে মেনে নেন। জেনে নিন প্রতিরোধযোগ্য বনাম অপরিহার্য রিটার্নের নিখুঁত হিসাব ও সমাধান।',
         content: `When an e-commerce business in Bangladesh processes 300 to 800 orders daily, Cash on Delivery (COD) return rates can quietly drain 15% to 25% of gross operational profit.
 
 ### The Two Types of Courier Returns
@@ -632,6 +652,23 @@ async function main() {
 - **Total Direct Loss:** **৳390 to ৳450 per mistake**
 
 When 10 orders per day suffer preventable issues, that is **৳1,20,000 in direct cash drain every month**. EcoMate's smart packing workstation and pre-dispatch fraud verification turn this loss back into net realized margin.`,
+        contentBn: `বাংলাদেশে একটি ই-কমার্স প্রতিষ্ঠান যখন দৈনিক ৩০০ থেকে ৮০০ অর্ডার প্রসেস করে, তখন ক্যাশ অন ডেলিভারি (COD) রিটার্নের কারণে গ্রস প্রফিটের ১৫% থেকে ২৫% হারিয়ে যেতে পারে।
+
+### কুরিয়ার রিটার্নের দুটি প্রধান ধরন
+১. **অপরিহার্য রিটার্ন (Unpreventable Returns)**: গ্রাহকের জরুরি কোনো সমস্যা, ভ্রমণ, বা দরজায় পৌঁছে সিদ্ধান্ত পরিবর্তন।
+২. **প্রতিরোধযোগ্য অপারেশনাল রিটার্ন (Preventable Operational Returns)**:
+   - ভুল সাইজ বা রঙের পণ্য ডেলিভারি দেওয়া (বারকোড ভেরিফিকেশনের মাধ্যমে ১০০% প্রতিরোধযোগ্য)।
+   - ভুয়া ও ফেক বায়ারদের কাছে পার্সেল পাঠানো যাদের অতীতে একাধিকবার রিটার্নের রেকর্ড রয়েছে।
+   - ওয়্যারহাউস বিনের বিভ্রান্তির কারণে ডিসপ্যাচে অনাকাঙ্ক্ষিত দেরি হওয়া।
+
+### একটি প্রতিরোধযোগ্য রিটার্নে প্রকৃতপক্ষে কত টাকা ক্ষতি হয়?
+- ফরওয়ার্ড ডেলিভারি চার্জ: **৳১৩০**
+- রিটার্ন ট্রানজিট চার্জ: **৳৭০**
+- প্যাকেজিং ম্যাটেরিয়াল ও ব্যাগের ক্ষতি: **৳৪০**
+- আটকে থাকা ক্যাপিটাল ও ইনভেন্টরি কস্ট: **৳১৫০**
+- **মোট প্রত্যক্ষ ক্ষতি:** **প্রতি ভুলের জন্য ৳৩৯০ থেকে ৳৪৫০**
+
+যদি প্রতিদিন গড়ে ১০টি অর্ডারেও এই প্রতিরোধযোগ্য সমস্যা হয়, তবে মাসে **১,২০,০০০ টাকারও বেশি নগদ ক্যাশ ক্ষতি** হয়। EcoMate-এর স্মার্ট প্যাকিং ওয়ার্কস্টেশন ও প্রি-ডিসপ্যাচ ফ্রড ভেরিফিকেশন এই ক্ষতি বন্ধ করে নেট প্রফিট নিশ্চিত করে।`,
         author: 'EcoMate Operations Research',
         category: 'Logistics & Courier Intelligence',
         categoryId: categoryIdBySlug.get('courier-fraud-defense') ?? categoryIdBySlug.get('logistics-courier') ?? null,
@@ -643,8 +680,10 @@ When 10 orders per day suffer preventable issues, that is **৳1,20,000 in direc
         readTime: '6 min read',
         status: 'published',
         seoTitle: 'Why E-commerce Brands Lose Money on Courier Returns | EcoMate Guide',
+        seoTitleBn: 'কুরিয়ার রিটার্ন ক্ষতি রোধের উপায় | EcoMate ই-কমার্স গাইড',
         seoDescription:
           'Complete breakdown of courier return costs in Bangladesh e-commerce, and how barcode verification stops operational cash leaks.',
+        seoDescriptionBn: 'বাংলাদেশে ই-কমার্স ব্যবসায় কুরিয়ার রিটার্ন কেন হয় এবং বারকোড ভেরিফিকেশন ও স্মার্ট প্যাকিং দিয়ে কীভাবে এই নগদ অপচয় বন্ধ করবেন।',
         canonicalUrl:
           'https://ecomate.bd/blog/why-ecommerce-businesses-lose-money-on-courier-returns',
         publishedAt: new Date(Date.now() - HOUR * 72),
@@ -653,8 +692,10 @@ When 10 orders per day suffer preventable issues, that is **৳1,20,000 in direc
         slug: 'inside-modern-high-volume-dispatch-station-bin-maps',
         title:
           'Inside the Modern High-Volume Dispatch Station: Bin Maps, Barcode Verification, and Zero-Mispack Flow',
+        titleBn: 'হাই-ভলিউম ডিসপ্যাচ স্টেশনের অভ্যন্তরীণ রূপ: বিন ম্যাপিং, বারকোড ভেরিফিকেশন ও জিরো-মিসপ্যাক পদ্ধতি',
         excerpt:
           'How top fashion and electronics brands in Dhaka process 1,200+ parcels daily with zero picking mistakes using structured bin maps and barcode lock stations.',
+        excerptBn: 'ঢাকায় শীর্ষ ফ্যাশন ও গ্যাজেট ব্র্যান্ডগুলো কীভাবে বিন ম্যাপিং এবং বারকোড লক ব্যবহার করে প্রতিদিন ১,২০০+ পার্সেল কোনো ধরনের প্যাকিং ভুল ছাড়াই ডেলিভারি করে।',
         content: `In a high-paced fulfillment warehouse handling 1,000+ parcels a day, chaos is the default state unless every physical movement is governed by software.
 
 ### The Problem With Paper Picklists
@@ -679,6 +720,30 @@ If a picker mistakenly brought an "L" instead of an "M", the terminal buzzes wit
 
 #### 3. Instant Courier Manifest Handover
 Once the parcel is sealed, EcoMate auto-generates the manifest for Steadfast, Pathao, or RedX. The courier rider signs one consolidated digital sheet, and tracking SMS is automatically queued to the customer.`,
+        contentBn: `দৈনিক ১,০০০+ পার্সেল হ্যান্ডেল করা একটি ব্যস্ত ওয়্যারহাউসে সঠিক সফটওয়্যার ও প্রসেস না থাকলে চরম বিশৃঙ্খলা সৃষ্টি হওয়া স্বাভাবিক।
+
+### কাগজের পিকলিস্ট ব্যবহারের সমস্যা
+ঐতিহ্যবাহী ওয়্যারহাউসে পিকারদের হাতে লম্বা কাগজের শিট ধরিয়ে দেওয়া হয়। পিকাররা এলোমেলো তাকের মাঝে ঘুরে বেড়ায়, খালি চোখে সাইজ খোঁজে এবং প্যাকিং টেবিলে এনে স্তূপ করে।
+
+এর ফলে:
+- ৮% পর্যন্ত মিসপ্যাক বা ভুল প্যাকিংয়ের হার (ভুল রঙ, ভুল সাইজ বা বোনাস আইটেম বাদ পড়া)।
+- হাতের লেখা বুঝতে গিয়ে প্যাকাররা প্রতি পার্সেলে অতিরিক্ত ৪৫ সেকেন্ড সময় নষ্ট করে।
+- ফিজিক্যাল শেলফ এবং অনলাইন স্টকের মধ্যে অমিল তৈরি হয়।
+
+### জিরো-মিসপ্যাক ডিসপ্যাচ স্টেশনের তিনটি স্তম্ভ
+
+#### ১. ডিজিটাল বিন ম্যাপিং (Numbered Bins)
+প্রতিটি পণ্যের জন্য নির্দিষ্ট বিন বরাদ্দ থাকে (যেমন: \`Bin B-04-A\`)। ব্যাচ পিকিংয়ের সময় মোবাইল অ্যাপ ওয়্যারহাউসের সবচেয়ে ছোট হাঁটার পথ নির্দেশ করে।
+
+#### ২. বারকোড স্ক্যান লক সিস্টেম
+প্যাকিং স্টেশনে কোনো প্রিন্টার শিপিং লেবেল প্রিন্ট করতে পারবে না যতক্ষণ না প্যাকার স্ক্যান করে:
+১. ইনভয়েসের বারকোড।
+২. বক্সের ভেতরের প্রতিটি পণ্যের আসল বারকোড।
+
+যদি পিকার ভুলবশত "M" এর বদলে "L" সাইজ নিয়ে আসে, সিস্টেম সাথে সাথে লাল সতর্কবার্তা দিয়ে প্রিন্টার লক করে দেয়। ফলে ভুল পণ্য প্যাক করা অসম্ভব।
+
+#### ৩. তাৎক্ষণিক কুরিয়ার ম্যানিফেস্ট হ্যান্ডওভার
+পার্সেল সিল হওয়ার সাথে সাথে স্টিডফাস্ট, পাঠাও বা রেডএক্সের ডিজিটাল ম্যানিফেস্ট স্বয়ংক্রিয়ভাবে তৈরি হয় এবং গ্রাহকের কাছে ট্র্যাকিং এসএমএস চলে যায়।`,
         author: 'EcoMate Fulfillment Team',
         category: 'Operations & Fulfillment',
         categoryId: categoryIdBySlug.get('smart-packing-dispatch') ?? categoryIdBySlug.get('operations-fulfillment') ?? null,
@@ -695,8 +760,10 @@ Once the parcel is sealed, EcoMate auto-generates the manifest for Steadfast, Pa
         readTime: '7 min read',
         status: 'published',
         seoTitle: 'Inside High-Volume E-commerce Dispatch Stations | EcoMate Operational Guide',
+        seoTitleBn: 'আধুনিক ওয়্যারহাউস ডিসপ্যাচ স্টেশন ও বিন ম্যাপিং গাইড | EcoMate',
         seoDescription:
           'Explore the architecture of modern packing stations with bin mapping, barcode scan locks, and automated courier manifest generation.',
+        seoDescriptionBn: 'ডিজিটাল বিন ম্যাপিং, বারকোড স্ক্যান লক এবং অটোমেটেড কুরিয়ার ম্যানিফেস্টের মাধ্যমে জিরো-মিসপ্যাক ডেলিভারি নিশ্চিত করার কৌশল।',
         canonicalUrl:
           'https://ecomate.bd/blog/inside-modern-high-volume-dispatch-station-bin-maps',
         publishedAt: new Date(Date.now() - HOUR * 48),
@@ -704,8 +771,10 @@ Once the parcel is sealed, EcoMate auto-generates the manifest for Steadfast, Pa
       {
         slug: 'automated-cod-courier-reconciliation-video-walkthrough',
         title: 'Video Walkthrough: Automated COD Courier Reconciliation vs. Bank Deposits',
+        titleBn: 'ভিডিও ওয়াকথ্রু: অটোমেটেড কুরিয়ার COD রিকনসিলিয়েশন বনাম ব্যাংক ডিপোজিট অডিট',
         excerpt:
           'Stop spending 3 days every month manually matching courier spreadsheets with bank statements. Watch how parcel-level reconciliation identifies hidden deductions instantly.',
+        excerptBn: 'কুরিয়ার স্প্রেডশিট আর ব্যাংক স্টেটমেন্ট মেলাতে প্রতি মাসে ৩ দিন সময় নষ্ট বন্ধ করুন। দেখুন কীভাবে পার্সেল-লেভেল রিকনসিলিয়েশন সকল গোপন চার্জ বের করে আনে।',
         content: `Reconciling courier Cash on Delivery (COD) payments against bank deposits is notoriously one of the most painful tasks in Bangladeshi e-commerce.
 
 ### The Hidden Deductions in Courier Statements
@@ -726,6 +795,25 @@ EcoMate ingests the courier statement CSV directly or pulls transaction logs via
 1. **Immediate Discrepancy Flagging**: Any parcel with unexpected weight charges is highlighted for dispute.
 2. **Bank Statement Matching**: Matches courier payout batch IDs against actual bank deposits.
 3. **Automated Ledger Posting**: Credits Cash-in-Transit and debits Bank Accounts with zero manual data entry.`,
+        contentBn: `কুরিয়ার ক্যাশ অন ডেলিভারি (COD) পেমেন্ট ব্যাংক ডিপোজিটের সাথে মেলানো বাংলাদেশের ই-কমার্স উদ্যোক্তাদের অন্যতম বড় জটিলতা।
+
+### কুরিয়ার স্টেটমেন্টে লুকানো বাড়তি চার্জ
+কুরিয়ারগুলো সাপ্তাহিক পেআউট স্টেটমেন্ট দেয় যাতে হাজার হাজার লেনদেন থাকে। এই স্টেটমেন্টের ভেতরে প্রায়ই থাকে:
+- ওজনের গরমিল (০.৫ কেজি পার্সেলকে ১.৫ কেজি হিসেবে বিল করা)।
+- সিওডি কালেকশন কমিশন (সাধারণত ১%)।
+- রিটার্ন হ্যান্ডলিং চার্জ।
+- দীর্ঘ পেমেন্ট সাইকেল যেখানে টাকা দিনের পর দিন আটকে থাকে।
+
+### এক্সেল দিয়ে ম্যানুয়ালি মেলানোর সীমাবদ্ধতা
+- প্রতি মাসে ২ থেকে ৪ কর্মদিবস সময় নষ্ট হয়।
+- ছোটখাটো ওজনের বাড়তি চার্জ নজরে আসে না যা মাসে ২০,০০০ থেকে ৫০,০০০ টাকা ক্ষতি করে।
+- যে পার্সেলগুলো কুরিয়ার ডেলিভার্ড দেখিয়েছে অথচ ব্যাংকে টাকা ঢোকেনি, সেগুলো শনাক্ত করা যায় না।
+
+### স্বয়ংক্রিয় পার্সেল-বাই-পার্সেল রিকনসিলিয়েশন
+EcoMate সরাসরি কুরিয়ার স্টেটমেন্ট বা API ডেটা টেনে নিয়ে প্রতিটি পার্সেল অডিট করে:
+১. **তাৎক্ষণিক অমিল শনাক্তকরণ**: বাড়তি ওজনের চার্জ থাকা পার্সেলগুলো ডিসপিউটের জন্য চিহ্নিত হয়।
+২. **ব্যাংক স্টেটমেন্ট ম্যাচিং**: কুরিয়ার পেআউট ব্যাচ আইডির সাথে ব্যাংকে জমা হওয়া টাকার সঠিক মিল নিশ্চিত করে।
+৩. **অটোমেটেড লেজার পোস্টিং**: কোনো ম্যানুয়াল এন্ট্রি ছাড়াই ক্যাশ-ইন-ট্রানজিট এবং ব্যাংক অ্যাকাউন্ট আপডেট হয়।`,
         author: 'EcoMate Finance Systems',
         category: 'Finance & Reconciliation',
         categoryId: categoryIdBySlug.get('finance-reconciliation') ?? null,
@@ -736,8 +824,10 @@ EcoMate ingests the courier statement CSV directly or pulls transaction logs via
         readTime: '4 min watch & read',
         status: 'published',
         seoTitle: 'Automated COD Courier Reconciliation Walkthrough | EcoMate Video',
+        seoTitleBn: 'অটোমেটেড কুরিয়ার সিওডি রিকনসিলিয়েশন ভিডিও গাইড | EcoMate',
         seoDescription:
           'Watch how automated courier reconciliation reconciles Steadfast, Pathao, and RedX statements against bank deposits in under 15 minutes.',
+        seoDescriptionBn: 'স্টিডফাস্ট, পাঠাও ও রেডএক্সের স্টেটমেন্ট মাত্র ১৫ মিনিটে ব্যাংক ডিপোজিটের সাথে নিখুঁতভাবে মেলানোর ভিডিও ওয়াকথ্রু।',
         canonicalUrl:
           'https://ecomate.bd/blog/automated-cod-courier-reconciliation-video-walkthrough',
         publishedAt: new Date(Date.now() - HOUR * 36),
@@ -745,8 +835,10 @@ EcoMate ingests the courier statement CSV directly or pulls transaction logs via
       {
         slug: 'multi-store-and-showroom-inventory-synchronization',
         title: 'Connecting Showrooms and Online Stores: The Zero-Overselling Blueprint',
+        titleBn: 'শোরুম এবং অনলাইন শপের সংযোগ: ওভারসেলিং বন্ধের আধুনিক ব্লুপ্রিন্ট',
         excerpt:
           'How leading lifestyle brands eliminate the nightmare of selling floor stock that online customers simultaneously checked out.',
+        excerptBn: 'কীভাবে শীর্ষস্থানীয় লাইফস্টাইল ব্র্যান্ডগুলো ডিসকানেক্টেড স্টক সমস্যার অবসান ঘটিয়ে একই সাথে শোরুম এবং অনলাইনে সঠিক স্টক বিক্রি নিশ্চিত করে।',
         content: `Retailers expanding from online to physical showrooms face immediate stock desynchronization if floor registers operate on disconnected POS software.
 
 ### The Double-Selling Crisis
@@ -762,6 +854,21 @@ EcoMate bridges the gap between showroom POS terminals and online sales channels
 1. **Millisecond Stock Reservation**: The moment an item barcode is scanned at the showroom cash counter, central stock is decremented immediately across WooCommerce, Shopify, and marketplace feeds.
 2. **Cross-Branch Stock Visibility**: If a customer in Dhanmondi asks for a size not on the floor, the cashier sees instantly that 2 units exist in Banani and 5 in the Tejgaon central warehouse.
 3. **Split Payment Processing**: Native support for Cash, bKash, and Card payments in a single transaction with automatic daily register reconciliation.`,
+        contentBn: `অনলাইন থেকে ফিজিক্যাল শোরুমে ব্যবসা সম্প্রসারণকারী ব্র্যান্ডগুলো তাৎক্ষণিক স্টক অমিলের মুখোমুখি হয় যদি শোরুমের পিওএস সফটওয়্যার কেন্দ্রীয় সিস্টেমের সাথে যুক্ত না থাকে।
+
+### ডাবল-সেলিং সংকট
+এই সাধারণ দৃশ্যটি কল্পনা করুন:
+- আপনার প্রিমিয়াম লেদার জ্যাকেটের (Size XL) শেষ ইউনিটটি বনানী শোরুমের ম্যানিকুইনে ডিসপ্লে করা আছে।
+- দুপুর ৩:১৫ মিনিটে একজন অনলাইন ক্রেতা আপনার ওয়েবসাইটে অর্ডার করেন।
+- দুপুর ৩:২০ মিনিটে বনানী শোরুমের এক ক্রেতা এসে ক্যাশ কাউন্টারে দাম পরিশোধ করে জ্যাকেটটি নিয়ে যান।
+
+অনলাইন অর্ডারটি প্যাক করতে গিয়ে ওয়্যারহাউস টিম দেখে পণ্য নেই! বাধ্য হয়ে গ্রাহককে ফোন করে ক্ষমা চাইতে হয় বা অর্ডার বাতিল করতে হয়।
+
+### রিয়েল-টাইম সেন্ট্রাল ইনভেন্টরি লক
+EcoMate শোরুমের পিওএস টার্মিনাল এবং অনলাইন বিক্রয় চ্যানেলের মধ্যে সংযোগ তৈরি করে:
+১. **মিলিসেকেন্ড স্টক রিজার্ভেশন**: শোরুম কাউন্টারে বারকোড স্ক্যান হওয়া মাত্রই উকমার্স বা শপিফাইয়ে কেন্দ্রীয় স্টক কমে যায়।
+২. **ক্রস-ব্রাঞ্চ স্টক ভিজিবিলিটি**: ধানমন্ডি শোরুমের কাস্টমার যে সাইজ চাচ্ছে তা না থাকলে ক্যাশিয়ার সাথে সাথে দেখতে পায় বনানীতে ২টি ও তেজগাঁও সেন্ট্রাল ওয়্যারহাউসে ৫টি ইউনিট রয়েছে।
+৩. **স্প্লিট পেমেন্ট প্রসেসিং**: এক লেনদেনেই ক্যাশ, বিকাশ এবং কার্ড পেমেন্টের সুবিধা এবং দিনের শেষে অটোমেটেড রেজিস্টার মেলানো।`,
         author: 'EcoMate Engineering Team',
         category: 'Omnichannel & POS',
         categoryId: categoryIdBySlug.get('omnichannel-pos') ?? null,
@@ -773,8 +880,10 @@ EcoMate bridges the gap between showroom POS terminals and online sales channels
         readTime: '5 min read',
         status: 'published',
         seoTitle: 'Connecting Showrooms and Online Stores — Zero-Overselling Blueprint',
+        seoTitleBn: 'শোরুম ও অনলাইন ইনভেন্টরি সিনক্রোনাইজেশন ব্লুপ্রিন্ট | EcoMate',
         seoDescription:
           'Step-by-step architecture for synchronizing retail showroom POS registers with online WooCommerce stores in real-time.',
+        seoDescriptionBn: 'রিটেল শোরুমের পিওএস এবং অনলাইন ই-কমার্স স্টোরের ইনভেন্টরি রিয়েল-টাইমে মেলানোর বিস্তারিত প্রযুক্তিগত আর্কিটেকচার।',
         canonicalUrl:
           'https://ecomate.bd/blog/multi-store-and-showroom-inventory-synchronization',
         publishedAt: new Date(Date.now() - HOUR * 120),
@@ -783,8 +892,10 @@ EcoMate bridges the gap between showroom POS terminals and online sales channels
         slug: 'complete-ecommerce-fulfillment-blueprint-order-to-cash',
         title:
           'The Complete Order-to-Cash Blueprint: Scaled Fulfillment Architecture for 500+ Orders Daily',
+        titleBn: 'অর্ডার-টু-ক্যাশ পূর্ণাঙ্গ ব্লুপ্রিন্ট: দৈনিক ৫০০+ অর্ডারের স্বয়ংক্রিয় ফুলফিলমেন্ট সিস্টেম',
         excerpt:
           'From pre-dispatch customer risk checks to automated courier manifest generation and bank reconciliation — the complete step-by-step operational pipeline.',
+        excerptBn: 'অর্ডার নেওয়ার পর রিস্ক স্কোরিং থেকে শুরু করে বারকোড প্যাকিং, স্বয়ংক্রিয় কুরিয়ার রাউটিং এবং ব্যাংক রিকনসিলিয়েশন — ধাপে ধাপে সম্পূর্ণ অপারেশনাল গাইড।',
         content: `Processing 500+ orders a day requires more than just marketing spend; it requires an airtight operational system that connects advertising spend directly to verified cash in the bank.
 
 ### Step 1: Pre-Dispatch Buyer Verification & Risk Scoring
@@ -810,6 +921,30 @@ Customers receive automated branded SMS notifications at key milestones:
 
 ### Step 5: Post-Delivery COD Bank Reconciliation
 When the courier remits funds, every consignment is automatically matched to the bank deposit statement down to the last taka.`,
+        contentBn: `প্রতিদিন ৫০০+ অর্ডার সফলভাবে ডেলিভারি ও ক্যাশ কালেকশন করার জন্য প্রয়োজন একটি নিখুঁত অপারেশনাল ফ্রেমওয়ার্ক।
+
+### ধাপ ১: প্রি-ডিসপ্যাচ বায়ার ভেরিফিকেশন ও রিস্ক স্কোরিং
+ক্যাশ অন ডেলিভারিতে আসা প্রতিটি অর্ডার অন্ধভাবে পাঠানো উচিত নয়। EcoMate দেশব্যাপী ইতিহাস বিশ্লেষণ করে সাকসেস স্কোর প্রদান করে:
+- **স্কোর > ৮৫%**: স্বয়ংক্রিয়ভাবে অনুমোদিত ও প্রায়োরিটি প্যাকিং।
+- **স্কোর ৫০% - ৮৫%**: কনফার্মেশন কল বা হোয়াটসঅ্যাপ ওটিপি দিয়ে ভেরিফিকেশন।
+- **স্কোর < ৫০%**: ডেলিভারি চার্জ বিকাশ অগ্রিম নেওয়ার নির্দেশনা।
+
+### ধাপ ২: ইন্টেলিজেন্ট মাল্টি-কুরিয়ার রাউটিং
+একটি কুরিয়ারের ওপর নির্ভরশীল না হয়ে EcoMate স্মার্টলি রুট করে:
+- দ্রুততম মেট্রোপলিটন ডেলিভারি (ঢাকার মধ্যে সেম-ডে) -> পাঠাও।
+- প্রত্যন্ত জেলাগুলোতে সর্বোচ্চ সফলতার হার -> স্টিডফাস্ট।
+- ভারী ও বড় পার্সেল -> বিশেষায়িত কার্গো লাইন।
+
+### ধাপ ৩: বারকোড-যাচাইকৃত প্যাকিং ও ওজন রেকর্ড
+প্রতিটি পার্সেল ডিজিটাল স্কেলের ওপর দিয়ে যায়। বারকোড সঠিক পণ্য নিশ্চিত করে এবং ওজন রেকর্ড হয়, যা কুরিয়ারের অতিরিক্ত ওজন চার্জের দাবি আটকে দেয়।
+
+### ধাপ ৪: অটোমেটেড এসএমএস ট্র্যাকিং অ্যালার্ট
+১. পার্সেল বের হওয়ার পর লাইভ ট্র্যাকিং লিংকসহ এসএমএস।
+২. ডেলিভারি রাইডারের কন্টাক্টসহ ডেলিভারির দিনে এসএমএস।
+৩. ডেলিভারি সফল হওয়ার পর ধন্যবাদ বার্তা।
+
+### ধাপ ৫: ডেলিভারি পরবর্তী ব্যাংক অডিট
+কুরিয়ার পেমেন্ট দেওয়ার সাথে সাথে প্রতিটি অর্ডার ব্যাংকে জমা টাকার সাথে পাই টু পাই মিলে যায়।`,
         author: 'EcoMate Architecture Group',
         category: 'Operations & Fulfillment',
         categoryId: categoryIdBySlug.get('operations-fulfillment') ?? null,
@@ -826,8 +961,10 @@ When the courier remits funds, every consignment is automatically matched to the
         readTime: '9 min deep dive',
         status: 'published',
         seoTitle: 'The Complete E-commerce Fulfillment Pipeline | EcoMate Master Guide',
+        seoTitleBn: 'ই-কমার্স ফুলফিলমেন্ট পূর্ণাঙ্গ মাস্টার গাইড | EcoMate',
         seoDescription:
           'Master the 7-step fulfillment architecture designed for scaling Bangladeshi brands: fraud screening, barcode packing, auto-routing, and bank audit.',
+        seoDescriptionBn: 'দৈনিক ৫০০+ অর্ডার ডেলিভারি করা ব্র্যান্ডগুলোর জন্য ৭-ধাপের ফ্রড স্ক্রিনিং, বারকোড প্যাকিং, অটো-রাউটিং ও ব্যাংক অডিট ব্লুপ্রিন্ট।',
         canonicalUrl:
           'https://ecomate.bd/blog/complete-ecommerce-fulfillment-blueprint-order-to-cash',
         publishedAt: new Date(Date.now() - HOUR * 24),
@@ -836,8 +973,10 @@ When the courier remits funds, every consignment is automatically matched to the
         slug: 'stop-burning-ad-budget-server-side-meta-capi-bangladesh',
         title:
           'Stop Scaling Ads on Phantom Clicks: Why Server-Side Meta CAPI and Realized ROAS Matter',
+        titleBn: 'অদৃশ্য ক্লিকে বিজ্ঞাপনের বাজেট অপচয় বন্ধ করুন: মেটা সার্ভার-সাইড CAPI ও রিয়ালাইজড ROAS',
         excerpt:
           'Browser pixel drops up to 35% of events due to iOS restrictions and network timeouts in Bangladesh. Learn how server-side Conversions API matches ad spend to actual delivered cash.',
+        excerptBn: 'ব্রাউজার পিক্সেল আইওএস বিধিনিষেধ ও নেটওয়ার্ক সমস্যার কারণে ৩৫% পর্যন্ত ইভেন্ট মিস করে। জানুন কীভাবে সার্ভার-সাইড কনভার্সন এপিআই প্রকৃত ডেলিভারি করা টাকার হিসাব দেয়।',
         content: `Most Bangladeshi e-commerce founders look at their Meta Ads Manager and celebrate a reported ROAS of 6.5x. But when they check their bank account at the end of the month, the net profit simply is not there.
 
 ### The Illusion of Browser Pixel Tracking
@@ -859,6 +998,27 @@ EcoMate implements server-side Conversions API paired with courier delivery tele
 1. **Deduplicated Server Events**: Events are sent directly from the server with persistent event IDs, completely bypassing ad-blockers and browser drop-offs.
 2. **Delivered Parcel Optimization**: You can train your ad algorithms to optimize for actual delivered and collected parcels, rather than empty clicks.
 3. **Net Cash Realized ROAS**: View accurate marketing dashboards showing exact ad spend matched against net money deposited in your bank.`,
+        contentBn: `অধিকাংশ বাংলাদেশি ই-কমার্স উদ্যোক্তা মেটা অ্যাডস ম্যানেজারে ৬.৫x ROAS দেখে খুশি হন। কিন্তু মাস শেষে ব্যাংক অ্যাকাউন্টে কাঙ্ক্ষিত প্রফিট খুঁজে পান না।
+
+### ব্রাউজার পিক্সেল ট্র্যাকিংয়ের বিভ্রম
+ব্রাউজার-ভিত্তিক মেটা পিক্সেল ব্যাপক ডেটা লসের শিকার হয়:
+- iOS 14.5+ অ্যাপ ট্র্যাকিং ট্রান্সপারেন্সি এবং সাফারির আইটিপি ব্রাউজার কুকি ব্লক করে।
+- অ্যাড ব্লকার ২০% থেকে ৩৫% কনভার্সন ইভেন্ট আটকে দেয়।
+- বাংলাদেশের নেটওয়ার্কের কারণে থ্যাঙ্ক ইউ পেজ লোড হওয়ার আগেই স্ক্রিপ্ট টাইমআউট হয়ে যায়।
+
+সবচেয়ে বড় কথা: **ব্রাউজার পিক্সেল যেকোনো "অর্ডার প্লেস" বাটনে ক্লিক করলেই পারচেজ ধরে নেয়**, গ্রাহক পার্সেল গ্রহণ করল নাকি প্রত্যাখ্যান করল তা দেখে না।
+
+### হাই রিটার্ন রেটের ফল কী হয়?
+যদি আপনি ৬x ব্রাউজার ROAS দিয়ে ১০০টি অর্ডার পান:
+- ২৫টি অর্ডার ভুয়া বা দরজায় কাস্টমার রিসিভ করে না।
+- ৫টি অর্ডার সাইজ না মেলায় রিটার্ন আসে।
+- **ফলাফল**: আপনি ১০০টি অর্ডারের জন্য বিজ্ঞাপন খরচ দিলেন, কিন্তু নগদ টাকা পেলেন মাত্র ৭০টিতে। আপনার বাস্তব ক্যাশ ROAS ফেসবুকের রিপোর্টের চেয়ে অনেক কম!
+
+### মেটা কনভার্সন এপিআই (CAPI) এর শক্তি
+EcoMate সার্ভার-সাইড কনভার্সন এপিআই-এর সাথে কুরিয়ার ডেলিভারির সমন্বয় করে:
+১. **ডিডুপ্লিকেটেড সার্ভার ইভেন্টস**: সরাসরি সার্ভার থেকে ইউনিক আইডি দিয়ে ইভেন্ট পাঠানো হয় যা কোনো অ্যাড ব্লকার ড্রপ করতে পারে না।
+২. **ডেলিভার্ড পার্সেল অপ্টিমাইজেশন**: আপনি শুধু আসল ডেলিভারি হওয়া ও টাকা পাওয়া পার্সেলে বিজ্ঞাপন অপ্টিমাইজ করতে পারবেন।
+৩. **নেট ক্যাশ রিয়ালাইজড ROAS**: সঠিক ড্যাশবোর্ডে দেখুন বিজ্ঞাপনে কত খরচ হলো আর বাস্তবে ব্যাংকে কত টাকা লাভ জমা হলো।`,
         author: 'EcoMate Growth Analytics',
         category: 'Logistics & Courier Intelligence',
         categoryId: categoryIdBySlug.get('logistics-courier') ?? null,
@@ -870,8 +1030,10 @@ EcoMate implements server-side Conversions API paired with courier delivery tele
         readTime: '8 min read',
         status: 'published',
         seoTitle: 'Meta Conversions API (CAPI) for Bangladesh E-commerce | EcoMate Guide',
+        seoTitleBn: 'মেটা কনভার্সন এপিআই (CAPI) ই-কমার্স গাইড | EcoMate',
         seoDescription:
           'How server-side Meta Conversions API connected with courier delivery reconciliation eliminates ad budget waste and reports true cash ROAS.',
+        seoDescriptionBn: 'সার্ভার-সাইড মেটা CAPI কীভাবে বিজ্ঞাপনের অপচয় রোধ করে এবং ডেলিভারি করা ক্যাশ অনুযায়ী সঠিক ROAS রিপোর্ট করে।',
         canonicalUrl:
           'https://ecomate.bd/blog/stop-burning-ad-budget-server-side-meta-capi-bangladesh',
         publishedAt: new Date(Date.now() - HOUR * 12),

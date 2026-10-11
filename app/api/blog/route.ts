@@ -115,10 +115,13 @@ export async function POST(req: Request) {
         .values({
           slug,
           title: rest.title,
+          titleBn: rest.titleBn ?? '',
           excerpt: rest.excerpt ?? '',
+          excerptBn: rest.excerptBn ?? '',
           // Sanitized after validation: the length bound already held on the raw input,
           // and sanitizing can only shrink it.
           content: sanitizeHtml(rest.content),
+          contentBn: rest.contentBn ? sanitizeHtml(rest.contentBn) : '',
           author: rest.author ?? 'EcoMate Engineering Team',
           category: rest.category ?? 'Operations & Fulfillment',
           categoryId: rest.categoryId ?? null,
@@ -129,7 +132,9 @@ export async function POST(req: Request) {
           readTime: rest.readTime ?? '5 min read',
           status: rest.status ?? 'draft',
           seoTitle: rest.seoTitle ?? '',
+          seoTitleBn: rest.seoTitleBn ?? '',
           seoDescription: rest.seoDescription ?? '',
+          seoDescriptionBn: rest.seoDescriptionBn ?? '',
           canonicalUrl: rest.canonicalUrl ?? '',
           publishedAt: publishedAt ? new Date(publishedAt) : rest.status === 'published' ? new Date() : undefined,
         })
@@ -140,8 +145,11 @@ export async function POST(req: Request) {
         entityKey: String(row.id),
         payload: {
           title: row.title,
+          titleBn: row.titleBn,
           excerpt: row.excerpt,
+          excerptBn: row.excerptBn,
           content: row.content,
+          contentBn: row.contentBn,
           author: row.author,
           category: row.category,
           categoryId: row.categoryId,
@@ -152,7 +160,9 @@ export async function POST(req: Request) {
           readTime: row.readTime,
           status: row.status,
           seoTitle: row.seoTitle,
+          seoTitleBn: row.seoTitleBn,
           seoDescription: row.seoDescription,
+          seoDescriptionBn: row.seoDescriptionBn,
           canonicalUrl: row.canonicalUrl,
           publishedAt: row.publishedAt?.toISOString() ?? null,
         },
@@ -166,6 +176,7 @@ export async function POST(req: Request) {
     // The blog index, the article page and the sitemap all read under this tag, so a new
     // draft is not searchable and a newly published one appears without a rebuild.
     invalidateDomains('blog', 'en', created.slug);
+    invalidateDomains('blog', 'bn', created.slug);
     return ok(created, 201);
   } catch (e) {
     logServerError('POST /api/blog', e, requestId(req));

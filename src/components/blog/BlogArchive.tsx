@@ -134,7 +134,9 @@ export function BlogArchive({
               return {
                 slug: String(item.slug || ''),
                 title: String(item.title || ''),
+                titleBn: typeof item.titleBn === 'string' ? item.titleBn : '',
                 excerpt: String(item.excerpt || ''),
+                excerptBn: typeof item.excerptBn === 'string' ? item.excerptBn : '',
                 author: String(item.author || 'EcoMate Operations Research'),
                 category: String(item.category || 'Operations & Fulfillment'),
                 tags,
@@ -158,6 +160,9 @@ export function BlogArchive({
     };
   }, [initialPosts]);
 
+  const getPostTitle = (p: BlogPostSummary) => (locale === 'bn' && p.titleBn?.trim()) ? p.titleBn : p.title;
+  const getPostExcerpt = (p: BlogPostSummary) => (locale === 'bn' && p.excerptBn?.trim()) ? p.excerptBn : p.excerpt;
+
   const categories = useMemo(() => {
     const seen = new Map<string, number>();
     for (const post of posts) {
@@ -171,15 +176,19 @@ export function BlogArchive({
     return posts.filter((post) => {
       const matchesCat = !category || post.category === category;
       const q = searchQuery.trim().toLowerCase();
+      const pTitle = getPostTitle(post).toLowerCase();
+      const pExcerpt = getPostExcerpt(post).toLowerCase();
       const matchesQuery =
         !q ||
+        pTitle.includes(q) ||
         post.title.toLowerCase().includes(q) ||
+        pExcerpt.includes(q) ||
         post.excerpt.toLowerCase().includes(q) ||
         post.category.toLowerCase().includes(q) ||
         (post.tags && post.tags.some((t) => t.toLowerCase().includes(q)));
       return matchesCat && matchesQuery;
     });
-  }, [posts, category, searchQuery]);
+  }, [posts, category, searchQuery, locale]);
 
   const [featured, ...rest] = filtered;
   const shown = rest.slice(0, visible);
@@ -305,10 +314,10 @@ export function BlogArchive({
                   {copy.featuredLabel} · {featured.category}
                 </span>
                 <span className="mk-h2 block" style={{ fontSize: 24, marginTop: 4 }}>
-                  {featured.title}
+                  {getPostTitle(featured)}
                 </span>
                 <span className="mk-sb block" style={{ marginTop: 8 }}>
-                  {featured.excerpt}
+                  {getPostExcerpt(featured)}
                 </span>
 
                 {featured.tags && featured.tags.length > 0 && (
@@ -351,10 +360,10 @@ export function BlogArchive({
                       className="block font-bold"
                       style={{ color: 'var(--mk-tx)', marginTop: 6, fontSize: 16, lineHeight: 1.35 }}
                     >
-                      {post.title}
+                      {getPostTitle(post)}
                     </span>
                     <span className="block text-sm" style={{ marginTop: 8, color: 'var(--mk-mu)', lineHeight: 1.5 }}>
-                      {post.excerpt}
+                      {getPostExcerpt(post)}
                     </span>
 
                     {post.tags && post.tags.length > 0 && (

@@ -18,8 +18,10 @@ import { blogCategoryCreate, stripUnknownKeys } from '@/lib/validation';
 export interface CategoryTreeNode {
   id: number;
   name: string;
+  nameBn?: string | null;
   slug: string;
   description: string | null;
+  descriptionBn?: string | null;
   parentId: number | null;
   sortOrder: number;
   createdAt: Date;
@@ -35,8 +37,10 @@ function buildCategoryTree(categories: Array<typeof blogCategoriesTable.$inferSe
     map.set(item.id, {
       id: item.id,
       name: item.name,
+      nameBn: item.nameBn,
       slug: item.slug,
       description: item.description,
+      descriptionBn: item.descriptionBn,
       parentId: item.parentId,
       sortOrder: item.sortOrder,
       createdAt: item.createdAt,
@@ -115,7 +119,7 @@ export async function POST(req: Request) {
       return fail('Validation failed', 400, { issues: parsed.error.issues });
     }
 
-    const { name, parentId, description, sortOrder, slug: preferredSlug } = parsed.data;
+    const { name, nameBn, parentId, description, descriptionBn, sortOrder, slug: preferredSlug } = parsed.data;
 
     if (parentId) {
       const [parent] = await getDb()
@@ -142,9 +146,11 @@ export async function POST(req: Request) {
       .insert(blogCategoriesTable)
       .values({
         name,
+        nameBn: nameBn ?? '',
         slug,
         parentId: parentId ?? null,
         description: description ?? '',
+        descriptionBn: descriptionBn ?? '',
         sortOrder: sortOrder ?? 0,
       })
       .returning();

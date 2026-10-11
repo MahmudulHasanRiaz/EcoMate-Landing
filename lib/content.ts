@@ -204,6 +204,15 @@ const BLOG_PUBLIC = and(
   isNull(blogPostsTable.deletedAt),
 );
 
+function toIsoDate(val: unknown): string {
+  if (val instanceof Date) return val.toISOString();
+  if (typeof val === 'string' && val.trim().length > 0) {
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? val : d.toISOString();
+  }
+  return new Date().toISOString();
+}
+
 function toBlogSummary(row: {
   slug: string;
   title: string;
@@ -217,9 +226,9 @@ function toBlogSummary(row: {
   readTime: string | null;
   seoTitle: string | null;
   seoDescription: string | null;
-  publishedAt: Date | null;
-  updatedAt: Date;
-  createdAt: Date;
+  publishedAt: Date | string | null;
+  updatedAt: Date | string;
+  createdAt: Date | string;
 }): BlogPostSummary {
   // `tags` is jsonb with no schema guarantee — anything that is not an array of strings is
   // dropped rather than rendered, because it ends up inside a JSON-LD `keywords` field.
@@ -242,8 +251,8 @@ function toBlogSummary(row: {
     readTime: row.readTime ?? '',
     seoTitle: row.seoTitle ?? '',
     seoDescription: row.seoDescription ?? '',
-    publishedAt: published.toISOString(),
-    lastModified: row.updatedAt.toISOString(),
+    publishedAt: toIsoDate(published),
+    lastModified: toIsoDate(row.updatedAt),
   };
 }
 
@@ -291,8 +300,8 @@ async function _getBlogPost(slug: string): Promise<BlogPostSummary & { content: 
     }
     return { ...toBlogSummary(row), content: row.content };
   } catch (e) {
-    logOnce('warn', 'content:blog-post', `[content] blog post "${slug}" read failed, rendering not-found:`, errorMessage(e));
-    return null;
+    logOnce('warn', 'content:blog-post', `[content] blog post "${slug}" read failed, skipping cache:`, errorMessage(e));
+    throw e;
   }
 }
 
@@ -319,7 +328,7 @@ async function _getBlogSlugById(id: number): Promise<string | null> {
     return row.slug;
   } catch (e) {
     logOnce('warn', 'content:blog-id', `[content] blog id "${id}" lookup failed:`, errorMessage(e));
-    return null;
+    throw e;
   }
 }
 

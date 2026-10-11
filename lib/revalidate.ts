@@ -57,6 +57,7 @@ type Domain =
 function tagsFor(domain: Domain, locale: string, slug?: string): string[] {
   if (domain === CONTENT_DOMAIN) return [`content:${locale}`];
   if (domain === CASE_STUDIES_DOMAIN && slug) return [domain, `${domain}:${slug}`];
+  if (domain === BLOG_DOMAIN && slug) return [domain, `${domain}:${slug}`];
   return [domain];
 }
 
@@ -127,9 +128,10 @@ export function invalidateDomains(
 export function invalidateDomainsInBackground(
   domain: Domain | readonly Domain[],
   locale = 'en',
+  slug?: string,
 ): void {
   const domains = Array.isArray(domain) ? domain : [domain as Domain];
-  const tags = domains.flatMap((entry) => tagsFor(entry, locale));
+  const tags = domains.flatMap((entry) => tagsFor(entry, locale, slug));
   try {
     for (const tag of tags) revalidateTag(tag, { expire: 0 });
   } catch (e) {

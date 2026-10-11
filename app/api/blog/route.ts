@@ -165,7 +165,7 @@ export async function POST(req: Request) {
     if (!created) return fail('Blog post could not be created', 500);
     // The blog index, the article page and the sitemap all read under this tag, so a new
     // draft is not searchable and a newly published one appears without a rebuild.
-    invalidateDomains('blog');
+    invalidateDomains('blog', 'en', created.slug);
     return ok(created, 201);
   } catch (e) {
     logServerError('POST /api/blog', e, requestId(req));

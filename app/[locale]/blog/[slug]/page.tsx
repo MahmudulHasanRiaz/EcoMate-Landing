@@ -37,12 +37,22 @@ import type { Metadata } from 'next';
 import { notFound, permanentRedirect } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Clock } from 'lucide-react';
+import { and, eq, isNull } from 'drizzle-orm';
+import { getDb } from '@/db/client';
+import { blogPostsTable } from '@/db/schema';
 import { BlogContent } from '@/components/BlogContent';
-import { getBlogPost, getBlogSlugById, getLandingContent, getPublishedBlogPosts } from '@/lib/content';
+import {
+  getBlogPost,
+  getBlogSlugById,
+  getLandingContent,
+  getPublishedBlogPosts,
+  type BlogPostSummary,
+} from '@/lib/content';
 import { assembleLandingContent } from '@/lib/merge';
 import { blogGalleryUrls, blogVideoEmbed } from '@/lib/blogMedia';
 import { formatDate } from '@/lib/format';
 import { LOCALES, isLocale } from '@/lib/locales';
+import type { Locale } from '@/src/types/landing';
 import { PRERENDER_PROBE_SLUG } from '@/lib/prerender-probe';
 import {
   absoluteUrl,
@@ -90,11 +100,63 @@ export async function generateStaticParams() {
     : LOCALES.map((locale) => ({ locale, slug: PRERENDER_PROBE_SLUG }));
 }
 
+async function resolvePost(slug: string): Promise<(BlogPostSummary & { content: string }) | null> {
+  const cached = await getBlogPost(slug).catch(() => null);
+  if (cached) return cached;
+
+  // Direct DB fallback if cache holds transient null or has not revalidated
+  try {
+    const [row] = await getDb()
+      .select()
+      .from(blogPostsTable)
+      .where(
+        and(
+          eq(blogPostsTable.slug, slug),
+          eq(blogPostsTable.status, 'published'),
+          isNull(blogPostsTable.deletedAt),
+        ),
+      )
+      .limit(1);
+    if (!row) return null;
+    const tags = Array.isArray(row.tags)
+      ? row.tags.filter((t): t is string => typeof t === 'string')
+      : [];
+    const galleryUrls = Array.isArray(row.galleryUrls)
+      ? row.galleryUrls.filter((g): g is string => typeof g === 'string')
+      : [];
+    const pub = row.publishedAt
+      ? new Date(row.publishedAt).toISOString()
+      : row.createdAt
+        ? new Date(row.createdAt).toISOString()
+        : new Date().toISOString();
+    const mod = row.updatedAt ? new Date(row.updatedAt).toISOString() : pub;
+    return {
+      slug: row.slug,
+      title: row.title,
+      excerpt: row.excerpt,
+      content: row.content,
+      author: row.author,
+      category: row.category,
+      tags,
+      featuredImageUrl: row.featuredImageUrl ?? '',
+      videoUrl: row.videoUrl ?? '',
+      galleryUrls,
+      readTime: row.readTime ?? '',
+      seoTitle: row.seoTitle ?? '',
+      seoDescription: row.seoDescription ?? '',
+      publishedAt: pub,
+      lastModified: mod,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function generateMetadata({ params }: BlogPageProps): Promise<Metadata> {
   const { locale, slug } = await params;
   if (!isLocale(locale)) return {};
 
-  const post = await getBlogPost(slug);
+  const post = await resolvePost(slug);
   if (!post) {
     // A missing post must not advertise hreflang alternates for a URL that 404s.
     return { robots: { index: false, follow: true } };
@@ -139,9 +201,9 @@ export default async function BlogPage({ params }: BlogPageProps) {
   // Post-name permalink (§1.5): the slug is canonical. A numeric segment that matches
   // no slug is a legacy ID URL — a published post with that id 301s to its slug.
   // Checked after the slug read so an admin-typed numeric slug keeps resolving by slug.
-  const post = await getBlogPost(slug);
+  let post = await resolvePost(slug);
   if (!post && /^\d+$/.test(slug)) {
-    const canonical = await getBlogSlugById(Number(slug));
+    const canonical = await getBlogSlugById(Number(slug)).catch(() => null);
     // `as never`: `typedRoutes` cannot prove a computed dynamic route (same tradeoff as
     // the `homeHref` literals below, which are impossible here — the slug is dynamic).
     // The URL is built by `localeUrl`, so it is internal by construction.
@@ -197,7 +259,7 @@ export default async function BlogPage({ params }: BlogPageProps) {
               galleryUrls: gallery,
               section: post.category,
               tags: post.tags,
-              locale: locale as any,
+              locale: locale as unknown as Locale,
             }),
           ),
         }}

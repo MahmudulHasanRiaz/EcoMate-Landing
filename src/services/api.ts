@@ -135,6 +135,16 @@ export async function updateSettings(data: Partial<SiteSettings>): Promise<SiteS
   return res.json();
 }
 
+export async function purgeCache(scope: 'all' | 'landing'): Promise<{ scope: string; invalidated: string[] }> {
+  const res = await fetch(`${API_BASE}/admin/cache/purge`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ scope }),
+  });
+  if (!res.ok) await throwApiError(res, 'Failed to purge cache');
+  return res.json();
+}
+
 export async function getSections(): Promise<LandingSection[]> {
   const res = await fetch(`${API_BASE}/sections`);
   if (!res.ok) throw new Error('Failed to fetch sections');

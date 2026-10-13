@@ -36,6 +36,7 @@ import {
   Settings,
   Share2,
   RefreshCw,
+  RotateCcw,
   Plus,
   Trash2,
   Edit2,
@@ -2551,6 +2552,23 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
                     <FieldError id="settings-seoDescription-error" message={settingsErrors.seoDescription} />
                   </div>
 
+                <div className="p-4 rounded-xl border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 space-y-2">
+                  <label htmlFor="settings-seoIndexing" className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2 cursor-pointer">
+                    <input
+                      id="settings-seoIndexing"
+                      type="checkbox"
+                      checked={settings?.seoIndexingEnabled ?? false}
+                      onChange={(e) => settings && setSettings({ ...settings, seoIndexingEnabled: e.target.checked })}
+                      className="h-4 w-4 accent-indigo-600"
+                    />
+                    <span>Search engine indexing</span>
+                  </label>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                    OFF থাকলে Google কোনো পেজ index করবে না (robots + sitemap + meta + header সব বন্ধ)।
+                    ON করলে পুরো সাইট index শুরু হবে। Save চাপলে কার্যকর হবে।
+                  </p>
+                </div>
+
                   <div className="pt-2 border-t border-slate-100 dark:border-white/5">
                     <h3 className="font-bold text-sm text-slate-900 dark:text-white">Meta Conversions API mode (H-1)</h3>
                     <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5 mb-3">
@@ -2612,6 +2630,47 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
                   </button>
                 </div>
               </form>
+
+              <div className="p-6 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1B] space-y-3 shadow-xs">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Cache</h3>
+                <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                  Purge করলে সব cached content expire হবে — পরের ভিজিটে fresh DB read হবে।
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!window.confirm('সব cache clear হবে। নিশ্চিত?')) return;
+                      try {
+                        const res = await api.purgeCache('all');
+                        showNotification(`Cache purged (${res.invalidated.length} tags)`);
+                      } catch (err) {
+                        showNotification(err instanceof Error ? err.message : 'Purge failed');
+                      }
+                    }}
+                    className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-xs cursor-pointer"
+                  >
+                    Purge all cache
+                  </button>
+                  <button
+                    type="button"
+                    title="শুধু landing shell (content, menus, branding, pricing)"
+                    onClick={async () => {
+                      if (!window.confirm('Landing cache clear হবে। নিশ্চিত?')) return;
+                      try {
+                        const res = await api.purgeCache('landing');
+                        showNotification(`Landing cache purged (${res.invalidated.length} tags)`);
+                      } catch (err) {
+                        showNotification(err instanceof Error ? err.message : 'Purge failed');
+                      }
+                    }}
+                    className="px-3 py-2 rounded-xl border border-slate-300 dark:border-white/15 text-slate-700 dark:text-slate-200 font-bold text-xs cursor-pointer flex items-center gap-1.5"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                    <span>Landing only</span>
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </main>

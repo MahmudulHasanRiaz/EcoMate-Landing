@@ -164,12 +164,12 @@ export default function AdminSetupPage() {
   }
 
   const inputClass =
-    'mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-indigo-400 dark:border-white/10 dark:bg-black/30';
+    'mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#0f766e] dark:border-white/10 dark:bg-black/30';
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 py-16">
       <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
-        <ShieldPlus className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+        <ShieldPlus className="h-6 w-6 text-teal-700 dark:text-teal-300" />
         First superadmin
       </h1>
 
@@ -235,7 +235,7 @@ export default function AdminSetupPage() {
           <button
             type="submit"
             disabled={pending || code.length !== 6}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#0f766e] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#115e59] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {pending ? 'Confirming…' : 'Confirm and finish setup'}
           </button>
@@ -246,7 +246,7 @@ export default function AdminSetupPage() {
         <div className="mt-6 space-y-4">
           <p className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm dark:border-white/10 dark:bg-[#0B0D1B]">
             Setup has already been completed.{' '}
-            <a className="font-semibold text-indigo-600 dark:text-indigo-400" href="/admin/login">
+            <a className="font-semibold text-teal-700 dark:text-teal-300" href="/admin/login">
               Sign in instead
             </a>
             .
@@ -295,7 +295,7 @@ export default function AdminSetupPage() {
             <button
               type="button"
               onClick={() => setResumeOpen(true)}
-              className="text-xs font-semibold text-indigo-600 underline dark:text-indigo-400"
+              className="text-xs font-semibold text-teal-700 underline dark:text-teal-300"
             >
               Lost the authenticator before confirming? Resume enrolment
             </button>
@@ -364,7 +364,7 @@ export default function AdminSetupPage() {
           <button
             type="submit"
             disabled={pending}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#0f766e] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#115e59] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {pending ? 'Creating…' : 'Create superadmin'}
           </button>

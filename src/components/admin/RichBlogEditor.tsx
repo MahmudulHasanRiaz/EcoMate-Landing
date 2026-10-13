@@ -210,7 +210,7 @@ export function RichBlogEditor({
             type="button"
             title="Insert Image from Media Library"
             onClick={() => setIsMediaPickerOpen(true)}
-            className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold text-teal-700 dark:text-teal-300 hover:bg-[#e6f2f0] dark:hover:bg-[#12302e] transition-colors cursor-pointer"
           >
             <ImageIcon className="h-3.5 w-3.5" />
             <span>Insert Image</span>

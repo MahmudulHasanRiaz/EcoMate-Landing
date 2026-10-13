@@ -133,7 +133,7 @@ export function AdminUsersPanel({ role, currentUserId }: AdminUsersPanelProps) {
     <section className="space-y-6">
       <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-[#0B0D1B]">
         <h2 className="flex items-center gap-2 text-sm font-bold">
-          <UserPlus className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+          <UserPlus className="h-4 w-4 text-teal-700 dark:text-teal-300" />
           Add operator
         </h2>
         <form
@@ -158,7 +158,7 @@ export function AdminUsersPanel({ role, currentUserId }: AdminUsersPanelProps) {
             value={newEmail}
             onChange={(event) => setNewEmail(event.target.value)}
             placeholder="operator@ecomate.bd"
-            className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-indigo-400 dark:border-white/10 dark:bg-black/30"
+            className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#0f766e] dark:border-white/10 dark:bg-black/30"
           />
           <input
             type="password"
@@ -167,12 +167,12 @@ export function AdminUsersPanel({ role, currentUserId }: AdminUsersPanelProps) {
             value={newPassword}
             onChange={(event) => setNewPassword(event.target.value)}
             placeholder={`Min ${MIN_PASSWORD_LENGTH} characters`}
-            className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-indigo-400 dark:border-white/10 dark:bg-black/30"
+            className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#0f766e] dark:border-white/10 dark:bg-black/30"
           />
           <select
             value={newRole}
             onChange={(event) => setNewRole(event.target.value as AdminRole)}
-            className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-indigo-400 dark:border-white/10 dark:bg-black/30"
+            className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#0f766e] dark:border-white/10 dark:bg-black/30"
           >
             {ADMIN_ROLES.map((option) => (
               <option key={option} value={option}>
@@ -182,7 +182,7 @@ export function AdminUsersPanel({ role, currentUserId }: AdminUsersPanelProps) {
           </select>
           <button
             type="submit"
-            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-indigo-700"
+            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#0f766e] px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#115e59]"
           >
             <Plus className="h-4 w-4" />
             Create
@@ -227,7 +227,7 @@ export function AdminUsersPanel({ role, currentUserId }: AdminUsersPanelProps) {
                     <p className="text-sm font-semibold">
                       {operator.email}
                       {String(operator.id) === currentUserId && (
-                        <span className="ml-2 rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-bold uppercase text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300">
+                        <span className="ml-2 rounded-full bg-[#e6f2f0] px-2 py-0.5 text-[10px] font-bold uppercase text-teal-700 dark:bg-[#12302e] dark:text-teal-300">
                           you
                         </span>
                       )}

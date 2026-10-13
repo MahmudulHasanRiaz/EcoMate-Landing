@@ -66,7 +66,7 @@ export function ImagePickerField({
           <button
             type="button"
             onClick={() => setIsModalOpen(true)}
-            className="inline-flex items-center gap-1 text-[11px] font-medium text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+            className="inline-flex items-center gap-1 text-[11px] font-medium text-teal-700 dark:text-teal-300 hover:underline cursor-pointer"
           >
             <FolderOpen className="h-3 w-3" />
             <span>Change</span>
@@ -121,10 +121,10 @@ export function ImagePickerField({
           className={`flex flex-col items-center justify-center py-6 px-4 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
             error
               ? 'border-rose-400 bg-rose-50/20 dark:bg-rose-950/10'
-              : 'border-slate-200 dark:border-white/10 hover:border-indigo-500/80 hover:bg-indigo-50/20 dark:hover:bg-indigo-950/10 bg-slate-50/50 dark:bg-black/20'
+              : 'border-slate-200 dark:border-white/10 hover:border-[#0f766e]/60 hover:bg-[#e6f2f0] dark:hover:bg-[#12302e] bg-slate-50/50 dark:bg-black/20'
           }`}
         >
-          <div className="h-9 w-9 rounded-full bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-2">
+          <div className="h-9 w-9 rounded-full bg-[#e6f2f0] dark:bg-[#12302e] text-teal-700 dark:text-teal-300 flex items-center justify-center mb-2">
             <ImageIcon className="h-4.5 w-4.5" />
           </div>
           <p className="font-semibold text-slate-800 dark:text-slate-200 text-xs text-center">

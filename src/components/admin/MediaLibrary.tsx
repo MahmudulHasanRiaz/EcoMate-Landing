@@ -185,7 +185,7 @@ export function MediaLibrary() {
             type="button"
             disabled={busy !== null}
             onClick={() => fileRef.current?.click()}
-            className="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white shadow-xs cursor-pointer"
+            className="px-4 py-2 rounded-xl text-xs font-bold bg-[#0f766e] hover:bg-[#115e59] disabled:opacity-50 text-white shadow-xs cursor-pointer"
           >
             {busy ?? 'Upload image'}
           </button>
@@ -245,7 +245,7 @@ export function MediaLibrary() {
               <img src={asset.url} alt={asset.altText} className="w-full h-40 object-cover bg-slate-100 dark:bg-black/30" loading="lazy" />
               <div className="p-4 space-y-2">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[10px] font-mono text-indigo-700 dark:text-indigo-300 uppercase font-bold">{asset.category}</span>
+                  <span className="text-[10px] font-mono text-teal-700 dark:text-teal-300 uppercase font-bold">{asset.category}</span>
                   <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">{formatBytes(asset.sizeBytes)}</span>
                 </div>
                 <h3 className="font-bold text-sm text-slate-900 dark:text-white truncate">{asset.title}</h3>
@@ -328,7 +328,7 @@ export function MediaLibrary() {
                 type="button"
                 onClick={() => void saveEdit()}
                 disabled={busy !== null}
-                className="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white cursor-pointer"
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-[#0f766e] hover:bg-[#115e59] disabled:opacity-50 text-white cursor-pointer"
               >
                 {busy ?? 'Save'}
               </button>

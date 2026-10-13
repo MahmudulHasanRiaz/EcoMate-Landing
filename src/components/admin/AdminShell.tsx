@@ -155,7 +155,7 @@ export const AdminShell: React.FC<AdminShellProps> = ({
             <img
               src={logoUrl}
               className="w-[34px] h-[34px] rounded-lg object-cover flex-none"
-              alt=""
+              alt={siteName}
             />
           ) : (
             <span className="w-[34px] h-[34px] rounded-lg flex-none bg-[#0f766e] text-white grid place-items-center font-semibold text-[13px]">

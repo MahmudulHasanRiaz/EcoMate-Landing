@@ -128,13 +128,13 @@ export function BlogCategoryManager() {
     return (
       <div key={node.id} className="space-y-1">
         <div
-          className={`flex items-center justify-between p-2.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0c0e17] hover:border-indigo-500/50 transition-colors ${
+          className={`flex items-center justify-between p-2.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0c0e17] hover:border-[#0f766e]/50 transition-colors ${
             depth > 0 ? 'ml-4 sm:ml-6' : ''
           }`}
         >
           <div className="flex items-center gap-2 min-w-0">
             {depth > 0 && <ChevronRight className="h-3.5 w-3.5 text-slate-400 shrink-0" />}
-            <Folder className="h-4 w-4 text-indigo-500 shrink-0" />
+            <Folder className="h-4 w-4 text-[#0f766e] dark:text-teal-300 shrink-0" />
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
@@ -157,7 +157,7 @@ export function BlogCategoryManager() {
               type="button"
               title="Add sub-category"
               onClick={() => handleStartCreate(node.id)}
-              className="p-1 rounded-md text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-white/5 text-xs inline-flex items-center gap-1 cursor-pointer"
+              className="p-1 rounded-md text-slate-500 hover:text-teal-700 dark:hover:text-teal-300 hover:bg-slate-100 dark:hover:bg-white/5 text-xs inline-flex items-center gap-1 cursor-pointer"
             >
               <Plus className="h-3 w-3" />
               <span className="text-[10px] hidden sm:inline">Add Child</span>
@@ -199,7 +199,7 @@ export function BlogCategoryManager() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <FolderTree className="h-4 w-4 text-indigo-500" />
+            <FolderTree className="h-4 w-4 text-[#0f766e] dark:text-teal-300" />
             Blog Categories (Hierarchical Taxonomy)
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -211,7 +211,7 @@ export function BlogCategoryManager() {
           <button
             type="button"
             onClick={() => handleStartCreate(null)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0f766e] hover:bg-[#115e59] text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
           >
             <FolderPlus className="h-3.5 w-3.5" />
             <span>New Root Category</span>
@@ -237,9 +237,9 @@ export function BlogCategoryManager() {
       {isCreating && editingCategory && (
         <form
           onSubmit={handleSave}
-          className="p-4 rounded-xl border border-indigo-200 dark:border-indigo-900/50 bg-indigo-50/20 dark:bg-indigo-950/10 space-y-3"
+          className="p-4 rounded-xl border border-[#bfdcd7] dark:border-[#1f4f4a] bg-[#e6f2f0] dark:bg-[#12302e] space-y-3"
         >
-          <div className="flex items-center justify-between border-b border-indigo-100 dark:border-white/5 pb-2">
+          <div className="flex items-center justify-between border-b border-[#bfdcd7] dark:border-white/5 pb-2">
             <h4 className="text-xs font-bold text-slate-900 dark:text-white">
               {editingCategory.id ? 'Edit Category' : 'Create Category'}
             </h4>
@@ -357,7 +357,7 @@ export function BlogCategoryManager() {
             <button
               type="submit"
               disabled={saving}
-              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs disabled:opacity-50 cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-[#0f766e] hover:bg-[#115e59] text-white text-xs font-semibold shadow-xs disabled:opacity-50 cursor-pointer"
             >
               {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
               <span>Save Category</span>
@@ -369,7 +369,7 @@ export function BlogCategoryManager() {
       {/* Tree view list */}
       {loading ? (
         <div className="flex items-center justify-center py-10 text-xs text-slate-400">
-          <Loader2 className="h-4 w-4 animate-spin mr-2 text-indigo-500" />
+          <Loader2 className="h-4 w-4 animate-spin mr-2 text-[#0f766e] dark:text-teal-300" />
           Loading categories…
         </div>
       ) : categories.length === 0 ? (

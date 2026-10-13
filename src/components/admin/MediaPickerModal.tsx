@@ -118,7 +118,7 @@ export function MediaPickerModal({
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.02]">
           <div className="flex items-center gap-2">
-            <ImageIcon className="h-4 w-4 text-indigo-500" />
+            <ImageIcon className="h-4 w-4 text-[#0f766e] dark:text-teal-300" />
             <h3 id="media-picker-title" className="text-sm font-bold tracking-tight text-slate-900 dark:text-white">
               {title}
             </h3>
@@ -169,7 +169,7 @@ export function MediaPickerModal({
 
           {activeTab === 'upload' ? (
             <div className="flex flex-col items-center justify-center py-12 px-4 border-2 border-dashed border-slate-200 dark:border-white/10 rounded-xl bg-slate-50/50 dark:bg-white/[0.02]">
-              <Upload className="h-10 w-10 text-indigo-500 mb-3" />
+              <Upload className="h-10 w-10 text-[#0f766e] dark:text-teal-300 mb-3" />
               <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-1">
                 Upload image to R2 Storage
               </h4>
@@ -190,7 +190,7 @@ export function MediaPickerModal({
                 type="button"
                 disabled={uploading}
                 onClick={() => fileInputRef.current?.click()}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs disabled:opacity-50 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#0f766e] hover:bg-[#115e59] text-white text-xs font-semibold shadow-xs disabled:opacity-50 transition-colors cursor-pointer"
               >
                 {uploading ? (
                   <>
@@ -216,14 +216,14 @@ export function MediaPickerModal({
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Search by title or filename…"
-                    className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/30 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:border-indigo-500"
+                    className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/30 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:border-[#0f766e]"
                   />
                 </div>
                 <div className="flex items-center gap-2">
                   <select
                     value={selectedCategory}
                     onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/30 text-slate-900 dark:text-white focus:outline-hidden focus:border-indigo-500 cursor-pointer"
+                    className="px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/30 text-slate-900 dark:text-white focus:outline-hidden focus:border-[#0f766e] cursor-pointer"
                   >
                     {CATEGORIES.map((cat) => (
                       <option key={cat} value={cat}>
@@ -245,7 +245,7 @@ export function MediaPickerModal({
               {/* Grid of assets */}
               {loading && assets.length === 0 ? (
                 <div className="flex items-center justify-center py-16 text-xs text-slate-400">
-                  <Loader2 className="h-5 w-5 animate-spin mr-2 text-indigo-500" />
+                  <Loader2 className="h-5 w-5 animate-spin mr-2 text-[#0f766e] dark:text-teal-300" />
                   Loading assets…
                 </div>
               ) : filteredAssets.length === 0 ? (
@@ -262,7 +262,7 @@ export function MediaPickerModal({
                         onSelect(asset.url, asset);
                         onClose();
                       }}
-                      className="group relative flex flex-col rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.02] overflow-hidden text-left hover:border-indigo-500 dark:hover:border-indigo-500 transition-all cursor-pointer focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+                      className="group relative flex flex-col rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.02] overflow-hidden text-left hover:border-[#0f766e] dark:hover:border-[#0f766e] transition-all cursor-pointer focus:outline-hidden focus:ring-1 focus:ring-[#0f766e]"
                     >
                       <div className="relative aspect-4/3 w-full bg-slate-100 dark:bg-black/40 overflow-hidden flex items-center justify-center">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -272,8 +272,8 @@ export function MediaPickerModal({
                           loading="lazy"
                           className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
                         />
-                        <div className="absolute inset-0 bg-indigo-950/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white text-indigo-900 text-[11px] font-bold shadow-xs">
+                        <div className="absolute inset-0 bg-[#0f766e]/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white text-[#0f766e] text-[11px] font-bold shadow-xs">
                             <Check className="h-3 w-3" /> Select
                           </span>
                         </div>

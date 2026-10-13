@@ -224,7 +224,7 @@ export function BlogPostEditor({
             type="button"
             disabled={saving}
             onClick={() => void onSave(post)}
-            className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs disabled:opacity-50 transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-[#0f766e] hover:bg-[#115e59] text-white text-xs font-semibold shadow-xs disabled:opacity-50 transition-colors cursor-pointer"
           >
             {saving ? (
               <span>Saving…</span>
@@ -250,7 +250,7 @@ export function BlogPostEditor({
           {/* Language Switcher Tabs */}
           <div className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0c0e17]">
             <div className="flex items-center gap-2">
-              <Languages className="h-4 w-4 text-indigo-500" />
+              <Languages className="h-4 w-4 text-[#0f766e] dark:text-teal-300" />
               <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
                 Content Language:
               </span>
@@ -261,7 +261,7 @@ export function BlogPostEditor({
                 onClick={() => setActiveLang('en')}
                 className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                   activeLang === 'en'
-                    ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                    ? 'bg-white dark:bg-slate-800 text-teal-700 dark:text-teal-300 shadow-xs'
                     : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
@@ -273,7 +273,7 @@ export function BlogPostEditor({
                 onClick={() => setActiveLang('bn')}
                 className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                   activeLang === 'bn'
-                    ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                    ? 'bg-white dark:bg-slate-800 text-teal-700 dark:text-teal-300 shadow-xs'
                     : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
@@ -297,7 +297,7 @@ export function BlogPostEditor({
                   value={post.title || ''}
                   onChange={(e) => handleTitleChange(e.target.value)}
                   placeholder="e.g. How High-Volume E-Commerce Brands Eliminate Courier COD Losses"
-                  className="w-full px-3.5 py-2 text-sm font-semibold rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-black/30 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:border-indigo-500"
+                  className="w-full px-3.5 py-2 text-sm font-semibold rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-black/30 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:border-[#0f766e]"
                 />
                 <FieldError id="post-title-error" message={errors.title} />
               </div>
@@ -319,7 +319,7 @@ export function BlogPostEditor({
                     }));
                   }}
                   placeholder="যেমন: ই-কমার্স বিজনেসে কুরিয়ার ক্যাশ অন ডেলিভারি (COD) ক্ষতি প্রতিরোধের আধুনিক কৌশল"
-                  className="w-full px-3.5 py-2 text-sm font-semibold rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-black/30 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:border-indigo-500 font-bangla"
+                  className="w-full px-3.5 py-2 text-sm font-semibold rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-black/30 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:border-[#0f766e] font-bangla"
                 />
               </div>
             )}
@@ -376,7 +376,7 @@ export function BlogPostEditor({
                       });
                     }}
                     placeholder="A concise summary of the problem and practical solution. This appears on the archive card and search engine result snippets."
-                    className="w-full px-3.5 py-2 text-xs rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-black/30 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:border-indigo-500 resize-none"
+                    className="w-full px-3.5 py-2 text-xs rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-black/30 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:border-[#0f766e] resize-none"
                   />
                   <FieldError id="post-excerpt-error" message={errors.excerpt} />
                 </>
@@ -398,7 +398,7 @@ export function BlogPostEditor({
                       });
                     }}
                     placeholder="আর্টিকেলের একটি সংক্ষিপ্ত ও আকর্ষণীয় সারসংক্ষেপ যা বাংলা ভার্সনের ব্লগ কার্ড ও সার্চ রেজাল্টে দেখা যাবে…"
-                    className="w-full px-3.5 py-2 text-xs rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-black/30 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:border-indigo-500 resize-none font-bangla"
+                    className="w-full px-3.5 py-2 text-xs rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-black/30 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:border-[#0f766e] resize-none font-bangla"
                   />
                 </>
               )}
@@ -409,13 +409,13 @@ export function BlogPostEditor({
           <div className="p-5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0c0e17] space-y-3">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                <ImageIcon className="h-4 w-4 text-indigo-500" />
+                <ImageIcon className="h-4 w-4 text-[#0f766e] dark:text-teal-300" />
                 Featured Thumbnail / Hero Image
               </label>
               <button
                 type="button"
                 onClick={() => setActiveMediaTarget('featured')}
-                className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/40 hover:bg-indigo-100 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg bg-[#e6f2f0] dark:bg-[#12302e] text-teal-700 dark:text-teal-300 border border-[#bfdcd7] dark:border-[#1f4f4a] hover:bg-[#e6f2f0] transition-colors cursor-pointer"
               >
                 <ImageIcon className="h-3.5 w-3.5" />
                 <span>Select from Media Library</span>
@@ -451,7 +451,7 @@ export function BlogPostEditor({
             ) : (
               <div
                 onClick={() => setActiveMediaTarget('featured')}
-                className="flex flex-col items-center justify-center py-8 border-2 border-dashed border-slate-200 dark:border-white/10 rounded-lg hover:border-indigo-500 cursor-pointer bg-slate-50/50 dark:bg-white/[0.01] transition-colors"
+                className="flex flex-col items-center justify-center py-8 border-2 border-dashed border-slate-200 dark:border-white/10 rounded-lg hover:border-[#0f766e] cursor-pointer bg-slate-50/50 dark:bg-white/[0.01] transition-colors"
               >
                 <ImageIcon className="h-8 w-8 text-slate-400 mb-2" />
                 <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
@@ -505,7 +505,7 @@ export function BlogPostEditor({
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
                 <span>Article Body Content</span>
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/40">
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-[#e6f2f0] dark:bg-[#12302e] text-teal-700 dark:text-teal-300 border border-[#bfdcd7] dark:border-[#1f4f4a]">
                   {activeLang === 'en' ? '🇬🇧 English' : '🇧🇩 বাংলা'}
                 </span>
               </label>
@@ -546,7 +546,7 @@ export function BlogPostEditor({
               <button
                 type="button"
                 onClick={() => setActiveMediaTarget('gallery')}
-                className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/40 hover:bg-indigo-100 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg bg-[#e6f2f0] dark:bg-[#12302e] text-teal-700 dark:text-teal-300 border border-[#bfdcd7] dark:border-[#1f4f4a] hover:bg-[#e6f2f0] transition-colors cursor-pointer"
               >
                 <Plus className="h-3.5 w-3.5" />
                 <span>Add from Media Library</span>
@@ -663,7 +663,7 @@ export function BlogPostEditor({
           {/* Hierarchical Category Selector */}
           <div className="p-5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0c0e17] space-y-3">
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-              <FolderTree className="h-3.5 w-3.5 text-indigo-500" />
+              <FolderTree className="h-3.5 w-3.5 text-[#0f766e] dark:text-teal-300" />
               Category
             </h4>
 
@@ -711,7 +711,7 @@ export function BlogPostEditor({
           {/* Tags manager */}
           <div className="p-5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0c0e17] space-y-3">
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-              <TagIcon className="h-3.5 w-3.5 text-indigo-500" />
+              <TagIcon className="h-3.5 w-3.5 text-[#0f766e] dark:text-teal-300" />
               Tags
             </h4>
 
@@ -720,13 +720,13 @@ export function BlogPostEditor({
               {(post.tags ?? []).map((tag) => (
                 <span
                   key={tag}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/40 text-xs"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#e6f2f0] dark:bg-[#12302e] text-teal-700 dark:text-teal-300 border border-[#bfdcd7] dark:border-[#1f4f4a] text-xs"
                 >
                   #{tag}
                   <button
                     type="button"
                     onClick={() => handleRemoveTag(tag)}
-                    className="hover:text-indigo-900 dark:hover:text-white cursor-pointer"
+                    className="hover:text-[#0f766e] dark:hover:text-white cursor-pointer"
                   >
                     ×
                   </button>
@@ -771,7 +771,7 @@ export function BlogPostEditor({
                         key={t.id}
                         type="button"
                         onClick={() => handleAddTag(t.slug || t.name)}
-                        className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 dark:bg-white/5 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-slate-600 dark:text-slate-400 hover:text-indigo-600 cursor-pointer"
+                        className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 dark:bg-white/5 hover:bg-[#e6f2f0] dark:hover:bg-[#12302e] text-slate-600 dark:text-slate-400 hover:text-teal-700 cursor-pointer"
                       >
                         +{t.name}
                       </button>
@@ -785,10 +785,10 @@ export function BlogPostEditor({
           <div className="p-5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0c0e17] space-y-3">
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                <Globe className="h-3.5 w-3.5 text-indigo-500" />
+                <Globe className="h-3.5 w-3.5 text-[#0f766e] dark:text-teal-300" />
                 SEO &amp; Search Optimization
               </h4>
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/40">
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-[#e6f2f0] dark:bg-[#12302e] text-teal-700 dark:text-teal-300 border border-[#bfdcd7] dark:border-[#1f4f4a]">
                 {activeLang === 'en' ? '🇬🇧 EN Meta' : '🇧🇩 BN মেটা'}
               </span>
             </div>

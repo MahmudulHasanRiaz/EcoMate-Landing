@@ -103,7 +103,7 @@ export function BlogTagManager() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Tag className="h-4 w-4 text-indigo-500" />
+            <Tag className="h-4 w-4 text-[#0f766e] dark:text-teal-300" />
             Blog Tags Taxonomy
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -115,7 +115,7 @@ export function BlogTagManager() {
           <button
             type="button"
             onClick={handleStartCreate}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0f766e] hover:bg-[#115e59] text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
           >
             <Plus className="h-3.5 w-3.5" />
             <span>New Tag</span>
@@ -141,9 +141,9 @@ export function BlogTagManager() {
       {isCreating && editingTag && (
         <form
           onSubmit={handleSave}
-          className="p-4 rounded-xl border border-indigo-200 dark:border-indigo-900/50 bg-indigo-50/20 dark:bg-indigo-950/10 space-y-3"
+          className="p-4 rounded-xl border border-[#bfdcd7] dark:border-[#1f4f4a] bg-[#e6f2f0] dark:bg-[#12302e] space-y-3"
         >
-          <div className="flex items-center justify-between border-b border-indigo-100 dark:border-white/5 pb-2">
+          <div className="flex items-center justify-between border-b border-[#bfdcd7] dark:border-white/5 pb-2">
             <h4 className="text-xs font-bold text-slate-900 dark:text-white">
               {editingTag.id ? 'Edit Tag' : 'Create Tag'}
             </h4>
@@ -222,7 +222,7 @@ export function BlogTagManager() {
             <button
               type="submit"
               disabled={saving}
-              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs disabled:opacity-50 cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-[#0f766e] hover:bg-[#115e59] text-white text-xs font-semibold shadow-xs disabled:opacity-50 cursor-pointer"
             >
               {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
               <span>Save Tag</span>
@@ -239,14 +239,14 @@ export function BlogTagManager() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Filter tags…"
-          className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-black/30 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:border-indigo-500"
+          className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-black/30 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:border-[#0f766e]"
         />
       </div>
 
       {/* Tags Grid / Badges */}
       {loading ? (
         <div className="flex items-center justify-center py-10 text-xs text-slate-400">
-          <Loader2 className="h-4 w-4 animate-spin mr-2 text-indigo-500" />
+          <Loader2 className="h-4 w-4 animate-spin mr-2 text-[#0f766e] dark:text-teal-300" />
           Loading tags…
         </div>
       ) : filteredTags.length === 0 ? (
@@ -262,7 +262,7 @@ export function BlogTagManager() {
             >
               <div className="min-w-0 pr-2">
                 <div className="flex items-center gap-1.5">
-                  <Tag className="h-3 w-3 text-indigo-500 shrink-0" />
+                  <Tag className="h-3 w-3 text-[#0f766e] dark:text-teal-300 shrink-0" />
                   <span className="text-xs font-semibold text-slate-900 dark:text-white truncate">
                     {tag.name}
                   </span>

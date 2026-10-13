@@ -51,7 +51,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         <select
           id="settings-defaultLocale"
           value={settings.defaultLocale}
-          onChange={(e) => onSettingsChange({ ...settings, defaultLocale: e.target.value as unknown as SiteSettings['defaultLocale'] })}
+          onChange={(e) => onSettingsChange({ ...settings, defaultLocale: e.target.value === 'bn' ? 'bn' : 'en' })}
           aria-describedby={settingsErrors.defaultLocale ? 'settings-defaultLocale-error' : undefined}
           className="w-full px-3 min-h-[34px] py-1.5 rounded-md bg-white dark:bg-[#12121a] border border-[#d5d9e0] dark:border-[#2a2a3a] text-[#1f242b] dark:text-[#e2e2ec] text-[13.5px] font-medium"
         >

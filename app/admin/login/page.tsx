@@ -60,7 +60,7 @@ export default function AdminLoginPage() {
             autoComplete="username"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-indigo-400 dark:border-white/10 dark:bg-black/30"
+            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#0f766e] dark:border-white/10 dark:bg-black/30"
           />
         </label>
 
@@ -72,7 +72,7 @@ export default function AdminLoginPage() {
             autoComplete="current-password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-indigo-400 dark:border-white/10 dark:bg-black/30"
+            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#0f766e] dark:border-white/10 dark:bg-black/30"
           />
         </label>
 
@@ -89,7 +89,7 @@ export default function AdminLoginPage() {
             placeholder="123456"
             value={code}
             onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
-            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-mono tracking-widest outline-none focus:border-indigo-400 dark:border-white/10 dark:bg-black/30"
+            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-mono tracking-widest outline-none focus:border-[#0f766e] dark:border-white/10 dark:bg-black/30"
           />
           <span className="mt-1 block text-[11px] text-slate-500 dark:text-slate-400">
             Required once two-factor authentication is enabled on your account.
@@ -105,7 +105,7 @@ export default function AdminLoginPage() {
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#0f766e] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#115e59] disabled:cursor-not-allowed disabled:opacity-60"
         >
           <LogIn className="h-4 w-4" />
           {pending ? 'Signing in…' : 'Sign in'}
@@ -113,7 +113,7 @@ export default function AdminLoginPage() {
       </form>
 
       <p className="mt-6 text-xs text-slate-500 dark:text-slate-400">
-        First deployment? <a className="font-semibold text-indigo-600 dark:text-indigo-400" href="/admin/setup">Create the first superadmin</a>.
+        First deployment? <a className="font-semibold text-teal-700 dark:text-teal-300" href="/admin/setup">Create the first superadmin</a>.
       </p>
     </main>
   );

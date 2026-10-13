@@ -132,7 +132,7 @@ export function CaseStudyEditor({
         <button type="button" onClick={onCancel} className="px-4 py-2 rounded-xl border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300">
           Cancel
         </button>
-        <button type="submit" disabled={saving} className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-bold text-xs shadow-xs cursor-pointer">
+        <button type="submit" disabled={saving} className="px-5 py-2 rounded-xl bg-[#0f766e] hover:bg-[#115e59] disabled:opacity-60 text-white font-bold text-xs shadow-xs cursor-pointer">
           {saving ? 'Saving…' : initial.id ? 'Save Changes' : 'Create Case Study'}
         </button>
       </div>

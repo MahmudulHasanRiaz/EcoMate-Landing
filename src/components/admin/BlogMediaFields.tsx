@@ -61,7 +61,7 @@ export function BlogMediaFields({ videoUrl, galleryUrls, errors, onVideoUrl, onG
           <button
             type="button"
             onClick={() => setPickerOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/40 font-semibold text-xs hover:bg-indigo-100 cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#e6f2f0] dark:bg-[#12302e] text-teal-700 dark:text-teal-300 border border-[#bfdcd7] dark:border-[#1f4f4a] font-semibold text-xs hover:bg-[#e6f2f0] cursor-pointer"
           >
             <Plus className="h-3.5 w-3.5" />
             <span>Add from Media Library</span>
@@ -71,7 +71,7 @@ export function BlogMediaFields({ videoUrl, galleryUrls, errors, onVideoUrl, onG
         {galleryUrls.length === 0 ? (
           <div
             onClick={() => setPickerOpen(true)}
-            className="flex flex-col items-center justify-center py-6 border-2 border-dashed border-slate-200 dark:border-white/10 rounded-xl cursor-pointer hover:border-indigo-500/80 bg-slate-50/50 dark:bg-black/20 transition-colors"
+            className="flex flex-col items-center justify-center py-6 border-2 border-dashed border-slate-200 dark:border-white/10 rounded-xl cursor-pointer hover:border-[#0f766e]/60 bg-slate-50/50 dark:bg-black/20 transition-colors"
           >
             <ImageIcon className="h-6 w-6 text-slate-400 mb-1.5" />
             <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">

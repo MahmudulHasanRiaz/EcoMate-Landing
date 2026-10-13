@@ -1443,3 +1443,120 @@ html.dark ::-webkit-scrollbar-thumb:hover {
     display: none;
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * Motion system (fix/perf-overhaul, D1–D5). Central tokens — no scattered magic
+ * numbers. GPU-composited ONLY (transform/opacity); layout-property animation is
+ * forbidden. The prefers-reduced-motion block in @layer base above is the global
+ * kill-switch (D2) and already collapses every transition/animation below to ~0ms.
+ * ------------------------------------------------------------------------- */
+:root {
+  --motion-duration-fast: 160ms;
+  --motion-duration-base: 240ms;
+  --motion-duration-slow: 360ms;
+  --motion-easing-standard: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --motion-easing-emphasized: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* D3 scroll reveal (paired with components/motion/Reveal.tsx, once, IO-driven). */
+.reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition:
+    opacity var(--motion-duration-base) var(--motion-easing-standard),
+    transform var(--motion-duration-base) var(--motion-easing-standard);
+  will-change: opacity, transform;
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+  will-change: auto;
+}
+
+/* D3 hero entrance (on load, transform/opacity only, staggered via animation-delay). */
+@keyframes motion-hero-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.motion-hero-entrance {
+  animation: motion-hero-rise var(--motion-duration-slow) var(--motion-easing-emphasized) both;
+}
+.motion-hero-entrance-1 { animation-delay: 0ms; }
+.motion-hero-entrance-2 { animation-delay: 80ms; }
+.motion-hero-entrance-3 { animation-delay: 160ms; }
+.motion-hero-entrance-4 { animation-delay: 240ms; }
+
+/* D3 card hover lift + D4 button press scale (transform only). */
+.motion-lift {
+  transition: transform var(--motion-duration-fast) var(--motion-easing-standard);
+}
+.motion-lift:hover {
+  transform: translateY(-4px);
+}
+.motion-press {
+  transition: transform var(--motion-duration-fast) var(--motion-easing-standard);
+}
+.motion-press:active {
+  transform: scale(0.97);
+}
+
+/* D3 image fade-in on load (next/image onLoad adds .is-loaded; opacity only). */
+.motion-img {
+  opacity: 0;
+  transition: opacity var(--motion-duration-base) var(--motion-easing-standard);
+}
+.motion-img.is-loaded {
+  opacity: 1;
+}
+
+/* D3 async-island skeleton shimmer — opacity pulse (compositor-friendly; a
+ * background-position shimmer would be paint per frame, so it stays out). */
+@keyframes motion-shimmer-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+.motion-shimmer {
+  animation: motion-shimmer-pulse 1.4s var(--motion-easing-standard) infinite;
+}
+
+/* D3 page/locale transition — the shell fades (opacity only, no layout shift). */
+@keyframes motion-page-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.motion-page-enter {
+  animation: motion-page-fade var(--motion-duration-fast) var(--motion-easing-standard) both;
+}
+
+/* D4 drawer (existing drawer kept, matched to tokens; transform only). */
+.motion-drawer {
+  transition: transform var(--motion-duration-base) var(--motion-easing-emphasized);
+}
+
+/* D4 accordion/tab content (opacity + translate only — never height/rows). */
+.motion-panel-enter {
+  animation: motion-hero-rise var(--motion-duration-fast) var(--motion-easing-standard) both;
+}
+
+/* D4 FAB/dock press state. */
+.motion-dock-press {
+  transition: transform var(--motion-duration-fast) var(--motion-easing-standard);
+}
+.motion-dock-press:active {
+  transform: scale(0.94);
+}

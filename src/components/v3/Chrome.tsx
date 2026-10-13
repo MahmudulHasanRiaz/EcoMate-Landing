@@ -92,9 +92,10 @@ export function MkHeader({
                 alt={brandName}
                 width={26}
                 height={26}
-                className="mk-logo-img"
+                className="mk-logo-img motion-img is-loaded"
                 loading="eager"
                 decoding="async"
+                onLoad={(e) => e.currentTarget.classList.add('is-loaded')}
               />
             ) : (
               <span className="mk-logo-mark" aria-hidden="true">
@@ -172,7 +173,7 @@ export function MkHeader({
         aria-label="Site navigation"
         tabIndex={-1}
         data-open={drawerOpen}
-        className="mk-drawer"
+        className="mk-drawer motion-drawer"
         onKeyDown={onPanelKey}
         aria-hidden={!drawerOpen}
         inert={!drawerOpen}
@@ -387,7 +388,7 @@ export function MkDock({ drawerOpen = false }: { drawerOpen?: boolean }) {
         )}
         <button
           type="button"
-          className="mk-fab-main"
+          className="mk-fab-main motion-dock-press"
           onClick={() => setOpen((prev) => !prev)}
           aria-expanded={open}
           aria-label={dock.fabLabel}
@@ -402,12 +403,17 @@ export function MkDock({ drawerOpen = false }: { drawerOpen?: boolean }) {
           <span className="mk-pulse-dot" aria-hidden="true" />
           {dock.helpLabel}
         </span>
-        <a href={dock.demoUrl} className="mk-btn mk-btn-primary">
+        <a href={dock.demoUrl} className="mk-btn mk-btn-primary motion-press">
           <CalendarIcon size={18} />
           {dock.demoLabel}
         </a>
         {callUrl && (
-          <a href={callUrl} className="mk-dock-icon" aria-label={dock.callLabel} title={dock.callLabel}>
+          <a
+            href={callUrl}
+            className="mk-dock-icon motion-dock-press"
+            aria-label={dock.callLabel}
+            title={dock.callLabel}
+          >
             <CallIcon size={17} />
           </a>
         )}

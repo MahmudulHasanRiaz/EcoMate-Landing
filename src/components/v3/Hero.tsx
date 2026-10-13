@@ -18,20 +18,24 @@ export function MkHero() {
   };
 
   return (
-    <section id="top" className="mk-hero">
+    <section id="top" className="mk-hero motion-page-enter">
       <div className="mk-w">
-        <span className="mk-badge">{hero.badge}</span>
-        <h1 className="mk-h1">
+        <span className="mk-badge motion-hero-entrance motion-hero-entrance-1">{hero.badge}</span>
+        <h1 className="mk-h1 motion-hero-entrance motion-hero-entrance-2">
           {hero.headlinePart1}
           <span className="mk-h1-accent">{hero.headlineHighlight}</span>
           {hero.headlinePart2}
         </h1>
-        <p className="mk-hero-sub">{hero.subtitle}</p>
-        <div className="mk-cta">
-          <a href="#demo" onClick={scrollTo('#demo')} className="mk-btn mk-btn-primary">
+        <p className="mk-hero-sub motion-hero-entrance motion-hero-entrance-3">{hero.subtitle}</p>
+        <div className="mk-cta motion-hero-entrance motion-hero-entrance-4">
+          <a
+            href="#demo"
+            onClick={scrollTo('#demo')}
+            className="mk-btn mk-btn-primary motion-press"
+          >
             {hero.primaryCta}
           </a>
-          <a href="#packing" onClick={scrollTo('#packing')} className="mk-btn">
+          <a href="#packing" onClick={scrollTo('#packing')} className="mk-btn motion-press">
             {hero.secondaryCta}
           </a>
         </div>
@@ -46,7 +50,7 @@ export function MkHero() {
                 role="tab"
                 aria-selected={tab.id === activeTab}
                 data-on={tab.id === activeTab}
-                className="mk-tab"
+                className="mk-tab motion-press"
                 onClick={() => setActiveTab(tab.id)}
               >
                 {tab.label}
@@ -54,7 +58,7 @@ export function MkHero() {
             ))}
           </div>
           {active && (
-            <div role="tabpanel">
+            <div key={active.id} role="tabpanel" className="motion-panel-enter">
               {active.rows.map((row) => (
                 <div key={row.label} className="mk-row">
                   <span>{row.label}</span>

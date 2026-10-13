@@ -36,7 +36,7 @@ import Credentials from 'next-auth/providers/credentials';
 import { DrizzleAdapter } from '@auth/drizzle-adapter';
 import { and, count, eq, gt, gte, lte } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
-import { getDb } from '@/db/client';
+import { getDb, getDbHttp, getDbTx } from '@/db/client';
 import {
   accountsTable,
   adminAuditLogsTable,
@@ -53,6 +53,11 @@ import { hitLimit } from '@/lib/rateLimit';
 import { clientIp } from '@/lib/request';
 import { isAdminRole, normalizeRole } from '@/lib/roles';
 import { applySecurityHeaders } from '@/lib/securityHeaders';
+import {
+  getCachedSession,
+  invalidateCachedSession,
+  setCachedSession,
+} from '@/lib/sessionCache';
 import { storedTotpMatches } from '@/lib/totp';
 
 /** Absolute server-side session lifetime. The cookie slides; this does not. */
@@ -86,6 +91,27 @@ const TIMING_EQUALIZER_HASH =
 
 const SECURE_COOKIE_PREFIX = process.env.NODE_ENV === 'production' ? '__Secure-' : '';
 
+/**
+ * B1 per-isolate session cache (fix/perf-overhaul) — `seoFlagCache` pattern from `proxy.ts`.
+ *
+ * The `jwt` callback runs on EVERY request carrying a session cookie and previously paid a
+ * 3-table join (sessions + users + admin_users) per call. The memo in
+ * `lib/sessionCache.ts` keeps `sid → { role, validUntil }` for 60s per isolate, so a hot
+ * admin dashboard goes from 1 DB round-trip per request to ~1 per minute per isolate per
+ * session. Trade-off documented + tested there: revocation ≤60s, fail-closed, failures
+ * never cached, absolute expiry never extended.
+ */
+export {
+  SESSION_CACHE_TTL_MS,
+  SESSION_CACHE_TTL_MS_FOR_TESTS,
+  getSessionCacheForTests,
+  getCachedSession as getCachedSessionForTests,
+  invalidateSessionCacheForTests,
+  resetSessionCacheForTests,
+  sessionCacheSizeForTests,
+  setSessionCacheForTests,
+} from '@/lib/sessionCache';
+
 function newSessionToken(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(32));
   let token = '';
@@ -111,6 +137,30 @@ export const authConfig = (): NextAuthConfig => {
     session: { strategy: 'jwt', maxAge: SESSION_MAX_AGE_SECONDS },
 
     pages: { signIn: '/admin/login' },
+
+    // B4 (fix/perf-overhaul): sign-out revokes server-side without validating first.
+    // Auth.js' sign-out POST clears the cookie — running the session-validation query
+    // before that would be pure waste, so there is none here. This event best-effort
+    // deletes the registry row + drops the B1 cache entry; it never throws (a sign-out
+    // that fails open still clears the cookie client-side, which is what logs the user
+    // out — the row then dies by expiry + next-sign-in GC).
+    events: {
+      async signOut(message) {
+        try {
+          const token = (message as { token?: unknown }).token as
+            | { sid?: unknown }
+            | undefined;
+          const sid = token?.sid;
+          if (typeof sid !== 'string' || sid === '') return;
+          invalidateCachedSession(sid);
+          await getDbHttp()
+            .delete(sessionsTable)
+            .where(eq(sessionsTable.sessionToken, sid));
+        } catch {
+          // Best-effort only — never break sign-out.
+        }
+      },
+    },
 
     // NOT bare `trustHost: true` — that accepts ANY Host header, which is a host-header
     // injection / cache-poisoning primitive. Trust only our own deployment hostnames.
@@ -157,28 +207,57 @@ export const authConfig = (): NextAuthConfig => {
           const now = Date.now();
           const ip = clientIp(request);
 
-          // --- Distributed per-client limit (Task 14 §1, Cloudflare KV) ---
+          // B2 (fix/perf-overhaul): the four pre-password reads are independent (all keyed
+          // by email/ip, none consumes another's result), so they launch in ONE Promise.all
+          // tick instead of four sequential round-trips. Priority on trip is unchanged:
+          // hitLimit > account lockout > IP throttle (checked in order after the join).
+          // PBKDF2 iterations untouched; the timing-equalizer hash below is unchanged.
+          const [rateLimited, accountRows, ipRows, userRows] = await Promise.all([
+            hitLimit(`login:${ip || 'unknown'}`, 10, 600),
+            withTimeout(
+              db
+                .select({ total: count() })
+                .from(adminAuditLogsTable)
+                .where(
+                  and(
+                    eq(adminAuditLogsTable.action, 'LOGIN_FAIL'),
+                    eq(adminAuditLogsTable.target, email),
+                    gte(adminAuditLogsTable.createdAt, new Date(now - ACCOUNT_LOCKOUT_WINDOW_MS)),
+                  ),
+                ),
+              'auth:lockout-check',
+            ),
+            ip
+              ? withTimeout(
+                  db
+                    .select({ total: count() })
+                    .from(adminAuditLogsTable)
+                    .where(
+                      and(
+                        eq(adminAuditLogsTable.action, 'LOGIN_FAIL'),
+                        eq(adminAuditLogsTable.ip, ip),
+                        gte(adminAuditLogsTable.createdAt, new Date(now - IP_THROTTLE_WINDOW_MS)),
+                      ),
+                    ),
+                  'auth:throttle-check',
+                )
+              : Promise.resolve([] as { total: number }[]),
+            withTimeout(
+              db.select().from(adminUsersTable).where(eq(adminUsersTable.email, email)).limit(1),
+              'auth:user-lookup',
+            ),
+          ]);
+
+          // --- Distributed per-client limit (Task 14 §1) ---
           // Counts *attempts*, not failures, across the whole fleet; the DB checks below
           // stay as the per-account/per-IP failure counters. Fail-open on a KV outage.
-          if (await hitLimit(`login:${ip || 'unknown'}`, 10, 600)) {
+          if (rateLimited) {
             await recordAudit({ actorId: null, action: 'LOGIN_LOCKED', target: email, ip });
             return null;
           }
 
           // --- Per-account lockout (5 failures / 15 min) ---
-          const [accountFailures] = await withTimeout(
-            db
-              .select({ total: count() })
-              .from(adminAuditLogsTable)
-              .where(
-                and(
-                  eq(adminAuditLogsTable.action, 'LOGIN_FAIL'),
-                  eq(adminAuditLogsTable.target, email),
-                  gte(adminAuditLogsTable.createdAt, new Date(now - ACCOUNT_LOCKOUT_WINDOW_MS)),
-                ),
-              ),
-            'auth:lockout-check',
-          );
+          const [accountFailures] = accountRows;
           if ((accountFailures?.total ?? 0) >= ACCOUNT_LOCKOUT_MAX_FAILURES) {
             await recordAudit({ actorId: null, action: 'LOGIN_LOCKED', target: email, ip });
             return null;
@@ -186,29 +265,14 @@ export const authConfig = (): NextAuthConfig => {
 
           // --- Per-client throttle (10 failures / 10 min) ---
           if (ip) {
-            const [ipFailures] = await withTimeout(
-              db
-                .select({ total: count() })
-                .from(adminAuditLogsTable)
-                .where(
-                  and(
-                    eq(adminAuditLogsTable.action, 'LOGIN_FAIL'),
-                    eq(adminAuditLogsTable.ip, ip),
-                    gte(adminAuditLogsTable.createdAt, new Date(now - IP_THROTTLE_WINDOW_MS)),
-                  ),
-                ),
-              'auth:throttle-check',
-            );
+            const [ipFailures] = ipRows;
             if ((ipFailures?.total ?? 0) >= IP_THROTTLE_MAX_FAILURES) {
               await recordAudit({ actorId: null, action: 'LOGIN_LOCKED', target: email, ip });
               return null;
             }
           }
 
-          const [adminUser] = await withTimeout(
-            db.select().from(adminUsersTable).where(eq(adminUsersTable.email, email)).limit(1),
-            'auth:user-lookup',
-          );
+          const [adminUser] = userRows;
 
           // Always run a KDF — see TIMING_EQUALIZER_HASH.
           const passwordOk = await verifyPassword(
@@ -262,8 +326,11 @@ export const authConfig = (): NextAuthConfig => {
 
           // Multi-table write: the identity row, the session registry row, the "last seen"
           // stamp and the audit entry must all land together or none of them should.
+          // A2(b): load-bearing atomicity → getDbTx() escape hatch (low-frequency sign-in;
+          // 0.6–3s handshake acceptable + correct). Plain reads above stay on the
+          // per-request client.
           await withTimeout(
-            db.transaction(async (tx) => {
+            getDbTx().transaction(async (tx) => {
             await tx
               .insert(usersTable)
               .values({ id: userId, name: adminUser.email, email: adminUser.email })
@@ -315,7 +382,10 @@ export const authConfig = (): NextAuthConfig => {
     callbacks: {
       /**
        * Runs on every request that carries a session cookie. Stamps `sid` + role at
-       * sign-in, then re-validates the registry row so revocation is immediate.
+       * sign-in, then re-validates the registry row so revocation is effective within
+       * the B1 60s window (see the cache header above — previously immediate, now
+       * ≤60s stale per isolate; the trade-off buys ~60x fewer session reads on hot
+       * admin paths and stays fail-closed).
        */
       async jwt({ token, user, trigger }) {
         if (trigger === 'signIn' && user) {
@@ -326,22 +396,43 @@ export const authConfig = (): NextAuthConfig => {
         const sid = token.sid;
         if (typeof sid !== 'string' || sid === '') return null;
 
+        const nowMs = Date.now();
+        const cached = getCachedSession(sid, nowMs);
+        if (cached) {
+          token.role = normalizeRole(cached.role);
+          return token;
+        }
+
         try {
-          const [row] = await getDb()
-            .select({ email: usersTable.email, role: adminUsersTable.role, isActive: adminUsersTable.isActive })
+          const [row] = await getDbHttp()
+            .select({
+              email: usersTable.email,
+              role: adminUsersTable.role,
+              isActive: adminUsersTable.isActive,
+              expires: sessionsTable.expires,
+            })
             .from(sessionsTable)
             .innerJoin(usersTable, eq(usersTable.id, sessionsTable.userId))
             .innerJoin(adminUsersTable, eq(adminUsersTable.email, usersTable.email))
-            .where(and(eq(sessionsTable.sessionToken, sid), gt(sessionsTable.expires, new Date())))
+            .where(and(eq(sessionsTable.sessionToken, sid), gt(sessionsTable.expires, new Date(nowMs))))
             .limit(1);
 
-          // A revoked, expired, or deactivated operator's session dies here.
-          if (!row || !row.isActive) return null;
+          // A revoked, expired, or deactivated operator's session dies here — and any
+          // stale cache entry for it dies with it (revocation must never be resurrected
+          // by a previous hit).
+          if (!row || !row.isActive) {
+            invalidateCachedSession(sid);
+            return null;
+          }
 
-          token.role = normalizeRole(row.role);
+          const role = normalizeRole(row.role);
+          const validUntilMs = row.expires instanceof Date ? row.expires.getTime() : nowMs;
+          setCachedSession(sid, role, validUntilMs, nowMs);
+          token.role = role;
           return token;
         } catch (error) {
           // Fail closed: if we cannot prove the session is still valid, it is not.
+          // Failures are deliberately NOT cached (see header).
           console.error('[auth] session validation failed:', error);
           return null;
         }

@@ -96,9 +96,19 @@ const baseMetadata: Metadata = {
  */
 export async function generateMetadata(): Promise<Metadata> {
   const branding = await getSiteBranding();
+  // Kill-switch (sequential awaits: see app/[locale]/layout.tsx note on joined
+  // cache branches). Fail-closed — read error keeps the page noindexed.
+  const { getSeoIndexingEnabled } = await import('@/lib/content');
+  const seoIndexingEnabled = await getSeoIndexingEnabled().catch(() => false);
+  const base = {
+    ...baseMetadata,
+    robots: seoIndexingEnabled
+      ? { index: true, follow: true }
+      : { index: false, follow: false },
+  };
   const favicon = branding?.faviconUrl.trim() ?? '';
-  if (!favicon) return baseMetadata;
-  return { ...baseMetadata, icons: { icon: favicon } };
+  if (!favicon) return base;
+  return { ...base, icons: { icon: favicon } };
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

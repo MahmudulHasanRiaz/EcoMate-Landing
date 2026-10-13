@@ -42,7 +42,7 @@ export async function PUT(req: Request) {
     // "System & Branding" tab would leave the cached pricing section in the old mode.
     // `branding` rides along for the same reason: logo/favicon edits must reach the
     // header and the metadata without waiting out the cache window.
-    invalidateDomains(['content', 'pricing', 'branding'], updated.defaultLocale === 'bn' ? 'bn' : 'en');
+    invalidateDomains(['content', 'pricing', 'branding', 'seo'], updated.defaultLocale === 'bn' ? 'bn' : 'en');
     return ok(updated);
   } catch (e) {
     logServerError('PUT /api/settings', e);

@@ -11,13 +11,15 @@ integrationSuite('seo_indexing_enabled', () => {
 
   it('defaults to false on insert and round-trips true->false', async () => {
     const db = getDb();
-    const [row] = await db
-      .insert(siteSettingsTable)
-      .values({ siteName: tag })
-      .returning({ id: siteSettingsTable.id, flag: siteSettingsTable.seoIndexingEnabled });
-    expect(row?.flag).toBe(false);
-    if (!row) throw new Error('Settings seed insert returned no row');
+    let rowId = 0;
     try {
+      const [row] = await db
+        .insert(siteSettingsTable)
+        .values({ siteName: tag })
+        .returning({ id: siteSettingsTable.id, flag: siteSettingsTable.seoIndexingEnabled });
+      expect(row?.flag).toBe(false);
+      if (!row) throw new Error('Settings seed insert returned no row');
+      rowId = row.id;
       const [on] = await db
         .update(siteSettingsTable)
         .set({ seoIndexingEnabled: true })
@@ -31,7 +33,7 @@ integrationSuite('seo_indexing_enabled', () => {
         .returning({ flag: siteSettingsTable.seoIndexingEnabled });
       expect(off?.flag).toBe(false);
     } finally {
-      await db.delete(siteSettingsTable).where(eq(siteSettingsTable.id, row.id));
+      if (rowId) await db.delete(siteSettingsTable).where(eq(siteSettingsTable.id, rowId));
     }
   });
 });

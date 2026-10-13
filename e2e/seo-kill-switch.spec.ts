@@ -26,6 +26,7 @@ test.describe('seo kill-switch (default OFF)', () => {
     expect(response.status()).toBe(200);
     expect(response.headers()['x-robots-tag']).toContain('noindex');
     const html = await response.text();
-    expect(html).toMatch(/name="robots"[^>]*content="[^"]*noindex/);
+    expect(html).toMatch(/<meta[^>]*name="robots"[^>]*>/i);
+    expect(html).toMatch(/<meta[^>]*content="[^"]*noindex[^"]*"[^>]*>/i);
   });
 });

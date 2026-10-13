@@ -12,7 +12,7 @@ import {
   organizationJsonLd,
   serializeJsonLd,
 } from '@/lib/seo';
-import { getSiteBranding } from '@/lib/content';
+import { getSeoIndexingEnabled, getSiteBranding } from '@/lib/content';
 
 const sans = Inter({
   subsets: ['latin'],
@@ -95,11 +95,11 @@ const baseMetadata: Metadata = {
  * direct-URL fallback feeds the prerender, exactly like the landing content.
  */
 export async function generateMetadata(): Promise<Metadata> {
-  const branding = await getSiteBranding();
-  // Kill-switch (sequential awaits: see app/[locale]/layout.tsx note on joined
-  // cache branches). Fail-closed — read error keeps the page noindexed.
-  const { getSeoIndexingEnabled } = await import('@/lib/content');
-  const seoIndexingEnabled = await getSeoIndexingEnabled().catch(() => false);
+  // Kill-switch: fail-closed — read error keeps the page noindexed.
+  const [branding, seoIndexingEnabled] = await Promise.all([
+    getSiteBranding(),
+    getSeoIndexingEnabled().catch(() => false),
+  ]);
   const base = {
     ...baseMetadata,
     robots: seoIndexingEnabled

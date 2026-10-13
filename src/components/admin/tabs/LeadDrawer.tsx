@@ -54,9 +54,11 @@ function capiTone(status: string): 'teal' | 'amber' | 'red' | 'slate' {
  * Lead drawer in artifact style (`.dp` 420px right rail): header avatar-lg + name
  * + close, body sections, footer Retry CAPI / Sync Portal / History.
  *
- * Behavior is the previous `renderLeadDrawer` 1:1 — outside-click + Escape close,
+ * Behavior matches the previous `renderLeadDrawer` — outside-click + Escape close,
  * assignment + follow-up through the existing AdminPanel handlers, timeline newest
- * first. Only markup/classes changed.
+ * first — plus artifact sections the old drawer lacked (Stage select, Contact rows
+ * with copy buttons, Order volume, Notes, footer Retry CAPI / Sync Portal /
+ * History scroll-to-timeline). No handler logic changed.
  */
 export const LeadDrawer: React.FC<LeadDrawerProps> = ({
   lead,

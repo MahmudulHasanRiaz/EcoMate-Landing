@@ -94,6 +94,14 @@ export const ConfirmDialog: React.FC<{
   onConfirm: () => void;
   onClose: () => void;
 }> = ({ open, title, body, confirmLabel, pending, onConfirm, onClose }) => {
+  React.useEffect(() => {
+    if (!open || pending) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open, pending, onClose]);
   if (!open) return null;
   return (
     <>
@@ -102,7 +110,7 @@ export const ConfirmDialog: React.FC<{
         <h3 className="m-0 text-base font-semibold">{title}</h3>
         <p className="mt-1 text-[13.5px] text-[#566070] dark:text-[#a2a2b6]">{body}</p>
         <div className="flex justify-end gap-2 mt-[18px]">
-          <GhostButton type="button" onClick={onClose}>Cancel</GhostButton>
+          <GhostButton type="button" disabled={pending} onClick={onClose}>Cancel</GhostButton>
           <PrimaryButton type="button" disabled={pending} onClick={onConfirm}>
             {pending ? 'Working…' : confirmLabel}
           </PrimaryButton>

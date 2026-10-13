@@ -653,6 +653,24 @@ export function getSeoIndexingEnabled(): Promise<boolean> {
   })();
 }
 
+/**
+ * Edge-context flag read for the proxy header. Deliberately uncached (no cache
+ * wrapper at all): `proxy.ts` runs outside any cache store, so the cached variant
+ * cannot serve there (same reason `getSlugByIdUncached` exists). Fail-closed.
+ */
+export async function getSeoIndexingEnabledUncached(): Promise<boolean> {
+  try {
+    const [row] = await withTimeout(getDb()
+      .select({ seoIndexingEnabled: siteSettingsTable.seoIndexingEnabled })
+      .from(siteSettingsTable)
+      .limit(1), 'getSeoIndexingEnabledUncached');
+    return row?.seoIndexingEnabled ?? false;
+  } catch (e) {
+    logOnce('warn', 'content:seo-flag-uncached', '[content] uncached seo flag read failed, defaulting OFF:', errorMessage(e));
+    return false;
+  }
+}
+
 /** jsonb arrays pass through `unknown`; anything that is not a string array is treated as empty. */
 function asStringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];

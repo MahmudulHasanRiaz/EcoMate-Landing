@@ -4,6 +4,9 @@ import { expect, test } from '@playwright/test';
  * SEO kill-switch (default OFF): all four crawler surfaces stay dark until an
  * admin flips `site_settings.seo_indexing_enabled`. The ON-state is covered by
  * the existing `e2e/seo.spec.ts` expectations once the flag is enabled.
+ * ON-state coverage lives in the existing `e2e/seo.spec.ts` (written for the
+ * always-ON world) plus the rollout manual check: flip the flag in Admin →
+ * Settings and re-verify robots/sitemap/meta/header.
  */
 test.describe('seo kill-switch (default OFF)', () => {
   test('/robots.txt disallows everything and advertises no sitemap', async ({ request }) => {

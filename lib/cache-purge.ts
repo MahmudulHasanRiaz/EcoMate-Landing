@@ -5,6 +5,8 @@ export const purgeScopeSchema = z.enum(['all', 'landing']);
 
 export type PurgeScope = z.infer<typeof purgeScopeSchema>;
 
+// Tag literals are duplicated from `lib/revalidate.ts` on purpose: importing them
+// would pull `next/cache` into this module and break vitest resolution (see Task 8).
 const LANDING_TAGS = [
   'content:en',
   'content:bn',

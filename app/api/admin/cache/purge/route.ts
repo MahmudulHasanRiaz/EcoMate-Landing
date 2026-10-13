@@ -18,7 +18,7 @@ function purgeAll(): void {
   invalidateDomains(['blog', 'social', 'testimonials', 'casestudies'], 'en');
 }
 
-// Global per-minute cap: this endpoint is admin-only and each hit refreshes every
+// Per-isolate per-minute cap on Workers (not global): this endpoint is admin-only and each hit refreshes every
 // cached read site-wide, so an accidental double-click storm must not loop the DB.
 const PURGE_WINDOW_MS = 60_000;
 const PURGE_MAX = 10;

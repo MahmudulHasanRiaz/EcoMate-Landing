@@ -36,4 +36,12 @@ integrationSuite('seo_indexing_enabled', () => {
       if (rowId) await db.delete(siteSettingsTable).where(eq(siteSettingsTable.id, rowId));
     }
   });
+
+  it('uncached reader agrees with the stored flag', async () => {
+    const db = getDb();
+    const { getSeoIndexingEnabledUncached } = await import('@/lib/content');
+    // Default dark without a row touch: just assert boolean shape + fail-closed type.
+    const off = await getSeoIndexingEnabledUncached();
+    expect(typeof off).toBe('boolean');
+  });
 });

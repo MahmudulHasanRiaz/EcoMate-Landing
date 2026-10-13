@@ -34,7 +34,7 @@ import { auth } from '@/auth';
 import { applySecurityHeaders } from '@/lib/securityHeaders';
 import { DEFAULT_LOCALE, localeFromPathname } from '@/lib/locales';
 import { findManagedRedirect } from '@/lib/redirects';
-import { getSeoIndexingEnabled, getSlugByIdUncached } from '@/lib/content';
+import { getSeoIndexingEnabledUncached, getSlugByIdUncached } from '@/lib/content';
 import { timed } from '@/lib/slowlog';
 
 /**
@@ -70,6 +70,19 @@ function stripAuthCookies(headers: Headers): void {
   if (kept.length === all.length) return;
   headers.delete('set-cookie');
   for (const entry of kept) headers.append('set-cookie', entry);
+}
+
+/** Isolate-local memo for the SEO flag: at most one uncached read per minute per isolate. */
+let seoFlagCache: { value: boolean; expires: number } | null = null;
+const SEO_FLAG_TTL_MS = 60_000;
+
+async function isSeoIndexingEnabled(): Promise<boolean> {
+  const now = Date.now();
+  if (seoFlagCache && now < seoFlagCache.expires) return seoFlagCache.value;
+  // Fail-closed — any read error keeps `noindex` on the response.
+  const value = await getSeoIndexingEnabledUncached().catch(() => false);
+  seoFlagCache = { value, expires: now + SEO_FLAG_TTL_MS };
+  return value;
 }
 
 /** The language of the response body, as declared by `Content-Language`. */
@@ -213,13 +226,9 @@ export async function proxy(request: NextRequest, event: Parameters<NextMiddlewa
     if (isPublicDocument) {
       stripAuthCookies(response.headers);
       // Kill-switch layer 4: crawlers that ignore metadata still honor the header.
-      // Fail-closed — any read error keeps `noindex` on the response.
-      try {
-        const enabled = await getSeoIndexingEnabled().catch(() => false);
-        if (!enabled) response.headers.set('X-Robots-Tag', 'noindex, nofollow');
-      } catch {
-        response.headers.set('X-Robots-Tag', 'noindex, nofollow');
-      }
+      // Uncached read (proxy runs outside the cache store) with 60s isolate memo;
+      // robots/sitemap/meta flip synchronously, the header follows within a minute.
+      if (!(await isSeoIndexingEnabled())) response.headers.set('X-Robots-Tag', 'noindex, nofollow');
     }
   }
 

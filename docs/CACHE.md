@@ -63,7 +63,7 @@ split the failure path into its own short-`revalidate` wrapper — do not reintr
 ## Rule for new cached reads
 
 1. Add the function to `lib/content.ts` as an inner `_fn` plus an exported wrapper that
-   calls `unstable_cache(_fn, keyParts, { tags, revalidate })` (every one of the eleven
+   calls `unstable_cache(_fn, keyParts, { tags, revalidate })` (every one of the twelve
    readers follows this shape). Tags that depend on arguments (`content:${locale}`,
    `menus:${key}:${locale}`, per-slug tags) are computed per call — the wrapper is
    created inside the exported function, not hoisted.

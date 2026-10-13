@@ -29,6 +29,7 @@ import { ContentTab } from './tabs/ContentTab';
 import { PricingTab } from './tabs/PricingTab';
 import { TestimonialsTab } from './tabs/TestimonialsTab';
 import { BlogTab } from './tabs/BlogTab';
+import { IntegrationsTab } from './tabs/IntegrationsTab';
 import { LeadDrawer } from './tabs/LeadDrawer';
 import { ConfirmDialog, Card, CardHeader } from './ui';
 import { AdminShell, type AdminNavItem } from './AdminShell';
@@ -997,56 +998,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
           )}
 
           {/* TAB 8: LICENSE PORTAL INTEGRATION QUEUE */}
-          {activeTab === 'integrations' && (
-            <div className="space-y-6 max-w-6xl mx-auto">
-              <div>
-                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">External License Portal Integration Layer</h2>
-                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-0.5">
-                  Asynchronous adapter queue. Dispatches validated leads to external License Portal API while keeping local records authoritative.
-                </p>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-500/30 text-xs text-indigo-900 dark:text-indigo-200">
-                <p className="font-bold">Architecture Contract Note:</p>
-                <p className="mt-1 leading-relaxed">
-                  The public marketing website and CMS are fully self-contained. The external License Management Portal is accessed strictly as an integration recipient. If the external portal is unavailable or offline, zero data is lost.
-                </p>
-              </div>
-
-              {/* Logs */}
-              <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1B] overflow-hidden shadow-xs">
-                <div className="p-4 border-b border-slate-100 dark:border-white/5 font-bold text-sm text-slate-900 dark:text-white">
-                  Integration Dispatch Audit Logs
-                </div>
-                <div className="divide-y divide-slate-100 dark:divide-white/5">
-                  {integrationLogs.map((log) => (
-                    <div key={log.id} className="p-4 text-xs space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="font-mono font-bold text-slate-900 dark:text-white">
-                          [{log.serviceName}] {log.action}
-                        </span>
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                            log.status === 'Success'
-                              ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
-                              : 'bg-amber-50 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300'
-                          }`}
-                        >
-                          {log.status}
-                        </span>
-                      </div>
-                      <p className="text-slate-600 dark:text-slate-300 text-[11px] font-mono">
-                        {new Date(log.createdAt).toLocaleString()} · Attempts: {log.attempts}
-                      </p>
-                      {log.errorMessage && (
-                        <p className="text-rose-700 dark:text-rose-300 text-[11px]">{log.errorMessage}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
+          {activeTab === 'integrations' && <IntegrationsTab integrationLogs={integrationLogs} />}
 
           {/* TAB 9: SETTINGS & BRANDING */}
           {activeTab === 'settings' && settings && (

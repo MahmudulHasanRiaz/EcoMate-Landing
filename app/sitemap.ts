@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next';
-import { getCaseStudies, getPublishedBlogPosts } from '@/lib/content';
+import { getCaseStudies, getPublishedBlogPosts, getSeoIndexingEnabled } from '@/lib/content';
 import { LOCALES } from '@/lib/locales';
 import { localeHomePath, localeRoutePrefix, SITE_URL } from '@/lib/seo';
 
@@ -28,6 +28,10 @@ import { localeHomePath, localeRoutePrefix, SITE_URL } from '@/lib/seo';
  * canonical + hreflang set. Per-post Bangla bodies arrive with the content-locale split.
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  // Kill-switch: dark by default. An empty sitemap + `Disallow: /` gives crawlers
+  // nothing to discover and nothing to fetch. Fail-closed on read error.
+  const indexingEnabled = await getSeoIndexingEnabled().catch(() => false);
+  if (!indexingEnabled) return [];
   // `/` is the canonical English URL; `/en` is its explicit-locale alias. Listing both keeps
   // a crawler that only ever sees the prefixed form able to discover the canonical one.
   const staticEntries: MetadataRoute.Sitemap = [

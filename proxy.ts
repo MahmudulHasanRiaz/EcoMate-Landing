@@ -31,6 +31,7 @@
  */
 import { NextResponse, type NextMiddleware, type NextRequest } from 'next/server';
 import { auth } from '@/auth';
+import { getSeoIndexingEnabled } from '@/lib/content';
 import { applySecurityHeaders } from '@/lib/securityHeaders';
 import { DEFAULT_LOCALE, localeFromPathname } from '@/lib/locales';
 import { findManagedRedirect } from '@/lib/redirects';
@@ -210,7 +211,17 @@ export async function proxy(request: NextRequest, event: Parameters<NextMiddlewa
     // is unaffected. No other header is touched.
     const isPublicDocument =
       isDocument && !pathname.startsWith('/api/') && !pathname.startsWith('/admin');
-    if (isPublicDocument) stripAuthCookies(response.headers);
+    if (isPublicDocument) {
+      stripAuthCookies(response.headers);
+      // Kill-switch layer 4: crawlers that ignore metadata still honor the header.
+      // Fail-closed — any read error keeps `noindex` on the response.
+      try {
+        const enabled = await getSeoIndexingEnabled().catch(() => false);
+        if (!enabled) response.headers.set('X-Robots-Tag', 'noindex, nofollow');
+      } catch {
+        response.headers.set('X-Robots-Tag', 'noindex, nofollow');
+      }
+    }
   }
 
   return response;

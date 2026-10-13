@@ -117,6 +117,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
   // Media uses its own self-fetching library (Phase 3b Item 17) — no bulk fetch here.
   const [integrationLogs, setIntegrationLogs] = useState<IntegrationLog[]>([]);
   const [systemHealth, setSystemHealth] = useState<{ status: string; uptime: number; postgresConfigured: boolean; licensePortalConfigured: boolean } | null>(null);
+  /** In-flight cache purge scope; both purge buttons disable while non-null (double-click guard). */
+  const [purging, setPurging] = useState<null | 'all' | 'landing'>(null);
 
   // --- Side-by-side EN|BN landing-content editor + translation report (Task 15 §6) -------
   const [i18nReport, setI18nReport] = useState<I18nReport | null>(null);
@@ -2639,35 +2641,43 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
+                    disabled={purging !== null}
                     onClick={async () => {
                       if (!window.confirm('সব cache clear হবে। নিশ্চিত?')) return;
+                      setPurging('all');
                       try {
                         const res = await api.purgeCache('all');
                         showNotification(`Cache purged (${res.invalidated.length} tags)`);
                       } catch (err) {
                         showNotification(err instanceof Error ? err.message : 'Purge failed');
+                      } finally {
+                        setPurging(null);
                       }
                     }}
-                    className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-xs cursor-pointer"
+                    className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-wait"
                   >
-                    Purge all cache
+                    {purging === 'all' ? 'Purging…' : 'Purge all cache'}
                   </button>
                   <button
                     type="button"
                     title="শুধু landing shell (content, menus, branding, pricing)"
+                    disabled={purging !== null}
                     onClick={async () => {
                       if (!window.confirm('Landing cache clear হবে। নিশ্চিত?')) return;
+                      setPurging('landing');
                       try {
                         const res = await api.purgeCache('landing');
                         showNotification(`Landing cache purged (${res.invalidated.length} tags)`);
                       } catch (err) {
                         showNotification(err instanceof Error ? err.message : 'Purge failed');
+                      } finally {
+                        setPurging(null);
                       }
                     }}
-                    className="px-3 py-2 rounded-xl border border-slate-300 dark:border-white/15 text-slate-700 dark:text-slate-200 font-bold text-xs cursor-pointer flex items-center gap-1.5"
+                    className="px-3 py-2 rounded-xl border border-slate-300 dark:border-white/15 text-slate-700 dark:text-slate-200 font-bold text-xs cursor-pointer flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-wait"
                   >
                     <RotateCcw className="h-4 w-4" />
-                    <span>Landing only</span>
+                    <span>{purging === 'landing' ? 'Purging…' : 'Landing only'}</span>
                   </button>
                 </div>
               </div>

@@ -21,6 +21,7 @@ import { TestimonialForm } from './TestimonialForm';
 import { ImagePickerField } from './ImagePickerField';
 import { CaseStudyEditor } from './CaseStudyEditor';
 import { MediaLibrary } from './MediaLibrary';
+import { DashboardTab } from './tabs/DashboardTab';
 import { TestimonialCard } from '../TestimonialCard';
 import { BlogPostEditor } from './BlogPostEditor';
 import { BlogCategoryManager } from './BlogCategoryManager';
@@ -1201,143 +1202,23 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           {/* TAB 1: DASHBOARD */}
           {activeTab === 'dashboard' && (
-            <div className="space-y-6 max-w-6xl mx-auto">
-              <div>
-                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Operations & Marketing Hub</h2>
-                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-1">
-                  Real-time visibility into inbound enterprise leads, CMS content status, and external integration dispatches.
-                </p>
-              </div>
-
-              {/* 4 Stats Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1B] shadow-xs">
-                  <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Total Inbound Leads</span>
-                  <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white font-mono-numbers mt-2">
-                    {leads.length}
-                  </p>
-                  <p className="text-xs text-indigo-700 dark:text-indigo-300 mt-1 font-medium">
-                    {leads.filter((l) => l.status === 'New').length} pending follow-up
-                  </p>
-                  {/* Overdue worklist (Task 16 §2). A clickable count rather than a separate
-                      section: the operator's question on the dashboard is "what needs me today",
-                      and this is the answer to it. */}
-                  <button
-                    onClick={() => setActiveTab('leads')}
-                    className={`text-xs mt-1 font-semibold hover:underline cursor-pointer ${
-                      overdueLeads.length > 0
-                        ? 'text-rose-600 dark:text-rose-400'
-                        : 'text-emerald-600 dark:text-emerald-400'
-                    }`}
-                  >
-                    {overdueLeads.length} overdue follow-up{overdueLeads.length === 1 ? '' : 's'}
-                  </button>
-                </div>
-
-                <div className="p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1B] shadow-xs">
-                  <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Pricing Mode Active</span>
-                  <p className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mt-2">
-                    {pricing.isPricingVisible ? 'Tiered Visible' : 'Custom / Hidden'}
-                  </p>
-                  <button
-                    onClick={handleTogglePricingMode}
-                    className="text-xs text-indigo-700 dark:text-indigo-300 hover:underline mt-1 font-semibold cursor-pointer"
-                  >
-                    Switch mode →
-                  </button>
-                </div>
-
-                <div className="p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1B] shadow-xs">
-                  <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">CMS Landing Sections</span>
-                  <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white font-mono-numbers mt-2">
-                    {sections.length}
-                  </p>
-                  <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-1 font-medium">
-                    Fully database-configured
-                  </p>
-                </div>
-
-                <div className="p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1B] shadow-xs">
-                  <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Untranslated Sections (BN)</span>
-                  <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white font-mono-numbers mt-2">
-                    {i18nReport ? i18nReport.gapCount : '—'}
-                  </p>
-                  <button
-                    onClick={() => setActiveTab('content')}
-                    className="text-xs text-indigo-700 dark:text-indigo-300 hover:underline mt-1 font-semibold cursor-pointer"
-                  >
-                    {i18nReport && i18nReport.gapCount === 0
-                      ? 'Every section has Bangla copy'
-                      : 'Bangla falls back to English until translated'}
-                  </button>
-                </div>
-
-                <div className="p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1B] shadow-xs">
-                  <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Blog / SEO Content</span>
-                  <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white font-mono-numbers mt-2">
-                    {blogPosts.length}
-                  </p>
-                  <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 font-medium">
-                    Indexable problem-first articles
-                  </p>
-                </div>
-              </div>
-
-              {/* Recent Leads Preview */}
-              <div className="p-6 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1B] shadow-xs">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold text-base text-slate-900 dark:text-white">Recent Inbound Consultation Leads</h3>
-                  <button
-                    onClick={() => setActiveTab('leads')}
-                    className="text-xs font-semibold text-indigo-700 dark:text-indigo-300 hover:underline flex items-center gap-1 cursor-pointer"
-                  >
-                    <span>View all leads</span>
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-
-                <div className="divide-y divide-slate-100 dark:divide-white/5">
-                  {leads.slice(0, 4).map((lead) => (
-                    <div key={lead.id} className="py-3 flex items-center justify-between gap-4 text-xs">
-                      <button
-                        type="button"
-                        onClick={() => handleOpenLead(lead)}
-                        className="min-w-0 text-left"
-                        title="Open the full timeline"
-                      >
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-slate-900 dark:text-white">{lead.name}</span>
-                          <span className="font-mono text-slate-500 dark:text-slate-400">{lead.phone}</span>
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">
-                            {lead.dailyVolume}
-                          </span>
-                        </div>
-                        <p className="text-slate-600 dark:text-slate-300 text-[11px] mt-0.5 line-clamp-1">
-                          {lead.note || 'No specific note provided.'}
-                        </p>
-                      </div>
-                      </button>
-
-                      <div className="flex items-center gap-3 shrink-0">
-                        <select
-                          value={lead.status}
-                          onChange={(e) => handleUpdateLeadStatus(lead.id, e.target.value as Lead['status'])}
-                          className="px-2 py-1 rounded-lg bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer"
-                        >
-                          <option value="New">New</option>
-                          <option value="Contacted">Contacted</option>
-                          <option value="Qualified">Qualified</option>
-                          <option value="Demo Scheduled">Demo Scheduled</option>
-                          <option value="Won">Won</option>
-                          <option value="Lost">Lost</option>
-                        </select>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
+            <DashboardTab
+              leads={leads}
+              pricingModeLabel={pricing.isPricingVisible ? 'Tiered Visible' : 'Custom / Hidden'}
+              onSwitchPricingMode={handleTogglePricingMode}
+              sectionCount={sections.length}
+              untranslatedCount={i18nReport ? i18nReport.gapCount : null}
+              articleCount={blogPosts.length}
+              overdueCount={overdueLeads.length}
+              recentLeads={leads.slice(0, 4)}
+              onOpenLeads={() => setActiveTab('leads')}
+              onOpenContent={() => setActiveTab('content')}
+              onOpenLead={handleOpenLead}
+              onStatusChange={handleUpdateLeadStatus}
+              onAddSection={() => setActiveTab('sections')}
+              onWriteArticle={() => setActiveTab('blog')}
+              onUploadMedia={() => setActiveTab('media')}
+            />
           )}
 
           {/* TAB 2: LEAD MANAGEMENT */}

@@ -68,7 +68,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
       </div>
 
       {/* KPI strip: 5 cells, hairline dividers */}
-      <div className="grid grid-cols-5 gap-px overflow-hidden rounded-[10px] border border-[#e4e7ec] bg-[#e4e7ec] dark:border-[#232331] dark:bg-[#232331]">
+      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[10px] border border-[#e4e7ec] bg-[#e4e7ec] dark:border-[#232331] dark:bg-[#232331] sm:grid-cols-3 lg:grid-cols-5">
         <StatCell
           label="Total Inbound Leads"
           value={leads.length}

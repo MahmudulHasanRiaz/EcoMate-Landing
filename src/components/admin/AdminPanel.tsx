@@ -43,7 +43,6 @@ import {
   Edit2,
   CheckCircle2,
   AlertTriangle,
-  ArrowRight,
   ExternalLink,
   Search,
   Filter,

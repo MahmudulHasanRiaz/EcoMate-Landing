@@ -1,7 +1,7 @@
 import { RotateCcw, Save } from 'lucide-react';
 import type { SiteSettings } from '../../../types/api';
 import type { FieldErrors } from '../fieldErrors';
-import { FieldError } from '../AdminPanel';
+import { FieldError } from '../ui';
 import { ImagePickerField } from '../ImagePickerField';
 import { Card, GhostButton, PrimaryButton } from '../ui';
 

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Trash2, ArrowUp, ArrowDown, Image as ImageIcon } from 'lucide-react';
 import { moveGalleryItem } from '@/lib/blogMedia';
 import { absoluteUrl } from '@/lib/seo';
-import { FieldError } from './AdminPanel';
+import { FieldError } from './ui';
 import { MediaPickerModal } from './MediaPickerModal';
 import type { FieldErrors } from './fieldErrors';
 

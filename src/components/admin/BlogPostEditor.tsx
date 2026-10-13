@@ -28,7 +28,7 @@ import { moveGalleryItem } from '@/lib/blogMedia';
 import { BlogVideoPlayer } from '@/src/components/blog/BlogVideoPlayer';
 import { RichBlogEditor } from './RichBlogEditor';
 import { MediaPickerModal } from './MediaPickerModal';
-import { FieldError } from './AdminPanel';
+import { FieldError } from './ui';
 import type { FieldErrors } from './fieldErrors';
 
 interface BlogPostEditorProps {

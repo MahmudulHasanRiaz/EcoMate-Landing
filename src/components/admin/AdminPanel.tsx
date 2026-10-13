@@ -18,9 +18,6 @@ import type {
 import * as api from '../../services/api';
 import { CONTENT_KEY_GROUPS } from '@/lib/contentKeys';
 import { fieldErrorsOf, type FieldErrors } from './fieldErrors';
-import { TestimonialForm } from './TestimonialForm';
-import { ImagePickerField } from './ImagePickerField';
-import { CaseStudyEditor } from './CaseStudyEditor';
 import { MediaLibrary } from './MediaLibrary';
 import { DashboardTab } from './tabs/DashboardTab';
 import { LeadsTab } from './tabs/LeadsTab';
@@ -34,10 +31,6 @@ import { SettingsTab } from './tabs/SettingsTab';
 import { LeadDrawer } from './tabs/LeadDrawer';
 import { ConfirmDialog, Card, CardHeader } from './ui';
 import { AdminShell, type AdminNavItem } from './AdminShell';
-import { TestimonialCard } from '../TestimonialCard';
-import { BlogPostEditor } from './BlogPostEditor';
-import { BlogCategoryManager } from './BlogCategoryManager';
-import { BlogTagManager } from './BlogTagManager';
 import {
   LayoutDashboard,
   Users,
@@ -48,19 +41,7 @@ import {
   Image,
   Settings,
   Share2,
-  RotateCcw,
-  Plus,
-  Trash2,
-  Edit2,
   CheckCircle2,
-  AlertTriangle,
-  ExternalLink,
-  Search,
-  Filter,
-  Save,
-  Eye,
-  EyeOff,
-  Server,
   X,
   Languages,
 } from 'lucide-react';
@@ -83,16 +64,6 @@ interface AdminPanelProps {
   theme: 'light' | 'dark';
   initialTab?: AdminTab;
 }
-
-/** Inline validation message rendered against its input (Task 17 §5). Exported for the form islands. */
-export const FieldError: React.FC<{ id: string; message?: string }> = ({ id, message }) => {
-  if (!message) return null;
-  return (
-    <p id={id} role="alert" className="mt-1 text-[11px] font-medium text-rose-700 dark:text-rose-300">
-      {message}
-    </p>
-  );
-};
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, initialTab = 'dashboard' }) => {
   const [activeTab, setActiveTab] = useState<AdminTab>(initialTab);

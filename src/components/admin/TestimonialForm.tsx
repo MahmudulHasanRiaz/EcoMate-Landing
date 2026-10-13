@@ -11,7 +11,7 @@
  */
 import { useState } from 'react';
 import type { Testimonial } from '@/src/types/api';
-import { FieldError } from '@/src/components/admin/AdminPanel';
+import { FieldError } from '@/src/components/admin/ui';
 import { ImagePickerField } from './ImagePickerField';
 import type { FieldErrors } from './fieldErrors';
 

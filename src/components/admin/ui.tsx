@@ -137,3 +137,13 @@ export const StatCell: React.FC<{ label: string; value: React.ReactNode; sub?: R
     {sub ? <div className="text-[13px] text-[#566070] dark:text-[#a2a2b6]">{sub}</div> : null}
   </div>
 );
+
+/** Inline validation message rendered against its input (Task 17 §5). Exported for the form islands. */
+export const FieldError: React.FC<{ id: string; message?: string }> = ({ id, message }) => {
+  if (!message) return null;
+  return (
+    <p id={id} role="alert" className="mt-1 text-[11px] font-medium text-rose-700 dark:text-rose-300">
+      {message}
+    </p>
+  );
+};

@@ -26,6 +26,7 @@ import { DashboardTab } from './tabs/DashboardTab';
 import { LeadsTab } from './tabs/LeadsTab';
 import { SectionsTab } from './tabs/SectionsTab';
 import { ContentTab } from './tabs/ContentTab';
+import { PricingTab } from './tabs/PricingTab';
 import { LeadDrawer } from './tabs/LeadDrawer';
 import { ConfirmDialog } from './ui';
 import { AdminShell, type AdminNavItem } from './AdminShell';
@@ -936,67 +937,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
 
           {/* TAB 4: PRICING CMS */}
           {activeTab === 'pricing' && (
-            <div className="space-y-6 max-w-6xl mx-auto">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Dynamic Pricing Manager</h2>
-                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-0.5">
-                    Toggle between Visible Tiered Pricing and Contact Sales / Custom Architecture mode.
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={handleTogglePricingMode}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-                      pricing.isPricingVisible
-                        ? 'bg-emerald-600 text-white shadow-xs'
-                        : 'bg-amber-600 text-white shadow-xs'
-                    }`}
-                  >
-                    {pricing.isPricingVisible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                    <span>{pricing.isPricingVisible ? 'Mode: Tiered Visible' : 'Mode: Hidden / Contact'}</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Plans Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {pricing.plans.map((plan) => (
-                  <div key={plan.id} className="p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1B] flex flex-col justify-between shadow-xs">
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="font-bold text-base text-slate-900 dark:text-white">{plan.nameEn}</span>
-                        {plan.isPopular && (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">
-                            Popular
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="text-2xl font-mono font-extrabold text-slate-900 dark:text-white mb-2">
-                        {plan.currency} {plan.monthlyPrice.toLocaleString()}{' '}
-                        <span className="text-xs font-normal text-slate-600 dark:text-slate-300">/ mo</span>
-                      </div>
-                      <p className="text-xs text-slate-600 dark:text-slate-300 mb-4">{plan.tierSubtitleEn}</p>
-
-                      <div className="space-y-1.5 text-xs text-slate-700 dark:text-slate-300 border-t border-slate-100 dark:border-white/5 pt-3">
-                        {plan.featuresEn.map((feat, idx) => (
-                          <div key={idx} className="flex items-center gap-2">
-                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700 shrink-0 dark:text-emerald-400" />
-                            <span>{feat}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="mt-6 pt-3 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-xs text-slate-600 dark:text-slate-300">
-                      <span>Order Limit: {plan.orderVolume}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <PricingTab pricing={pricing} onTogglePricingMode={handleTogglePricingMode} />
           )}
 
           {/* TAB 5: TESTIMONIALS & CASE STUDIES */}

@@ -404,7 +404,13 @@ git commit -m "feat(seo): invalidate seo tag on settings save"
 
 ### Task 8: Purge endpoint (TDD)
 
+> **REVISION (executed):** importing the route file from vitest failed
+> (`next-auth` → `next/server` unresolvable). Pure scope/tag logic lives in
+> `lib/cache-purge.ts` (zod-only); the route and the test both import from there.
+> Test imports `@/lib/cache-purge`, never the route.
+
 **Files:**
+- Create: `lib/cache-purge.ts`
 - Create: `app/api/admin/cache/purge/route.ts`
 - Create: `tests/validation/cache-purge.test.ts`
 

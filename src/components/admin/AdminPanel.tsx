@@ -27,6 +27,7 @@ import { LeadsTab } from './tabs/LeadsTab';
 import { SectionsTab } from './tabs/SectionsTab';
 import { ContentTab } from './tabs/ContentTab';
 import { PricingTab } from './tabs/PricingTab';
+import { TestimonialsTab } from './tabs/TestimonialsTab';
 import { LeadDrawer } from './tabs/LeadDrawer';
 import { ConfirmDialog } from './ui';
 import { AdminShell, type AdminNavItem } from './AdminShell';
@@ -942,139 +943,24 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
 
           {/* TAB 5: TESTIMONIALS & CASE STUDIES */}
           {activeTab === 'testimonials' && (
-            <div className="space-y-6 max-w-6xl mx-auto">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Proof & Case Studies CMS</h2>
-                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-0.5">
-                    Manage verifiable client testimonials, video interviews, and quantified ROI case studies.
-                  </p>
-                </div>
-                {!testimonialDraft && (
-                  <button
-                    onClick={() => {
-                      setTestimonialDraft({ format: 'text', isPublished: false, sortOrder: 0 });
-                      setTestimonialErrors({});
-                    }}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 text-white font-semibold text-xs shadow-xs hover:bg-indigo-700 transition-colors cursor-pointer"
-                  >
-                    <Plus className="h-4 w-4" />
-                    <span>New Testimonial</span>
-                  </button>
-                )}
-              </div>
-
-              {testimonialDraft && (
-                <TestimonialForm
-                  initial={testimonialDraft}
-                  errors={testimonialErrors}
-                  saving={testimonialSaving}
-                  onSubmit={handleSaveTestimonial}
-                  onCancel={() => setTestimonialDraft(null)}
-                />
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {testimonials.map((t) => (
-                  <div key={t.id} className="relative">
-                    {!t.isPublished && (
-                      <span className="absolute -top-2 left-4 z-10 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
-                        Draft
-                      </span>
-                    )}
-                    <TestimonialCard data={t} locale="en" />
-                    <div className="mt-2 flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => {
-                          setTestimonialDraft({ ...t });
-                          setTestimonialErrors({});
-                        }}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-[11px] font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 cursor-pointer"
-                      >
-                        <Edit2 className="h-3 w-3" />
-                        <span>Edit</span>
-                      </button>
-                      <button
-                        onClick={() => handleDeleteTestimonial(t.id)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-rose-200 dark:border-rose-900/40 text-[11px] font-semibold text-rose-700 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/30 cursor-pointer"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                        <span>Delete</span>
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-white/5">
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Case Studies</h3>
-                  <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
-                    Long-form proof pages. A blank slug is generated from the title.
-                  </p>
-                </div>
-                {!caseStudyDraft && (
-                  <button
-                    onClick={() => {
-                      setCaseStudyDraft({ isPublished: false });
-                      setCaseStudyErrors({});
-                    }}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 text-white font-semibold text-xs shadow-xs hover:bg-indigo-700 transition-colors cursor-pointer"
-                  >
-                    <Plus className="h-4 w-4" />
-                    <span>New Case Study</span>
-                  </button>
-                )}
-              </div>
-
-              {caseStudyDraft && (
-                <CaseStudyEditor
-                  initial={caseStudyDraft}
-                  errors={caseStudyErrors}
-                  saving={caseStudySaving}
-                  onSubmit={handleSaveCaseStudy}
-                  onCancel={() => setCaseStudyDraft(null)}
-                />
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {caseStudies.map((cs) => (
-                  <div key={cs.id} className="p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1B] flex flex-col justify-between shadow-xs">
-                    <div>
-                      <div className="flex items-center justify-between mb-2 gap-2">
-                        <span className="font-bold text-slate-900 dark:text-white text-sm">{cs.title}</span>
-                        {!cs.isPublished && (
-                          <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
-                            Draft
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-slate-600 dark:text-slate-300">{cs.client} · <span className="font-mono">/{cs.slug}</span></p>
-                      <p className="mt-2 text-xs text-slate-700 dark:text-slate-300 line-clamp-2">{cs.problemOverview}</p>
-                    </div>
-                    <div className="mt-4 pt-3 border-t border-slate-100 dark:border-white/5 flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => {
-                          setCaseStudyDraft({ ...cs });
-                          setCaseStudyErrors({});
-                        }}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-[11px] font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 cursor-pointer"
-                      >
-                        <Edit2 className="h-3 w-3" />
-                        <span>Edit</span>
-                      </button>
-                      <button
-                        onClick={() => handleDeleteCaseStudy(cs.id)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-rose-200 dark:border-rose-900/40 text-[11px] font-semibold text-rose-700 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/30 cursor-pointer"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                        <span>Delete</span>
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <TestimonialsTab
+              testimonials={testimonials}
+              caseStudies={caseStudies}
+              testimonialDraft={testimonialDraft}
+              onTestimonialDraftChange={setTestimonialDraft}
+              testimonialErrors={testimonialErrors}
+              onTestimonialErrorsChange={setTestimonialErrors}
+              testimonialSaving={testimonialSaving}
+              caseStudyDraft={caseStudyDraft}
+              onCaseStudyDraftChange={setCaseStudyDraft}
+              caseStudyErrors={caseStudyErrors}
+              onCaseStudyErrorsChange={setCaseStudyErrors}
+              caseStudySaving={caseStudySaving}
+              onSaveTestimonial={handleSaveTestimonial}
+              onDeleteTestimonial={handleDeleteTestimonial}
+              onSaveCaseStudy={handleSaveCaseStudy}
+              onDeleteCaseStudy={handleDeleteCaseStudy}
+            />
           )}
 
           {/* TAB 6: BLOG & SEO PLATFORM */}

@@ -24,6 +24,7 @@ import { CaseStudyEditor } from './CaseStudyEditor';
 import { MediaLibrary } from './MediaLibrary';
 import { DashboardTab } from './tabs/DashboardTab';
 import { LeadsTab } from './tabs/LeadsTab';
+import { SectionsTab } from './tabs/SectionsTab';
 import { LeadDrawer } from './tabs/LeadDrawer';
 import { ConfirmDialog } from './ui';
 import { AdminShell, type AdminNavItem } from './AdminShell';
@@ -904,81 +905,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
 
           {/* TAB 3: SECTIONS CMS */}
           {activeTab === 'sections' && (
-            <div className="space-y-6 max-w-6xl mx-auto">
-              <div>
-                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Landing Page Sections CMS</h2>
-                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-0.5">
-                  Control section headlines, subtitles, language translations, ordering and live visibility without code changes.
-                </p>
-              </div>
-
-              <div className="space-y-4">
-                {sections.map((sec) => (
-                  <div key={sec.id} className="p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1B] shadow-xs">
-                    <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/5 pb-3 mb-4">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs font-bold text-indigo-700 dark:text-indigo-300">
-                          #{sec.sortOrder} · {sec.sectionKey}
-                        </span>
-                        <span className="text-xs text-slate-400">({sec.eyebrowEn})</span>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <label className="flex items-center gap-1.5 text-xs font-semibold cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={sec.isVisible}
-                            onChange={async (e) => {
-                              const updated = await api.updateSection(sec.id, { isVisible: e.target.checked });
-                              setSections((prev) => prev.map((s) => (s.id === sec.id ? updated : s)));
-                              showNotification(`Section visibility updated`);
-                            }}
-                            className="rounded text-indigo-600"
-                          />
-                          <span>Visible</span>
-                        </label>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                      <div>
-                        <label className="block text-slate-500 mb-1 font-medium dark:text-slate-400">English Headline</label>
-                        <input
-                          type="text"
-                          value={sec.titleEn}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setSections((prev) => prev.map((s) => (s.id === sec.id ? { ...s, titleEn: val } : s)));
-                          }}
-                          onBlur={async () => {
-                            await api.updateSection(sec.id, { titleEn: sec.titleEn });
-                            showNotification('Headline saved');
-                          }}
-                          className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-slate-500 mb-1 font-medium dark:text-slate-400">Bangla Headline (বাংলা)</label>
-                        <input
-                          type="text"
-                          value={sec.titleBn}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setSections((prev) => prev.map((s) => (s.id === sec.id ? { ...s, titleBn: val } : s)));
-                          }}
-                          onBlur={async () => {
-                            await api.updateSection(sec.id, { titleBn: sec.titleBn });
-                            showNotification('Bangla headline saved');
-                          }}
-                          className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white font-bangla"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <SectionsTab sections={sections} onSectionsChange={setSections} onNotify={showNotification} />
           )}
 
           {/* TAB 4: BILINGUAL CONTENT EDITOR (EN | BN side by side) */}

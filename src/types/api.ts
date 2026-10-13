@@ -24,6 +24,7 @@ export interface SiteSettings {
   messengerUrl: string;
   address: string;
   isPricingVisible: boolean;
+  seoIndexingEnabled: boolean;
   seoTitle: string;
   seoDescription: string;
   /** Meta CAPI mode (H-1/Decision 14): full Lead on submit vs validated trigger. */

@@ -13,6 +13,7 @@ const valid = {
   messengerUrl: 'https://m.me/ecomate.bd',
   address: 'Tejgaon I/A, Dhaka 1208, Bangladesh',
   isPricingVisible: true,
+  seoIndexingEnabled: false,
   seoTitle: 'EcoMate — Operations Platform',
   seoDescription: 'Complete operating platform for high-volume brands.',
 } as const;
@@ -42,5 +43,14 @@ describe('settingsPatch', () => {
 
   it('accepts an empty patch (all fields optional)', () => {
     expect(settingsPatch.safeParse({}).success).toBe(true);
+  });
+
+  it('accepts seoIndexingEnabled true/false', () => {
+    expect(settingsPatch.safeParse({ seoIndexingEnabled: true }).success).toBe(true);
+    expect(settingsPatch.safeParse({ seoIndexingEnabled: false }).success).toBe(true);
+  });
+
+  it('rejects non-boolean seoIndexingEnabled', () => {
+    expect(settingsPatch.safeParse({ seoIndexingEnabled: 'yes' }).success).toBe(false);
   });
 });

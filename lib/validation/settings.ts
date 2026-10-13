@@ -19,6 +19,7 @@ export const settingsPatch = z.strictObject({
   messengerUrl: optionalUrl.optional(),
   address: z.string().max(300).optional(),
   isPricingVisible: z.boolean().optional(),
+  seoIndexingEnabled: z.boolean().optional(),
   seoTitle: z.string().max(70).optional(),
   seoDescription: z.string().max(200).optional(),
   // Meta CAPI two-mode (H-1/Decision 14, admin-only surface): mode switch, the lead

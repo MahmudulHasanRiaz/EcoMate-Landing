@@ -1,6 +1,7 @@
 import { Edit2, Plus, Trash2 } from 'lucide-react';
 import type { CaseStudy, Testimonial } from '../../../types/api';
 import type { FieldErrors } from '../fieldErrors';
+import { AsyncButton } from '@/hooks/useAsyncAction';
 import { TestimonialForm } from '../TestimonialForm';
 import { CaseStudyEditor } from '../CaseStudyEditor';
 import { TestimonialCard } from '../../TestimonialCard';
@@ -19,6 +20,8 @@ export interface TestimonialsTabProps {
   caseStudyErrors: FieldErrors;
   onCaseStudyErrorsChange: (errors: FieldErrors) => void;
   caseStudySaving: boolean;
+  /** Shared panel mutation pending flag (AdminPanel `mutation.pending`). */
+  mutating: boolean;
   onSaveTestimonial: (data: Partial<Testimonial>) => void;
   onDeleteTestimonial: (id: number) => void;
   onSaveCaseStudy: (data: Partial<CaseStudy>) => void;
@@ -38,6 +41,7 @@ export const TestimonialsTab: React.FC<TestimonialsTabProps> = ({
   caseStudyErrors,
   onCaseStudyErrorsChange,
   caseStudySaving,
+  mutating,
   onSaveTestimonial,
   onDeleteTestimonial,
   onSaveCaseStudy,
@@ -97,13 +101,14 @@ export const TestimonialsTab: React.FC<TestimonialsTabProps> = ({
                 <Edit2 className="h-3 w-3" />
                 <span>Edit</span>
               </button>
-              <button
+              <AsyncButton
                 onClick={() => onDeleteTestimonial(t.id)}
+                loading={mutating}
                 className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-rose-200 dark:border-rose-900/40 text-[11px] font-semibold text-rose-700 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/30 cursor-pointer"
               >
                 <Trash2 className="h-3 w-3" />
                 <span>Delete</span>
-              </button>
+              </AsyncButton>
             </div>
           </div>
         ))}
@@ -169,13 +174,14 @@ export const TestimonialsTab: React.FC<TestimonialsTabProps> = ({
                 <Edit2 className="h-3 w-3" />
                 <span>Edit</span>
               </button>
-              <button
+              <AsyncButton
                 onClick={() => onDeleteCaseStudy(cs.id)}
+                loading={mutating}
                 className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-rose-200 dark:border-rose-900/40 text-[11px] font-semibold text-rose-700 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/30 cursor-pointer"
               >
                 <Trash2 className="h-3 w-3" />
                 <span>Delete</span>
-              </button>
+              </AsyncButton>
             </div>
           </Card>
         ))}

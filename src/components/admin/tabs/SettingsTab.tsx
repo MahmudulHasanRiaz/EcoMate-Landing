@@ -3,13 +3,16 @@ import type { SiteSettings } from '../../../types/api';
 import type { FieldErrors } from '../fieldErrors';
 import { FieldError } from '../ui';
 import { ImagePickerField } from '../ImagePickerField';
-import { Card, GhostButton, PrimaryButton } from '../ui';
+import { AsyncButton } from '@/hooks/useAsyncAction';
+import { Card } from '../ui';
 
 export interface SettingsTabProps {
   settings: SiteSettings;
   onSettingsChange: React.Dispatch<React.SetStateAction<SiteSettings | null>>;
   settingsErrors: FieldErrors;
   purging: null | 'all' | 'landing';
+  /** Shared panel mutation pending flag (AdminPanel `mutation.pending`). */
+  mutating: boolean;
   onConfirmScopeChange: (scope: 'all' | 'landing') => void;
   onSaveSettings: (e: React.FormEvent) => void;
 }
@@ -19,6 +22,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   onSettingsChange,
   settingsErrors,
   purging,
+  mutating,
   onConfirmScopeChange,
   onSaveSettings,
 }) => {
@@ -223,10 +227,14 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       </div>
 
     <div className="pt-2 flex justify-end">
-      <PrimaryButton type="submit">
+      <AsyncButton
+        type="submit"
+        loading={mutating}
+        className="inline-flex items-center gap-2 min-h-[34px] px-3 rounded-md border bg-[#0f766e] border-[#0f766e] text-white text-[13.5px] font-medium cursor-pointer transition-colors hover:bg-[#115e59] hover:border-[#115e59] disabled:opacity-50 disabled:cursor-wait"
+      >
         <Save className="h-4 w-4" />
         <span>Save Site Settings</span>
-      </PrimaryButton>
+      </AsyncButton>
     </div>
   </form>
 
@@ -236,23 +244,24 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       Purge করলে সব cached content expire হবে — পরের ভিজিটে fresh DB read হবে।
     </p>
     <div className="flex flex-wrap items-center gap-2">
-      <button
-        type="button"
+      <AsyncButton
         disabled={purging !== null}
+        loading={purging === 'all'}
         onClick={() => onConfirmScopeChange('all')}
         className="min-h-[34px] px-3 rounded-md bg-red-600 hover:bg-red-700 text-white text-[13.5px] font-medium cursor-pointer disabled:opacity-50 disabled:cursor-wait"
       >
         {purging === 'all' ? 'Purging…' : 'Purge all cache'}
-      </button>
-      <GhostButton
-        type="button"
+      </AsyncButton>
+      <AsyncButton
         title="শুধু landing shell (content, menus, branding, pricing)"
         disabled={purging !== null}
+        loading={purging === 'landing'}
         onClick={() => onConfirmScopeChange('landing')}
+        className="inline-flex items-center gap-2 min-h-[34px] px-3 rounded-md border border-[#d5d9e0] dark:border-[#2a2a3a] bg-white dark:bg-[#12121a] text-[#1f242b] dark:text-[#e2e2ec] text-[13.5px] font-medium cursor-pointer transition-colors hover:bg-[#f1f3f5] dark:hover:bg-[#1a1a26] disabled:opacity-50 disabled:cursor-wait"
       >
         <RotateCcw className="h-4 w-4" />
         <span>{purging === 'landing' ? 'Purging…' : 'Landing only'}</span>
-      </GhostButton>
+      </AsyncButton>
     </div>
   </Card>
 

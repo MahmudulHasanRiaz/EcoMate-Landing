@@ -1,10 +1,13 @@
 import { ArrowRight, DollarSign, PenLine, Plus, Upload } from 'lucide-react';
 import type { Lead } from '../../../types/api';
+import { AsyncButton } from '@/hooks/useAsyncAction';
 import { Avatar, Card, CardHeader, EmptyState, StatCell, Tag } from '../ui';
 
 export interface DashboardTabProps {
   leads: Lead[];
   pricingModeLabel: string;
+  /** Shared panel mutation pending flag (AdminPanel `mutation.pending`). */
+  mutating: boolean;
   onSwitchPricingMode: () => void;
   sectionCount: number;
   untranslatedCount: number | null;
@@ -35,6 +38,7 @@ function initialsOf(name: string): string {
 export const DashboardTab: React.FC<DashboardTabProps> = ({
   leads,
   pricingModeLabel,
+  mutating,
   onSwitchPricingMode,
   sectionCount,
   untranslatedCount,
@@ -91,13 +95,13 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
           label="Pricing Mode Active"
           value={pricingModeLabel}
           sub={
-            <button
-              type="button"
+            <AsyncButton
               onClick={onSwitchPricingMode}
-              className="inline-flex items-center gap-1.5 font-medium text-teal-700 dark:text-teal-300 hover:underline cursor-pointer"
+              loading={mutating}
+              className="inline-flex items-center gap-1.5 font-medium text-teal-700 dark:text-teal-300 hover:underline cursor-pointer disabled:opacity-50"
             >
               Switch mode <ArrowRight className="h-3.5 w-3.5" />
-            </button>
+            </AsyncButton>
           }
         />
         <StatCell label="CMS Landing Sections" value={sectionCount} sub={<span>Fully database-configured</span>} />
@@ -166,6 +170,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                   <select
                     value={lead.status}
                     aria-label={`Status for ${lead.name}`}
+                    disabled={mutating}
                     onChange={(e) => onStatusChange(lead.id, e.target.value as Lead['status'])}
                     className="min-h-[34px] cursor-pointer rounded-md border border-[#d5d9e0] bg-white px-2 py-1 text-[12.5px] font-medium text-[#1f242b] dark:border-[#2a2a3a] dark:bg-[#12121a] dark:text-[#e2e2ec]"
                   >
@@ -265,17 +270,17 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                 <span className="flex-1 text-left text-[13.5px]">Upload media</span>
                 <ArrowRight className="h-3.5 w-3.5 -translate-x-1 text-[#0f766e] opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100 dark:text-teal-300" />
               </button>
-              <button
-                type="button"
+              <AsyncButton
                 onClick={onSwitchPricingMode}
-                className="group flex min-h-[44px] w-full cursor-pointer items-center gap-3 border-t border-[#eceef1] px-5 font-medium text-[#1f242b] transition-colors first:border-t-0 hover:bg-[#f1f3f5] dark:border-[#1e1e2a] dark:text-[#e2e2ec] dark:hover:bg-[#1a1a26]"
+                loading={mutating}
+                className="group flex min-h-[44px] w-full cursor-pointer items-center gap-3 border-t border-[#eceef1] px-5 font-medium text-[#1f242b] transition-colors first:border-t-0 hover:bg-[#f1f3f5] dark:border-[#1e1e2a] dark:text-[#e2e2ec] dark:hover:bg-[#1a1a26] disabled:opacity-50"
               >
                 <span className="text-[#667085] dark:text-[#8e8ea4]">
                   <DollarSign className="h-4 w-4" />
                 </span>
                 <span className="flex-1 text-left text-[13.5px]">Switch pricing mode</span>
                 <ArrowRight className="h-3.5 w-3.5 -translate-x-1 text-[#0f766e] opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100 dark:text-teal-300" />
-              </button>
+              </AsyncButton>
             </div>
           </Card>
         </div>

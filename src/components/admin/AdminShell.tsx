@@ -12,6 +12,7 @@ import {
   Sun,
   User,
 } from 'lucide-react';
+import { AsyncButton, ToastStack, useAsyncAction } from '@/hooks/useAsyncAction';
 import type { AdminTab } from './AdminPanel';
 
 export interface AdminNavItem {
@@ -133,6 +134,9 @@ export const AdminShell: React.FC<AdminShellProps> = ({
 
   const busy = purging !== null;
   const systemsOk = health.sql === 'ok' && health.license === 'connected';
+  // Self-contained sign-out: pending → spinner + disabled + aria-busy, error → toast,
+  // settle → re-enable. Previously `onClick={onSignOut}` fired without any feedback.
+  const signout = useAsyncAction();
 
   return (
     <div className="bg-[#f5f6f8] dark:bg-[#0a0a0f] text-[#14171c] dark:text-[#ededf3] grid grid-cols-[252px_minmax(0,1fr)] max-md:grid-cols-1 min-h-screen">
@@ -263,14 +267,21 @@ export const AdminShell: React.FC<AdminShellProps> = ({
                 </button>
               </div>
               <div className="border-t border-[#eceef1] dark:border-[#1e1e2a] p-1.5">
-                <button
-                  type="button"
-                  onClick={onSignOut}
-                  className="flex items-center gap-2.5 px-2.5 min-h-[34px] w-full rounded-[6px] text-[13.5px] font-medium text-rose-700 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-500/10 cursor-pointer text-left"
+                <AsyncButton
+                  onClick={() => {
+                    void signout.run(
+                      async () => {
+                        await onSignOut();
+                      },
+                      { errorPrefix: 'Sign out failed' },
+                    );
+                  }}
+                  loading={signout.pending}
+                  className="flex items-center gap-2.5 px-2.5 min-h-[34px] w-full rounded-[6px] text-[13.5px] font-medium text-rose-700 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-500/10 cursor-pointer text-left disabled:opacity-50"
                 >
                   <LogOut className="w-4 h-4 flex-none" />
-                  Sign out
-                </button>
+                  {signout.pending ? 'Signing out…' : 'Sign out'}
+                </AsyncButton>
               </div>
             </div>
           ) : null}
@@ -322,25 +333,23 @@ export const AdminShell: React.FC<AdminShellProps> = ({
           </div>
 
           <div className="flex items-center gap-2 flex-none">
-            <button
-              type="button"
+            <AsyncButton
               onClick={() => onPurge('all')}
-              disabled={busy}
+              loading={busy}
               className="inline-flex items-center gap-2 min-h-[34px] px-3 rounded-md border border-[#d5d9e0] dark:border-[#2a2a3a] bg-white dark:bg-[#12121a] text-[#1f242b] dark:text-[#e2e2ec] text-[13px] font-medium cursor-pointer transition-colors hover:bg-[#f1f3f5] dark:hover:bg-[#1a1a26] disabled:opacity-50 disabled:cursor-wait"
             >
               <Eraser className="w-4 h-4" />
               {busy ? 'Purging…' : 'Purge all'}
-            </button>
-            <button
-              type="button"
+            </AsyncButton>
+            <AsyncButton
               onClick={() => onPurge('landing')}
-              disabled={busy}
+              loading={busy}
               title="Purge public cache"
               aria-label="Purge public cache"
               className="inline-flex items-center justify-center w-8 h-8 rounded-md border border-[#d5d9e0] dark:border-[#2a2a3a] bg-white dark:bg-[#12121a] text-[#444b57] dark:text-[#b9b9cc] cursor-pointer transition-colors hover:bg-[#f1f3f5] dark:hover:bg-[#1c1c2c] disabled:opacity-50 disabled:cursor-wait"
             >
               <Eraser className="w-4 h-4" />
-            </button>
+            </AsyncButton>
             <button
               type="button"
               onClick={toggleTheme}
@@ -399,6 +408,8 @@ export const AdminShell: React.FC<AdminShellProps> = ({
           </div>
         </main>
       </div>
+      {/* Shared async-error toast home for this tree (sign-out + self-contained islands). */}
+      <ToastStack />
     </div>
   );
 };

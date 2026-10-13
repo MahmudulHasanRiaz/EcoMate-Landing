@@ -1,6 +1,7 @@
 import { ExternalLink, Plus, Search, Trash2 } from 'lucide-react';
 import type { BlogPost } from '../../../types/api';
 import type { FieldErrors } from '../fieldErrors';
+import { AsyncButton } from '@/hooks/useAsyncAction';
 import { BlogPostEditor } from '../BlogPostEditor';
 import { BlogCategoryManager } from '../BlogCategoryManager';
 import { BlogTagManager } from '../BlogTagManager';
@@ -15,6 +16,8 @@ export interface BlogTabProps {
   isEditingBlog: boolean;
   onIsEditingBlogChange: (editing: boolean) => void;
   isBlogSaving: boolean;
+  /** Shared panel mutation pending flag (AdminPanel `mutation.pending`). */
+  mutating: boolean;
   blogSubTab: 'posts' | 'categories' | 'tags';
   onBlogSubTabChange: (tab: 'posts' | 'categories' | 'tags') => void;
   blogSearchQuery: string;
@@ -34,6 +37,7 @@ export const BlogTab: React.FC<BlogTabProps> = ({
   isEditingBlog,
   onIsEditingBlogChange,
   isBlogSaving,
+  mutating,
   blogSubTab,
   onBlogSubTabChange,
   blogSearchQuery,
@@ -239,15 +243,15 @@ export const BlogTab: React.FC<BlogTabProps> = ({
                           >
                             Edit
                           </button>
-                          <button
-                            type="button"
+                          <AsyncButton
                             onClick={() => onDeleteBlogPost(post.id, post.title)}
+                            loading={mutating}
                             className="inline-flex items-center justify-center w-8 h-8 rounded-md text-[#667085] dark:text-[#8e8ea4] hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
                             title="Delete article"
                             aria-label={`Delete article ${post.title}`}
                           >
                             <Trash2 className="h-4 w-4" />
-                          </button>
+                          </AsyncButton>
                         </div>
                       </Card>
                     ))}

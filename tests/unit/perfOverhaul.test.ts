@@ -1,6 +1,7 @@
 /**
  * fix/perf-overhaul verification: B1 session cache, B2 parallel prechecks, B3 bootstrap
- * shape, C1 pending state, D2 reduced-motion kill-switch.
+ * shape, C1 pending state, D2 reduced-motion kill-switch, C1 follow-up (AdminPanel-wide
+ * shared async pattern).
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -177,5 +178,97 @@ describe('D2 reduced-motion kill-switch + D1 tokens', () => {
     expect(staggerDelayMs(2)).toBe(2 * MOTION.staggerStepMs);
     expect(staggerDelayMs(100)).toBe(8 * MOTION.staggerStepMs);
     expect(MOTION.pressScale).toBeLessThan(1);
+  });
+});
+
+describe('C1 follow-up: AdminPanel-wide shared async pattern (no fire-and-forget)', () => {
+  const ADMIN_PANEL_MUTATIONS = [
+    'handleSaveLocale',
+    'handlePublishLocale',
+    'handleRestoreRevision',
+    'handleUpdateLeadStatus',
+    'handleAssignLead',
+    'handleSaveFollowUp',
+    'handleRetryLicenseSync',
+    'handleRetryMetaSync',
+    'handleTogglePricingMode',
+    'handleSaveSettings',
+    'handleSaveBlogPost',
+    'handleDeleteBlogPost',
+    'handleSaveTestimonial',
+    'handleDeleteTestimonial',
+    'handleSaveCaseStudy',
+    'handleDeleteCaseStudy',
+    'runPurge',
+  ];
+
+  it('every mutating handler runs through the shared async primitive', () => {
+    const src = readFileSync(path.join(root, 'src/components/admin/AdminPanel.tsx'), 'utf8');
+    for (const name of ADMIN_PANEL_MUTATIONS) expect(src).toContain(name);
+    expect(src).toContain('useAsyncAction');
+    const runs = src.match(/mutation\.run\(/g)?.length ?? 0;
+    expect(runs).toBeGreaterThanOrEqual(ADMIN_PANEL_MUTATIONS.length);
+  });
+
+  it('no ad-hoc isSaving* pending states remain in AdminPanel (single source of truth)', () => {
+    const src = readFileSync(path.join(root, 'src/components/admin/AdminPanel.tsx'), 'utf8');
+    expect(src).not.toMatch(/setIsSavingEditor|setIsBlogSaving|setTestimonialSaving|setCaseStudySaving/);
+    expect(src).not.toMatch(/const \[isSavingEditor|const \[isBlogSaving|const \[testimonialSaving|const \[caseStudySaving/);
+  });
+
+  it('panel loading states render Skeleton', () => {
+    for (const file of [
+      'src/components/admin/AdminPanel.tsx',
+      'src/components/admin/tabs/ContentTab.tsx',
+      'src/components/admin/tabs/LeadDrawer.tsx',
+      'src/components/admin/MediaLibrary.tsx',
+      'src/components/admin/BlogCategoryManager.tsx',
+      'src/components/admin/BlogTagManager.tsx',
+    ]) {
+      const src = readFileSync(path.join(root, file), 'utf8');
+      expect(src, file).toContain('Skeleton');
+    }
+  });
+
+  it('mutating buttons across the panel surface use the shared AsyncButton', () => {
+    for (const file of [
+      'src/components/admin/AdminPanel.tsx',
+      'src/components/admin/tabs/ContentTab.tsx',
+      'src/components/admin/tabs/BlogTab.tsx',
+      'src/components/admin/tabs/TestimonialsTab.tsx',
+      'src/components/admin/tabs/LeadsTab.tsx',
+      'src/components/admin/tabs/LeadDrawer.tsx',
+      'src/components/admin/tabs/DashboardTab.tsx',
+      'src/components/admin/tabs/PricingTab.tsx',
+      'src/components/admin/tabs/SettingsTab.tsx',
+      // SectionsTab has no buttons (checkbox + blur autosaves) — it owns the hook and
+      // wires pending into disabled + aria-busy instead (asserted below).
+      'src/components/admin/AdminShell.tsx',
+      'src/components/admin/MediaLibrary.tsx',
+      'src/components/admin/BlogCategoryManager.tsx',
+      'src/components/admin/BlogTagManager.tsx',
+    ]) {
+      const src = readFileSync(path.join(root, file), 'utf8');
+      expect(src, file).toContain('AsyncButton');
+    }
+    const sections = readFileSync(
+      path.join(root, 'src/components/admin/tabs/SectionsTab.tsx'),
+      'utf8',
+    );
+    expect(sections).toContain('useAsyncAction');
+    expect(sections).toContain('aria-busy');
+  });
+
+  it('self-contained mutation islands own the shared hook (no unhandled rejections)', () => {
+    for (const file of [
+      'src/components/admin/tabs/SectionsTab.tsx',
+      'src/components/admin/MediaLibrary.tsx',
+      'src/components/admin/BlogCategoryManager.tsx',
+      'src/components/admin/BlogTagManager.tsx',
+      'src/components/admin/AdminShell.tsx',
+    ]) {
+      const src = readFileSync(path.join(root, file), 'utf8');
+      expect(src, file).toContain('useAsyncAction');
+    }
   });
 });

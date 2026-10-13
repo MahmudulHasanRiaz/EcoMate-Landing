@@ -15,6 +15,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import * as api from '@/src/services/api';
 import type { MediaAsset } from '@/src/types/api';
+import { AsyncButton, Skeleton, useAsyncAction } from '@/hooks/useAsyncAction';
 
 const CATEGORIES = ['general', 'logo', 'hero', 'product_ui', 'customer_logo', 'og_image'] as const;
 const ACCEPT = 'image/jpeg,image/png,image/webp';
@@ -40,7 +41,11 @@ function errorText(err: unknown): string {
 export function MediaLibrary() {
   const [assets, setAssets] = useState<MediaAsset[]>([]);
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState<string | null>(null);
+  // Shared async primitive: pending is the single source of truth for disabled +
+  // spinner + aria-busy. `statusText` keeps the old `busy` status messaging
+  // ("Uploading x…") — messaging only, never a second pending flag.
+  const mutation = useAsyncAction();
+  const [statusText, setStatusText] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<string>('all');
@@ -66,63 +71,67 @@ export function MediaLibrary() {
   /** Upload one file: presigned direct-to-R2, legacy fallback when unconfigured. */
   const uploadFile = useCallback(
     async (file: File) => {
-      setBusy(`Uploading ${file.name}…`);
+      setStatusText(`Uploading ${file.name}…`);
       setNotice(null);
-      try {
-        // Presigned path first — bytes go straight to R2.
+      await mutation.run(async () => {
         try {
-          const signed = await api.signMediaUpload({
-            filename: file.name,
-            contentType: file.type,
-            size: file.size,
-            title: file.name.replace(/\.[^.]*$/, ''),
-            altText: file.name.replace(/\.[^.]*$/, ''),
-          });
-          const put = await fetch(signed.uploadUrl, {
-            method: 'PUT',
-            headers: { 'Content-Type': signed.contentType },
-            body: file,
-          });
-          if (!put.ok) throw new Error(`Direct upload failed (HTTP ${put.status})`);
-          await api.confirmMediaUpload({
-            key: signed.key,
-            title: file.name.replace(/\.[^.]*$/, ''),
-            altText: file.name.replace(/\.[^.]*$/, ''),
-          });
-          setNotice({ kind: 'ok', text: `${file.name} uploaded.` });
-        } catch (signErr) {
-          // 503 = presign not provisioned → legacy multipart path (bytes via Worker).
-          const status = (signErr as { status?: number })?.status;
-          if (status !== 503) throw signErr;
-          await api.legacyUploadMedia(file, { title: file.name.replace(/\.[^.]*$/, '') });
-          setNotice({ kind: 'ok', text: `${file.name} uploaded via standard upload (direct upload not configured).` });
+          // Presigned path first — bytes go straight to R2.
+          try {
+            const signed = await api.signMediaUpload({
+              filename: file.name,
+              contentType: file.type,
+              size: file.size,
+              title: file.name.replace(/\.[^.]*$/, ''),
+              altText: file.name.replace(/\.[^.]*$/, ''),
+            });
+            const put = await fetch(signed.uploadUrl, {
+              method: 'PUT',
+              headers: { 'Content-Type': signed.contentType },
+              body: file,
+            });
+            if (!put.ok) throw new Error(`Direct upload failed (HTTP ${put.status})`);
+            await api.confirmMediaUpload({
+              key: signed.key,
+              title: file.name.replace(/\.[^.]*$/, ''),
+              altText: file.name.replace(/\.[^.]*$/, ''),
+            });
+            setNotice({ kind: 'ok', text: `${file.name} uploaded.` });
+          } catch (signErr) {
+            // 503 = presign not provisioned → legacy multipart path (bytes via Worker).
+            const status = (signErr as { status?: number })?.status;
+            if (status !== 503) throw signErr;
+            await api.legacyUploadMedia(file, { title: file.name.replace(/\.[^.]*$/, '') });
+            setNotice({ kind: 'ok', text: `${file.name} uploaded via standard upload (direct upload not configured).` });
+          }
+          await refresh();
+        } catch (err) {
+          setNotice({ kind: 'err', text: errorText(err) });
+        } finally {
+          setStatusText(null);
+          if (fileRef.current) fileRef.current.value = '';
         }
-        await refresh();
-      } catch (err) {
-        setNotice({ kind: 'err', text: errorText(err) });
-      } finally {
-        setBusy(null);
-        if (fileRef.current) fileRef.current.value = '';
-      }
+      }, { errorPrefix: 'Upload failed' });
     },
-    [refresh],
+    [refresh, mutation],
   );
 
   const removeAsset = useCallback(
     async (asset: MediaAsset) => {
       if (!window.confirm(`Delete "${asset.title}"? The R2 object is purged unless another asset shares its key.`)) return;
-      setBusy(`Deleting ${asset.title}…`);
-      try {
-        await api.deleteMediaAsset(asset.id);
-        setNotice({ kind: 'ok', text: `"${asset.title}" deleted.` });
-        await refresh();
-      } catch (err) {
-        setNotice({ kind: 'err', text: errorText(err) });
-      } finally {
-        setBusy(null);
-      }
+      setStatusText(`Deleting ${asset.title}…`);
+      await mutation.run(async () => {
+        try {
+          await api.deleteMediaAsset(asset.id);
+          setNotice({ kind: 'ok', text: `"${asset.title}" deleted.` });
+          await refresh();
+        } catch (err) {
+          setNotice({ kind: 'err', text: errorText(err) });
+        } finally {
+          setStatusText(null);
+        }
+      }, { errorPrefix: 'Delete failed' });
     },
-    [refresh],
+    [refresh, mutation],
   );
 
   const openEdit = useCallback((asset: MediaAsset) => {
@@ -132,18 +141,20 @@ export function MediaLibrary() {
 
   const saveEdit = useCallback(async () => {
     if (!editing) return;
-    setBusy('Saving…');
-    try {
-      await api.updateMediaAsset(editing.id, editForm);
-      setEditing(null);
-      setNotice({ kind: 'ok', text: 'Asset updated.' });
-      await refresh();
-    } catch (err) {
-      setNotice({ kind: 'err', text: errorText(err) });
-    } finally {
-      setBusy(null);
-    }
-  }, [editing, editForm, refresh]);
+    setStatusText('Saving…');
+    await mutation.run(async () => {
+      try {
+        await api.updateMediaAsset(editing.id, editForm);
+        setEditing(null);
+        setNotice({ kind: 'ok', text: 'Asset updated.' });
+        await refresh();
+      } catch (err) {
+        setNotice({ kind: 'err', text: errorText(err) });
+      } finally {
+        setStatusText(null);
+      }
+    }, { errorPrefix: 'Save failed' });
+  }, [editing, editForm, refresh, mutation]);
 
   const copyUrl = useCallback(async (url: string) => {
     try {
@@ -181,14 +192,13 @@ export function MediaLibrary() {
               if (file) void uploadFile(file);
             }}
           />
-          <button
-            type="button"
-            disabled={busy !== null}
+          <AsyncButton
+            loading={mutation.pending}
             onClick={() => fileRef.current?.click()}
             className="px-4 py-2 rounded-xl text-xs font-bold bg-[#0f766e] hover:bg-[#115e59] disabled:opacity-50 text-white shadow-xs cursor-pointer"
           >
-            {busy ?? 'Upload image'}
-          </button>
+            {statusText ?? 'Upload image'}
+          </AsyncButton>
           <button
             type="button"
             onClick={() => void refresh()}
@@ -234,7 +244,9 @@ export function MediaLibrary() {
       </div>
 
       {loading ? (
-        <p className="text-sm text-slate-600 dark:text-slate-300">Loading library…</p>
+        <div aria-busy="true" aria-label="Loading media library">
+          <Skeleton lines={6} />
+        </div>
       ) : visible.length === 0 ? (
         <p className="text-sm text-slate-600 dark:text-slate-300">No assets match. Upload the first image above.</p>
       ) : (
@@ -265,13 +277,14 @@ export function MediaLibrary() {
                   >
                     Edit
                   </button>
-                  <button
-                    type="button"
+                  <AsyncButton
                     onClick={() => void removeAsset(asset)}
-                    className="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border border-rose-200 dark:border-rose-500/30 bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-300 cursor-pointer"
+                    loading={mutation.pending}
+                    aria-label={`Delete ${asset.title}`}
+                    className="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border border-rose-200 dark:border-rose-500/30 bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-300 cursor-pointer disabled:opacity-50"
                   >
                     Delete
-                  </button>
+                  </AsyncButton>
                 </div>
               </div>
             </div>
@@ -324,14 +337,13 @@ export function MediaLibrary() {
               >
                 Cancel
               </button>
-              <button
-                type="button"
+              <AsyncButton
                 onClick={() => void saveEdit()}
-                disabled={busy !== null}
+                loading={mutation.pending}
                 className="px-4 py-2 rounded-xl text-xs font-bold bg-[#0f766e] hover:bg-[#115e59] disabled:opacity-50 text-white cursor-pointer"
               >
-                {busy ?? 'Save'}
-              </button>
+                {statusText ?? 'Save'}
+              </AsyncButton>
             </div>
           </div>
         </div>

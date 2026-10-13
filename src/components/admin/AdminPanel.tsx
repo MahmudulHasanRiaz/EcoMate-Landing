@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { signOut } from 'next-auth/react';
+import { AsyncButton, Skeleton, useAsyncAction } from '@/hooks/useAsyncAction';
 import type {
   SiteSettings,
   LandingSection,
@@ -76,6 +77,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
   const [isLoading, setIsLoading] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   /**
+   * C1 shared async primitive (fix/perf-overhaul follow-up): the SINGLE source of truth
+   * for every mutation pending state in this panel. Each handler below runs its work
+   * through `mutation.run(...)` — pending disables the threaded buttons, settle always
+   * re-enables. User messaging stays on `showNotification` (the existing toast card):
+   * the hook's own toast channel has no listener in this tree, so there is exactly one
+   * visible toast, never two.
+   */
+  const mutation = useAsyncAction();
+  /** First-load gate for the panel skeleton: reloads keep rendered panels (with their
+   *  local state) instead of flashing back to a skeleton. */
+  const firstLoad = useRef(true);
+  /**
    * Maintenance state (Task 20 §3): when the initial load fails (DB outage),
    * the console shows this banner with a retry instead of empty panels.
    */
@@ -109,7 +122,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
   /** Raw textarea text per locale. Kept as text so a half-typed `{` is not a parse error. */
   const [editorDraft, setEditorDraft] = useState<{ en: string; bn: string }>({ en: '', bn: '' });
   const [editorErrors, setEditorErrors] = useState<{ en: string; bn: string }>({ en: '', bn: '' });
-  const [isSavingEditor, setIsSavingEditor] = useState(false);
+  // (was `isSavingEditor` — now `mutation.pending`, threaded as `isSavingEditor` below)
   /**
    * Optimistic-locking conflict (Task 19 §5): someone else saved this locale while the
    * editor was open. The operator's own draft stays in the textarea — nothing is lost —
@@ -163,7 +176,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
     tags: ['ecommerce', 'operations'],
   });
   const [blogSubTab, setBlogSubTab] = useState<'posts' | 'categories' | 'tags'>('posts');
-  const [isBlogSaving, setIsBlogSaving] = useState(false);
+  // (was `isBlogSaving` — now `mutation.pending`, threaded as `isBlogSaving` below)
   const [blogSearchQuery, setBlogSearchQuery] = useState('');
   const [blogStatusFilter, setBlogStatusFilter] = useState<string>('all');
 
@@ -171,10 +184,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
   // a draft with no `id` is a create, with an `id` an edit.
   const [testimonialDraft, setTestimonialDraft] = useState<Partial<Testimonial> | null>(null);
   const [testimonialErrors, setTestimonialErrors] = useState<FieldErrors>({});
-  const [testimonialSaving, setTestimonialSaving] = useState(false);
+  // (was `testimonialSaving` — now `mutation.pending`, threaded below)
   const [caseStudyDraft, setCaseStudyDraft] = useState<Partial<CaseStudy> | null>(null);
   const [caseStudyErrors, setCaseStudyErrors] = useState<FieldErrors>({});
-  const [caseStudySaving, setCaseStudySaving] = useState(false);
+  // (was `caseStudySaving` — now `mutation.pending`, threaded below)
 
   // Load all data
   const loadData = async () => {
@@ -250,6 +263,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
       setLoadError('The database could not be reached. Showing cached/empty data.');
     } finally {
       setIsLoading(false);
+      firstLoad.current = false;
     }
 
     // The operator roster and the overdue worklist are fetched separately for the same reason
@@ -280,20 +294,24 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
    * the toast on success and on failure.
    */
   const runPurge = async (scope: 'all' | 'landing'): Promise<void> => {
+    // `purging` stays as the *scope* target (which button + dialog), while pending
+    // ownership moves to the shared primitive: no fire-and-forget purge.
     setPurging(scope);
-    try {
-      const res = await api.purgeCache(scope);
-      showNotification(
-        scope === 'all'
-          ? `Cache purged (${res.invalidated.length} tags)`
-          : `Landing cache purged (${res.invalidated.length} tags)`,
-      );
-    } catch (err) {
-      showNotification(err instanceof Error ? err.message : 'Purge failed');
-    } finally {
-      setPurging(null);
-      setConfirmScope(null);
-    }
+    await mutation.run(async () => {
+      try {
+        const res = await api.purgeCache(scope);
+        showNotification(
+          scope === 'all'
+            ? `Cache purged (${res.invalidated.length} tags)`
+            : `Landing cache purged (${res.invalidated.length} tags)`,
+        );
+      } catch (err) {
+        showNotification(err instanceof Error ? err.message : 'Purge failed');
+      } finally {
+        setPurging(null);
+        setConfirmScope(null);
+      }
+    }, { errorPrefix: 'Purge failed' });
   };
 
   /**
@@ -417,66 +435,64 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
     }
 
     setEditorErrors((prev) => ({ ...prev, [locale]: '' }));
-    setIsSavingEditor(true);
-    try {
-      const status = editorRows[locale]?.status ?? 'published';
-      const saved = await api.saveSectionContent(
-        editingSectionKey,
-        locale,
-        parsed,
-        status,
-        editorRows[locale]?.version,
-      );
-      if (typeof saved === 'object' && saved !== null && 'staged' in saved && saved.staged) {
-        // Changed copy on a published row: draft staged, live copy untouched. The row the
-        // editor holds is still current, so no reload is needed — only a publish.
-        setEditorConflict(null);
-        showNotification(
-          `${editingSectionKey} · ${locale.toUpperCase()} draft staged (revision ${saved.revisionVersion}) — Publish to go live`,
+    await mutation.run(async () => {
+      try {
+        const status = editorRows[locale]?.status ?? 'published';
+        const saved = await api.saveSectionContent(
+          editingSectionKey,
+          locale,
+          parsed,
+          status,
+          editorRows[locale]?.version,
         );
-        return;
+        if (typeof saved === 'object' && saved !== null && 'staged' in saved && saved.staged) {
+          // Changed copy on a published row: draft staged, live copy untouched. The row the
+          // editor holds is still current, so no reload is needed — only a publish.
+          setEditorConflict(null);
+          showNotification(
+            `${editingSectionKey} · ${locale.toUpperCase()} draft staged (revision ${saved.revisionVersion}) — Publish to go live`,
+          );
+          return;
+        }
+        const row = saved as LandingContentRow;
+        setEditorRows((prev) => ({ ...prev, [locale]: row }));
+        setEditorDraft((prev) => ({ ...prev, [locale]: JSON.stringify(row.content, null, 2) }));
+        setEditorConflict(null);
+        showNotification(`${editingSectionKey} · ${locale.toUpperCase()} saved`);
+        // The gap count just changed; re-read it rather than guessing.
+        api.getI18nReport().then(setI18nReport).catch(() => undefined);
+      } catch (err: any) {
+        if (err instanceof api.ApiConflictError && err.serverRow) {
+          setEditorConflict({ locale, serverRow: err.serverRow });
+          showNotification(`Save conflict on ${editingSectionKey} · ${locale.toUpperCase()} — see the banner`);
+        } else {
+          setEditorErrors((prev) => ({ ...prev, [locale]: err.message }));
+          showNotification(`Save failed: ${err.message}`);
+        }
       }
-      const row = saved as LandingContentRow;
-      setEditorRows((prev) => ({ ...prev, [locale]: row }));
-      setEditorDraft((prev) => ({ ...prev, [locale]: JSON.stringify(row.content, null, 2) }));
-      setEditorConflict(null);
-      showNotification(`${editingSectionKey} · ${locale.toUpperCase()} saved`);
-      // The gap count just changed; re-read it rather than guessing.
-      api.getI18nReport().then(setI18nReport).catch(() => undefined);
-    } catch (err: any) {
-      if (err instanceof api.ApiConflictError && err.serverRow) {
-        setEditorConflict({ locale, serverRow: err.serverRow });
-        showNotification(`Save conflict on ${editingSectionKey} · ${locale.toUpperCase()} — see the banner`);
-      } else {
-        setEditorErrors((prev) => ({ ...prev, [locale]: err.message }));
-        showNotification(`Save failed: ${err.message}`);
-      }
-    } finally {
-      setIsSavingEditor(false);
-    }
+    }, { errorPrefix: 'Save failed' });
   };
 
   /** Promote staged drafts to the live copy (Task 19 §3). Live immediately. */
   const handlePublishLocale = async (locale: 'en' | 'bn') => {
     if (!editingSectionKey) return;
-    setIsSavingEditor(true);
-    try {
-      const published = await api.publishSection(editingSectionKey, locale);
-      setEditorRows((prev) => ({ ...prev, [locale]: published }));
-      setEditorDraft((prev) => ({ ...prev, [locale]: JSON.stringify(published.content, null, 2) }));
-      setEditorConflict(null);
-      showNotification(`${editingSectionKey} · ${locale.toUpperCase()} published live`);
-      api.getI18nReport().then(setI18nReport).catch(() => undefined);
-    } catch (err: any) {
-      if (err instanceof api.ApiConflictError && err.serverRow) {
-        setEditorConflict({ locale, serverRow: err.serverRow });
-        showNotification(`Publish conflict on ${editingSectionKey} · ${locale.toUpperCase()} — see the banner`);
-      } else {
-        showNotification(`Publish failed: ${err.message}`);
+    await mutation.run(async () => {
+      try {
+        const published = await api.publishSection(editingSectionKey, locale);
+        setEditorRows((prev) => ({ ...prev, [locale]: published }));
+        setEditorDraft((prev) => ({ ...prev, [locale]: JSON.stringify(published.content, null, 2) }));
+        setEditorConflict(null);
+        showNotification(`${editingSectionKey} · ${locale.toUpperCase()} published live`);
+        api.getI18nReport().then(setI18nReport).catch(() => undefined);
+      } catch (err: any) {
+        if (err instanceof api.ApiConflictError && err.serverRow) {
+          setEditorConflict({ locale, serverRow: err.serverRow });
+          showNotification(`Publish conflict on ${editingSectionKey} · ${locale.toUpperCase()} — see the banner`);
+        } else {
+          showNotification(`Publish failed: ${err.message}`);
+        }
       }
-    } finally {
-      setIsSavingEditor(false);
-    }
+    }, { errorPrefix: 'Publish failed' });
   };
 
   /** Load one locale's forward-only history for the rollback list (Task 19 §4). */
@@ -496,22 +512,21 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
   /** Re-apply a historical revision as a new live version (forward-only rollback). */
   const handleRestoreRevision = async (locale: 'en' | 'bn', version: number) => {
     if (!editingSectionKey) return;
-    setIsSavingEditor(true);
-    try {
-      const restored = await api.restoreSection(editingSectionKey, locale, version);
-      setEditorRows((prev) => ({ ...prev, [locale]: restored }));
-      setEditorDraft((prev) => ({ ...prev, [locale]: JSON.stringify(restored.content, null, 2) }));
-      setEditorConflict(null);
-      const rows = await api.getSectionRevisions(editingSectionKey, locale);
-      setRevisionHistory({ locale, rows });
-      showNotification(
-        `${editingSectionKey} · ${locale.toUpperCase()} restored to revision ${version} — live now`,
-      );
-    } catch (err: any) {
-      showNotification(`Restore failed: ${err.message}`);
-    } finally {
-      setIsSavingEditor(false);
-    }
+    await mutation.run(async () => {
+      try {
+        const restored = await api.restoreSection(editingSectionKey, locale, version);
+        setEditorRows((prev) => ({ ...prev, [locale]: restored }));
+        setEditorDraft((prev) => ({ ...prev, [locale]: JSON.stringify(restored.content, null, 2) }));
+        setEditorConflict(null);
+        const rows = await api.getSectionRevisions(editingSectionKey, locale);
+        setRevisionHistory({ locale, rows });
+        showNotification(
+          `${editingSectionKey} · ${locale.toUpperCase()} restored to revision ${version} — live now`,
+        );
+      } catch (err: any) {
+        showNotification(`Restore failed: ${err.message}`);
+      }
+    }, { errorPrefix: 'Restore failed' });
   };
 
   /**
@@ -564,16 +579,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
    * drawer is showing.
    */
   const handleUpdateLeadStatus = async (id: number, status: Lead['status']) => {
-    try {
-      const updated = await api.updateLead(id, { status });
-      setLeads((prev) => prev.map((l) => (l.id === id ? updated : l)));
-      setSelectedLead((prev) => (prev?.id === id ? updated : prev));
-      showNotification(`Lead #${id} status updated to ${status}`);
-      await refreshTimeline(id);
-      await refreshOverdue();
-    } catch (err: any) {
-      showNotification(`Error updating lead: ${err.message}`);
-    }
+    await mutation.run(async () => {
+      try {
+        const updated = await api.updateLead(id, { status });
+        setLeads((prev) => prev.map((l) => (l.id === id ? updated : l)));
+        setSelectedLead((prev) => (prev?.id === id ? updated : prev));
+        showNotification(`Lead #${id} status updated to ${status}`);
+        await refreshTimeline(id);
+        await refreshOverdue();
+      } catch (err: any) {
+        showNotification(`Error updating lead: ${err.message}`);
+      }
+    }, { errorPrefix: 'Error updating lead' });
   };
 
   /** Re-read the timeline for the open lead after a mutation that wrote to it. */
@@ -598,50 +615,56 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
 
   /** Assignment change. Logged as an activity server-side, same transaction as the write. */
   const handleAssignLead = async (leadId: number, assignedToId: number | null) => {
-    try {
-      const updated = await api.updateLead(leadId, { assignedToId });
-      setLeads((prev) => prev.map((l) => (l.id === leadId ? updated : l)));
-      setSelectedLead((prev) => (prev?.id === leadId ? updated : prev));
-      showNotification(
-        assignedToId === null
-          ? `Lead #${leadId} unassigned`
-          : `Lead #${leadId} assigned to ${operators.find((o) => o.id === assignedToId)?.email ?? `operator #${assignedToId}`}`,
-      );
-      await refreshTimeline(leadId);
-    } catch (err: any) {
-      showNotification(`Error assigning lead: ${err.message}`);
-    }
+    await mutation.run(async () => {
+      try {
+        const updated = await api.updateLead(leadId, { assignedToId });
+        setLeads((prev) => prev.map((l) => (l.id === leadId ? updated : l)));
+        setSelectedLead((prev) => (prev?.id === leadId ? updated : prev));
+        showNotification(
+          assignedToId === null
+            ? `Lead #${leadId} unassigned`
+            : `Lead #${leadId} assigned to ${operators.find((o) => o.id === assignedToId)?.email ?? `operator #${assignedToId}`}`,
+        );
+        await refreshTimeline(leadId);
+      } catch (err: any) {
+        showNotification(`Error assigning lead: ${err.message}`);
+      }
+    }, { errorPrefix: 'Error assigning lead' });
   };
 
   /** Follow-up scheduling. `''` clears it — the server distinguishes that from a bad date. */
   const handleSaveFollowUp = async (lead: Lead) => {
     const trimmed = followUpDraft.trim();
     const followUpAt = trimmed === '' ? null : new Date(`${trimmed}T09:00:00`).toISOString();
-    try {
-      const updated = await api.updateLead(lead.id, { followUpAt });
-      setLeads((prev) => prev.map((l) => (l.id === lead.id ? updated : l)));
-      setSelectedLead((prev) => (prev?.id === lead.id ? updated : prev));
-      showNotification(
-        followUpAt === null ? `Follow-up cleared for lead #${lead.id}` : `Follow-up set for lead #${lead.id}`,
-      );
-      await refreshTimeline(lead.id);
-      await refreshOverdue();
-    } catch (err: any) {
-      showNotification(`Error saving follow-up: ${err.message}`);
-    }
+    await mutation.run(async () => {
+      try {
+        const updated = await api.updateLead(lead.id, { followUpAt });
+        setLeads((prev) => prev.map((l) => (l.id === lead.id ? updated : l)));
+        setSelectedLead((prev) => (prev?.id === lead.id ? updated : prev));
+        showNotification(
+          followUpAt === null ? `Follow-up cleared for lead #${lead.id}` : `Follow-up set for lead #${lead.id}`,
+        );
+        await refreshTimeline(lead.id);
+        await refreshOverdue();
+      } catch (err: any) {
+        showNotification(`Error saving follow-up: ${err.message}`);
+      }
+    }, { errorPrefix: 'Error saving follow-up' });
   };
 
   const handleRetryLicenseSync = async (id: number) => {
-    try {
-      const result = await api.retryLeadLicenseSync(id);
-      showNotification(result.message || `Dispatched lead #${id} to License Portal integration queue`);
-      const updatedLeads = await api.getLeads({ limit: api.ADMIN_LIST_LIMIT });
-      setLeads(updatedLeads);
-      const updatedLogs = await api.getIntegrationLogs({ limit: api.ADMIN_LIST_LIMIT });
-      setIntegrationLogs(updatedLogs);
-    } catch (err: any) {
-      showNotification(`Sync failed: ${err.message}`);
-    }
+    await mutation.run(async () => {
+      try {
+        const result = await api.retryLeadLicenseSync(id);
+        showNotification(result.message || `Dispatched lead #${id} to License Portal integration queue`);
+        const updatedLeads = await api.getLeads({ limit: api.ADMIN_LIST_LIMIT });
+        setLeads(updatedLeads);
+        const updatedLogs = await api.getIntegrationLogs({ limit: api.ADMIN_LIST_LIMIT });
+        setIntegrationLogs(updatedLogs);
+      } catch (err: any) {
+        showNotification(`Sync failed: ${err.message}`);
+      }
+    }, { errorPrefix: 'Sync failed' });
   };
 
   /**
@@ -650,144 +673,153 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
    * conversion in Events Manager.
    */
   const handleRetryMetaSync = async (id: number) => {
-    try {
-      const result = await api.retryLeadMetaSync(id);
-      showNotification(
-        result.metaCapiStatus === 'Sent'
-          ? `Lead #${id} converted: Meta CAPI accepted the Lead event`
-          : `Meta CAPI status for lead #${id}: ${result.metaCapiStatus}`
-      );
-      const updatedLeads = await api.getLeads({ limit: api.ADMIN_LIST_LIMIT });
-      setLeads(updatedLeads);
-      const updatedLogs = await api.getIntegrationLogs({ limit: api.ADMIN_LIST_LIMIT });
-      setIntegrationLogs(updatedLogs);
-    } catch (err: any) {
-      showNotification(`Meta CAPI sync failed: ${err.message}`);
-    }
+    await mutation.run(async () => {
+      try {
+        const result = await api.retryLeadMetaSync(id);
+        showNotification(
+          result.metaCapiStatus === 'Sent'
+            ? `Lead #${id} converted: Meta CAPI accepted the Lead event`
+            : `Meta CAPI status for lead #${id}: ${result.metaCapiStatus}`
+        );
+        const updatedLeads = await api.getLeads({ limit: api.ADMIN_LIST_LIMIT });
+        setLeads(updatedLeads);
+        const updatedLogs = await api.getIntegrationLogs({ limit: api.ADMIN_LIST_LIMIT });
+        setIntegrationLogs(updatedLogs);
+      } catch (err: any) {
+        showNotification(`Meta CAPI sync failed: ${err.message}`);
+      }
+    }, { errorPrefix: 'Meta CAPI sync failed' });
   };
 
   const handleTogglePricingMode = async () => {
-    try {
-      const res = await api.togglePricingMode();
-      setPricing((prev) => ({ ...prev, isPricingVisible: res.isPricingVisible }));
-      showNotification(`Pricing mode set to: ${res.isPricingVisible ? 'Visible Tiered' : 'Hidden / Contact Sales'}`);
-    } catch (err: any) {
-      showNotification(`Error toggling pricing mode: ${err.message}`);
-    }
+    await mutation.run(async () => {
+      try {
+        const res = await api.togglePricingMode();
+        setPricing((prev) => ({ ...prev, isPricingVisible: res.isPricingVisible }));
+        showNotification(`Pricing mode set to: ${res.isPricingVisible ? 'Visible Tiered' : 'Hidden / Contact Sales'}`);
+      } catch (err: any) {
+        showNotification(`Error toggling pricing mode: ${err.message}`);
+      }
+    }, { errorPrefix: 'Error toggling pricing mode' });
   };
 
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!settings) return;
     setSettingsErrors({});
-    try {
-      const updated = await api.updateSettings(settings);
-      setSettings(updated);
-      showNotification('Site settings updated successfully');
-    } catch (err: unknown) {
-      setSettingsErrors(fieldErrorsOf(err));
-      showNotification(`Error saving settings: ${err instanceof Error ? err.message : 'Unknown error'}`);
-    }
+    await mutation.run(async () => {
+      try {
+        const updated = await api.updateSettings(settings);
+        setSettings(updated);
+        showNotification('Site settings updated successfully');
+      } catch (err: unknown) {
+        setSettingsErrors(fieldErrorsOf(err));
+        showNotification(`Error saving settings: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      }
+    }, { errorPrefix: 'Error saving settings' });
   };
 
   const handleSaveBlogPost = async (postToSave: Partial<BlogPost>) => {
     setBlogErrors({});
-    setIsBlogSaving(true);
-    try {
-      if (postToSave.id) {
-        await api.updateBlogPost(postToSave.id, postToSave);
-        showNotification('Article updated successfully');
-      } else {
-        await api.createBlogPost(postToSave);
-        showNotification('New article created successfully');
+    await mutation.run(async () => {
+      try {
+        if (postToSave.id) {
+          await api.updateBlogPost(postToSave.id, postToSave);
+          showNotification('Article updated successfully');
+        } else {
+          await api.createBlogPost(postToSave);
+          showNotification('New article created successfully');
+        }
+        setIsEditingBlog(false);
+        const bData = await api.getAllBlogPosts({ limit: api.ADMIN_LIST_LIMIT });
+        setBlogPosts(bData);
+      } catch (err: unknown) {
+        setBlogErrors(fieldErrorsOf(err));
+        showNotification(`Error saving post: ${err instanceof Error ? err.message : 'Unknown error'}`);
       }
-      setIsEditingBlog(false);
-      const bData = await api.getAllBlogPosts({ limit: api.ADMIN_LIST_LIMIT });
-      setBlogPosts(bData);
-    } catch (err: unknown) {
-      setBlogErrors(fieldErrorsOf(err));
-      showNotification(`Error saving post: ${err instanceof Error ? err.message : 'Unknown error'}`);
-    } finally {
-      setIsBlogSaving(false);
-    }
+    }, { errorPrefix: 'Error saving post' });
   };
 
   const handleDeleteBlogPost = async (id: number, title: string) => {
     if (!window.confirm(`Are you sure you want to delete article "${title}"?`)) return;
-    try {
-      await api.deleteBlogPost(id);
-      showNotification(`Article "${title}" deleted`);
-      const bData = await api.getAllBlogPosts({ limit: api.ADMIN_LIST_LIMIT });
-      setBlogPosts(bData);
-    } catch (err: unknown) {
-      showNotification(`Error deleting post: ${err instanceof Error ? err.message : 'Unknown error'}`);
-    }
+    await mutation.run(async () => {
+      try {
+        await api.deleteBlogPost(id);
+        showNotification(`Article "${title}" deleted`);
+        const bData = await api.getAllBlogPosts({ limit: api.ADMIN_LIST_LIMIT });
+        setBlogPosts(bData);
+      } catch (err: unknown) {
+        showNotification(`Error deleting post: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      }
+    }, { errorPrefix: 'Error deleting post' });
   };
 
   // Testimonial + case-study CMS handlers (H-19/H-20). Lists refresh from the admin
   // paths so a just-unpublished row stays visible as a draft instead of vanishing.
   const handleSaveTestimonial = async (data: Partial<Testimonial>) => {
-    setTestimonialSaving(true);
     setTestimonialErrors({});
-    try {
-      if (testimonialDraft?.id) {
-        await api.updateTestimonial(testimonialDraft.id, data);
-        showNotification('Testimonial updated successfully');
-      } else {
-        await api.createTestimonial(data);
-        showNotification('Testimonial created successfully');
+    await mutation.run(async () => {
+      try {
+        if (testimonialDraft?.id) {
+          await api.updateTestimonial(testimonialDraft.id, data);
+          showNotification('Testimonial updated successfully');
+        } else {
+          await api.createTestimonial(data);
+          showNotification('Testimonial created successfully');
+        }
+        setTestimonialDraft(null);
+        setTestimonials(await api.getAllTestimonials({ limit: api.ADMIN_LIST_LIMIT }));
+      } catch (err: unknown) {
+        setTestimonialErrors(fieldErrorsOf(err));
+        showNotification(`Error saving testimonial: ${err instanceof Error ? err.message : 'Unknown error'}`);
       }
-      setTestimonialDraft(null);
-      setTestimonials(await api.getAllTestimonials({ limit: api.ADMIN_LIST_LIMIT }));
-    } catch (err: unknown) {
-      setTestimonialErrors(fieldErrorsOf(err));
-      showNotification(`Error saving testimonial: ${err instanceof Error ? err.message : 'Unknown error'}`);
-    } finally {
-      setTestimonialSaving(false);
-    }
+    }, { errorPrefix: 'Error saving testimonial' });
   };
 
   const handleDeleteTestimonial = async (id: number) => {
     if (!window.confirm('Delete this testimonial? It will no longer appear anywhere.')) return;
-    try {
-      await api.deleteTestimonial(id);
-      setTestimonials(await api.getAllTestimonials({ limit: api.ADMIN_LIST_LIMIT }));
-      showNotification('Testimonial deleted');
-    } catch (err: unknown) {
-      showNotification(`Error deleting testimonial: ${err instanceof Error ? err.message : 'Unknown error'}`);
-    }
+    await mutation.run(async () => {
+      try {
+        await api.deleteTestimonial(id);
+        setTestimonials(await api.getAllTestimonials({ limit: api.ADMIN_LIST_LIMIT }));
+        showNotification('Testimonial deleted');
+      } catch (err: unknown) {
+        showNotification(`Error deleting testimonial: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      }
+    }, { errorPrefix: 'Error deleting testimonial' });
   };
 
   const handleSaveCaseStudy = async (data: Partial<CaseStudy>) => {
-    setCaseStudySaving(true);
     setCaseStudyErrors({});
-    try {
-      if (caseStudyDraft?.id) {
-        await api.updateCaseStudy(caseStudyDraft.id, data);
-        showNotification('Case study updated successfully');
-      } else {
-        await api.createCaseStudy(data);
-        showNotification('Case study created successfully');
+    await mutation.run(async () => {
+      try {
+        if (caseStudyDraft?.id) {
+          await api.updateCaseStudy(caseStudyDraft.id, data);
+          showNotification('Case study updated successfully');
+        } else {
+          await api.createCaseStudy(data);
+          showNotification('Case study created successfully');
+        }
+        setCaseStudyDraft(null);
+        setCaseStudies(await api.getAllCaseStudies({ limit: api.ADMIN_LIST_LIMIT }));
+      } catch (err: unknown) {
+        setCaseStudyErrors(fieldErrorsOf(err));
+        showNotification(`Error saving case study: ${err instanceof Error ? err.message : 'Unknown error'}`);
       }
-      setCaseStudyDraft(null);
-      setCaseStudies(await api.getAllCaseStudies({ limit: api.ADMIN_LIST_LIMIT }));
-    } catch (err: unknown) {
-      setCaseStudyErrors(fieldErrorsOf(err));
-      showNotification(`Error saving case study: ${err instanceof Error ? err.message : 'Unknown error'}`);
-    } finally {
-      setCaseStudySaving(false);
-    }
+    }, { errorPrefix: 'Error saving case study' });
   };
 
   const handleDeleteCaseStudy = async (idOrSlug: number | string) => {
     if (!window.confirm('Delete this case study? Its public page will 404.')) return;
-    try {
-      await api.deleteCaseStudy(idOrSlug);
-      setCaseStudies(await api.getAllCaseStudies({ limit: api.ADMIN_LIST_LIMIT }));
-      showNotification('Case study deleted');
-    } catch (err: unknown) {
-      showNotification(`Error deleting case study: ${err instanceof Error ? err.message : 'Unknown error'}`);
-    }
+    await mutation.run(async () => {
+      try {
+        await api.deleteCaseStudy(idOrSlug);
+        setCaseStudies(await api.getAllCaseStudies({ limit: api.ADMIN_LIST_LIMIT }));
+        showNotification('Case study deleted');
+      } catch (err: unknown) {
+        showNotification(`Error deleting case study: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      }
+    }, { errorPrefix: 'Error deleting case study' });
   };
 
   // Filtered Leads
@@ -831,20 +863,27 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
           className="flex shrink-0 items-center justify-between gap-3 border-b border-amber-300 bg-amber-50 px-4 py-2.5 text-xs text-amber-900 sm:px-6 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200"
         >
           <span className="font-medium">{loadError}</span>
-          <button
-            type="button"
+          <AsyncButton
+            loading={isLoading}
             onClick={() => void loadData()}
             className="shrink-0 rounded-lg bg-amber-600 px-3 py-1.5 font-semibold text-white transition-colors hover:bg-amber-700"
           >
-            Retry
-          </button>
+            {isLoading ? 'Retrying…' : 'Retry'}
+          </AsyncButton>
         </div>
       )}
           {/* TAB 1: DASHBOARD */}
+          {isLoading && firstLoad.current ? (
+            <div className="min-h-[420px]" aria-busy="true" aria-label="Loading admin panel">
+              <Skeleton lines={10} />
+            </div>
+          ) : (
+          <>
           {activeTab === 'dashboard' && (
             <DashboardTab
               leads={leads}
               pricingModeLabel={pricing.isPricingVisible ? 'Tiered Visible' : 'Custom / Hidden'}
+              mutating={mutation.pending}
               onSwitchPricingMode={handleTogglePricingMode}
               sectionCount={sections.length}
               untranslatedCount={i18nReport ? i18nReport.gapCount : null}
@@ -869,6 +908,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
               overdueLeads={overdueLeads}
               leadSearchQuery={leadSearchQuery}
               leadStatusFilter={leadStatusFilter}
+              mutating={mutation.pending}
               exportUrl={api.leadExportUrl()}
               onSearchChange={setLeadSearchQuery}
               onStatusFilterChange={setLeadStatusFilter}
@@ -900,7 +940,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
               onEditorConflictChange={setEditorConflict}
               revisionHistory={revisionHistory}
               isLoadingHistory={isLoadingHistory}
-              isSavingEditor={isSavingEditor}
+              isSavingEditor={mutation.pending}
               onOpenSection={(key) => void handleOpenSection(key)}
               onSaveLocale={(locale) => void handleSaveLocale(locale)}
               onPublishLocale={(locale) => void handlePublishLocale(locale)}
@@ -912,7 +952,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
 
           {/* TAB 4: PRICING CMS */}
           {activeTab === 'pricing' && (
-            <PricingTab pricing={pricing} onTogglePricingMode={handleTogglePricingMode} />
+            <PricingTab pricing={pricing} mutating={mutation.pending} onTogglePricingMode={handleTogglePricingMode} />
           )}
 
           {/* TAB 5: TESTIMONIALS & CASE STUDIES */}
@@ -924,12 +964,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
               onTestimonialDraftChange={setTestimonialDraft}
               testimonialErrors={testimonialErrors}
               onTestimonialErrorsChange={setTestimonialErrors}
-              testimonialSaving={testimonialSaving}
+              testimonialSaving={mutation.pending}
               caseStudyDraft={caseStudyDraft}
               onCaseStudyDraftChange={setCaseStudyDraft}
               caseStudyErrors={caseStudyErrors}
               onCaseStudyErrorsChange={setCaseStudyErrors}
-              caseStudySaving={caseStudySaving}
+              caseStudySaving={mutation.pending}
+              mutating={mutation.pending}
               onSaveTestimonial={handleSaveTestimonial}
               onDeleteTestimonial={handleDeleteTestimonial}
               onSaveCaseStudy={handleSaveCaseStudy}
@@ -947,7 +988,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
               onBlogErrorsChange={setBlogErrors}
               isEditingBlog={isEditingBlog}
               onIsEditingBlogChange={setIsEditingBlog}
-              isBlogSaving={isBlogSaving}
+              isBlogSaving={mutation.pending}
+              mutating={mutation.pending}
               blogSubTab={blogSubTab}
               onBlogSubTabChange={setBlogSubTab}
               blogSearchQuery={blogSearchQuery}
@@ -979,9 +1021,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
               onSettingsChange={setSettings}
               settingsErrors={settingsErrors}
               purging={purging}
+              mutating={mutation.pending}
               onConfirmScopeChange={setConfirmScope}
               onSaveSettings={handleSaveSettings}
             />
+          )}
+          </>
           )}
       </AdminShell>
 
@@ -990,6 +1035,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
           lead={selectedLead}
           activities={leadActivities}
           isLoadingTimeline={isLoadingTimeline}
+          mutating={mutation.pending}
           operators={operators}
           followUpDraft={followUpDraft}
           onFollowUpDraftChange={setFollowUpDraft}

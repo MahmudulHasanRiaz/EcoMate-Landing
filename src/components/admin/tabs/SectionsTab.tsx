@@ -1,5 +1,6 @@
 import * as api from '../../../services/api';
 import type { LandingSection } from '../../../types/api';
+import { useAsyncAction } from '@/hooks/useAsyncAction';
 import { Card } from '../ui';
 
 export interface SectionsTabProps {
@@ -9,8 +10,24 @@ export interface SectionsTabProps {
 }
 
 export const SectionsTab: React.FC<SectionsTabProps> = ({ sections, onSectionsChange, onNotify }) => {
+  // Self-contained mutation island: its three autosaves call the API directly, so it
+  // owns the shared primitive (pending → disabled + aria-busy, error → toast, settle →
+  // re-enable). Previously these awaits had no try/catch at all — a failure was an
+  // unhandled rejection with zero operator feedback.
+  const mutation = useAsyncAction();
+
+  const runSectionUpdate = (label: string, work: () => Promise<void>): void => {
+    void mutation.run(async () => {
+      try {
+        await work();
+      } catch (err) {
+        onNotify(err instanceof Error ? err.message : `${label} failed`);
+      }
+    }, { errorPrefix: label });
+  };
+
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
+    <div className="space-y-6 max-w-6xl mx-auto" aria-busy={mutation.pending}>
       <div>
         <h2 className="text-xl sm:text-2xl font-bold text-[#14171c] dark:text-[#ededf3]">
           Landing Page Sections CMS
@@ -36,10 +53,15 @@ export const SectionsTab: React.FC<SectionsTabProps> = ({ sections, onSectionsCh
                   <input
                     type="checkbox"
                     checked={sec.isVisible}
-                    onChange={async (e) => {
-                      const updated = await api.updateSection(sec.id, { isVisible: e.target.checked });
-                      onSectionsChange((prev) => prev.map((s) => (s.id === sec.id ? updated : s)));
-                      onNotify(`Section visibility updated`);
+                    disabled={mutation.pending}
+                    aria-busy={mutation.pending}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      void runSectionUpdate('Visibility update failed', async () => {
+                        const updated = await api.updateSection(sec.id, { isVisible: checked });
+                        onSectionsChange((prev) => prev.map((s) => (s.id === sec.id ? updated : s)));
+                        onNotify(`Section visibility updated`);
+                      });
                     }}
                     className="rounded accent-[#0f766e]"
                   />
@@ -54,13 +76,18 @@ export const SectionsTab: React.FC<SectionsTabProps> = ({ sections, onSectionsCh
                 <input
                   type="text"
                   value={sec.titleEn}
+                  disabled={mutation.pending}
+                  aria-busy={mutation.pending}
                   onChange={(e) => {
                     const val = e.target.value;
                     onSectionsChange((prev) => prev.map((s) => (s.id === sec.id ? { ...s, titleEn: val } : s)));
                   }}
-                  onBlur={async () => {
-                    await api.updateSection(sec.id, { titleEn: sec.titleEn });
-                    onNotify('Headline saved');
+                  onBlur={() => {
+                    const titleEn = sec.titleEn;
+                    void runSectionUpdate('Headline save failed', async () => {
+                      await api.updateSection(sec.id, { titleEn });
+                      onNotify('Headline saved');
+                    });
                   }}
                   className="w-full px-3 min-h-[34px] py-1.5 rounded-md bg-white dark:bg-[#12121a] border border-[#d5d9e0] dark:border-[#2a2a3a] text-[#1f242b] dark:text-[#e2e2ec] text-[13.5px]"
                 />
@@ -71,13 +98,18 @@ export const SectionsTab: React.FC<SectionsTabProps> = ({ sections, onSectionsCh
                 <input
                   type="text"
                   value={sec.titleBn}
+                  disabled={mutation.pending}
+                  aria-busy={mutation.pending}
                   onChange={(e) => {
                     const val = e.target.value;
                     onSectionsChange((prev) => prev.map((s) => (s.id === sec.id ? { ...s, titleBn: val } : s)));
                   }}
-                  onBlur={async () => {
-                    await api.updateSection(sec.id, { titleBn: sec.titleBn });
-                    onNotify('Bangla headline saved');
+                  onBlur={() => {
+                    const titleBn = sec.titleBn;
+                    void runSectionUpdate('Bangla headline save failed', async () => {
+                      await api.updateSection(sec.id, { titleBn });
+                      onNotify('Bangla headline saved');
+                    });
                   }}
                   className="w-full px-3 min-h-[34px] py-1.5 rounded-md bg-white dark:bg-[#12121a] border border-[#d5d9e0] dark:border-[#2a2a3a] text-[#1f242b] dark:text-[#e2e2ec] text-[13.5px] font-bangla"
                 />

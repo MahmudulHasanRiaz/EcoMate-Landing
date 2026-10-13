@@ -1,12 +1,15 @@
 import { useEffect } from 'react';
 import { Calendar, Copy, History, Mail, Phone, RefreshCw, Upload, X } from 'lucide-react';
 import type { Lead, LeadActivity } from '../../../types/api';
-import { Avatar, GhostButton, IconButton, PrimaryButton, Tag } from '../ui';
+import { AsyncButton, Skeleton } from '@/hooks/useAsyncAction';
+import { Avatar, GhostButton, IconButton, Tag } from '../ui';
 
 export interface LeadDrawerProps {
   lead: Lead;
   activities: LeadActivity[];
   isLoadingTimeline: boolean;
+  /** Shared panel mutation pending flag (AdminPanel `mutation.pending`). */
+  mutating: boolean;
   operators: { id: number; email: string }[];
   /**
    * Follow-up draft lives in AdminPanel (lifted value + setter, no new logic here):
@@ -64,6 +67,7 @@ export const LeadDrawer: React.FC<LeadDrawerProps> = ({
   lead,
   activities,
   isLoadingTimeline,
+  mutating,
   operators,
   followUpDraft,
   onFollowUpDraftChange,
@@ -151,6 +155,7 @@ export const LeadDrawer: React.FC<LeadDrawerProps> = ({
             <select
               value={lead.status}
               aria-label={`Stage for ${lead.name}`}
+              disabled={mutating}
               onChange={(e) => onStatusChange(lead.id, e.target.value as Lead['status'])}
               className="min-h-[38px] w-full cursor-pointer rounded-md border border-[#d5d9e0] bg-white px-2.5 text-[13.5px] font-medium text-[#1f242b] dark:border-[#2a2a3a] dark:bg-[#12121a] dark:text-[#e2e2ec]"
             >
@@ -170,6 +175,7 @@ export const LeadDrawer: React.FC<LeadDrawerProps> = ({
             <div className="flex items-center gap-2">
               <select
                 value={lead.assignedToId ?? ''}
+                disabled={mutating}
                 onChange={(e) => {
                   const raw = e.target.value;
                   onAssign(lead.id, raw === '' ? null : Number(raw));
@@ -267,9 +273,13 @@ export const LeadDrawer: React.FC<LeadDrawerProps> = ({
                   className="min-h-[36px] w-full rounded-md border border-[#d5d9e0] bg-white py-0 pl-[34px] pr-3 text-[13.5px] text-[#1f242b] dark:border-[#2a2a3a] dark:bg-[#12121a] dark:text-[#e2e2ec]"
                 />
               </span>
-              <PrimaryButton type="button" onClick={() => onSaveFollowUp(lead)}>
+              <AsyncButton
+                onClick={() => onSaveFollowUp(lead)}
+                loading={mutating}
+                className="inline-flex items-center gap-2 min-h-[34px] px-3 rounded-md border bg-[#0f766e] border-[#0f766e] text-white text-[13.5px] font-medium cursor-pointer transition-colors hover:bg-[#115e59] hover:border-[#115e59] disabled:opacity-50 disabled:cursor-wait"
+              >
                 Save
-              </PrimaryButton>
+              </AsyncButton>
             </div>
             {isOverdue && (
               <p className="m-0 text-[11px] font-semibold text-rose-700 dark:text-rose-300">
@@ -319,7 +329,9 @@ export const LeadDrawer: React.FC<LeadDrawerProps> = ({
               Activity
             </span>
             {isLoadingTimeline ? (
-              <p className="m-0 text-[13px] text-[#667085] dark:text-[#8e8ea4]">Loading history…</p>
+              <div aria-busy="true" aria-label="Loading activity history">
+                <Skeleton lines={3} />
+              </div>
             ) : activities.length === 0 ? (
               <p className="m-0 text-[13px] text-[#667085] dark:text-[#8e8ea4]">
                 No recorded activity yet. Every status change and assignment from here on is
@@ -370,14 +382,22 @@ export const LeadDrawer: React.FC<LeadDrawerProps> = ({
         </div>
 
         <footer className="flex gap-2 border-t border-[#eceef1] bg-white px-5 py-3.5 dark:border-[#1e1e2a] dark:bg-[#14141c]">
-          <GhostButton type="button" onClick={() => onRetryCapi(lead.id)} className="flex-1 justify-center whitespace-nowrap">
+          <AsyncButton
+            onClick={() => onRetryCapi(lead.id)}
+            loading={mutating}
+            className="flex-1 justify-center whitespace-nowrap inline-flex items-center gap-2 min-h-[34px] px-3 rounded-md border border-[#d5d9e0] dark:border-[#2a2a3a] bg-white dark:bg-[#12121a] text-[#1f242b] dark:text-[#e2e2ec] text-[13.5px] font-medium cursor-pointer transition-colors hover:bg-[#f1f3f5] dark:hover:bg-[#1a1a26] disabled:opacity-50 disabled:cursor-wait"
+          >
             <RefreshCw className="h-3.5 w-3.5" />
             Retry CAPI
-          </GhostButton>
-          <PrimaryButton type="button" onClick={() => onRetryPortal(lead.id)} className="flex-1 justify-center whitespace-nowrap">
+          </AsyncButton>
+          <AsyncButton
+            onClick={() => onRetryPortal(lead.id)}
+            loading={mutating}
+            className="flex-1 justify-center whitespace-nowrap inline-flex items-center gap-2 min-h-[34px] px-3 rounded-md border bg-[#0f766e] border-[#0f766e] text-white text-[13.5px] font-medium cursor-pointer transition-colors hover:bg-[#115e59] hover:border-[#115e59] disabled:opacity-50 disabled:cursor-wait"
+          >
             <Upload className="h-3.5 w-3.5" />
             Sync Portal
-          </PrimaryButton>
+          </AsyncButton>
           <GhostButton type="button" onClick={scrollToTimeline} className="flex-1 justify-center whitespace-nowrap">
             <History className="h-3.5 w-3.5" />
             History

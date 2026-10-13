@@ -2,7 +2,8 @@ import { Save } from 'lucide-react';
 import type { I18nReport, LandingContentRow } from '../../../types/api';
 import * as api from '../../../services/api';
 import { CONTENT_KEY_GROUPS } from '@/lib/contentKeys';
-import { Card, GhostButton, PrimaryButton } from '../ui';
+import { AsyncButton, Skeleton } from '@/hooks/useAsyncAction';
+import { Card, GhostButton } from '../ui';
 
 export interface ContentTabProps {
   i18nReport: I18nReport | null;
@@ -184,21 +185,23 @@ export const ContentTab: React.FC<ContentTabProps> = ({
                   </span>
                 </h4>
                 <div className="flex items-center gap-1.5">
-                  <button
+                  <AsyncButton
                     onClick={() => void onPublishLocale(locale)}
-                    disabled={isSavingEditor || !row}
+                    loading={isSavingEditor}
+                    disabled={!row}
                     title="Promote staged drafts to the live page immediately"
                     className="inline-flex items-center gap-1.5 rounded-md min-h-[34px] bg-emerald-600 px-3 py-1.5 text-[11px] font-bold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50 cursor-pointer"
                   >
                     Publish {locale.toUpperCase()}
-                  </button>
-                  <PrimaryButton
+                  </AsyncButton>
+                  <AsyncButton
                     onClick={() => void onSaveLocale(locale)}
-                    disabled={isSavingEditor}
+                    loading={isSavingEditor}
+                    className="inline-flex items-center gap-2 min-h-[34px] px-3 rounded-md border bg-[#0f766e] border-[#0f766e] text-white text-[13.5px] font-medium cursor-pointer transition-colors hover:bg-[#115e59] hover:border-[#115e59] disabled:opacity-50 disabled:cursor-wait"
                   >
                     <Save className="h-3.5 w-3.5" />
                     Save {locale.toUpperCase()}
-                  </PrimaryButton>
+                  </AsyncButton>
                 </div>
               </div>
 
@@ -302,7 +305,9 @@ export const ContentTab: React.FC<ContentTabProps> = ({
             </button>
           ))}
           {isLoadingHistory && (
-            <span className="text-[11px] text-[#667085] dark:text-[#8e8ea4]">Loading…</span>
+            <div className="mt-2" aria-busy="true" aria-label="Loading revision history">
+              <Skeleton lines={2} />
+            </div>
           )}
         </div>
         {revisionHistory && (
@@ -326,16 +331,15 @@ export const ContentTab: React.FC<ContentTabProps> = ({
                       {revision.note ? ` · ${revision.note}` : ''} ·{' '}
                       {new Date(revision.createdAt).toLocaleString()}
                     </span>
-                    <button
-                      type="button"
+                    <AsyncButton
                       onClick={() =>
                         void onRestoreRevision(revisionHistory.locale, revision.version)
                       }
-                      disabled={isSavingEditor}
+                      loading={isSavingEditor}
                       className="rounded-md border border-[#d5d9e0] dark:border-[#2a2a3a] px-2 py-0.5 font-semibold text-[#1f242b] dark:text-[#e2e2ec] hover:bg-[#f1f3f5] dark:hover:bg-white/[0.04] disabled:opacity-50 cursor-pointer"
                     >
                       Restore this
-                    </button>
+                    </AsyncButton>
                   </li>
                 ))}
               </ul>

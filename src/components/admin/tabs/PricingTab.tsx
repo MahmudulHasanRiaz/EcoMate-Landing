@@ -1,13 +1,16 @@
 import { CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import type { PricingPlan } from '../../../types/api';
+import { AsyncButton } from '@/hooks/useAsyncAction';
 import { Card, Tag } from '../ui';
 
 export interface PricingTabProps {
   pricing: { isPricingVisible: boolean; plans: PricingPlan[] };
+  /** Shared panel mutation pending flag (AdminPanel `mutation.pending`). */
+  mutating: boolean;
   onTogglePricingMode: () => void;
 }
 
-export const PricingTab: React.FC<PricingTabProps> = ({ pricing, onTogglePricingMode }) => {
+export const PricingTab: React.FC<PricingTabProps> = ({ pricing, mutating, onTogglePricingMode }) => {
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -21,15 +24,16 @@ export const PricingTab: React.FC<PricingTabProps> = ({ pricing, onTogglePricing
         </div>
 
         <div className="flex items-center gap-3">
-          <button
+          <AsyncButton
             onClick={onTogglePricingMode}
-            className={`min-h-[34px] px-3 rounded-md text-[13.5px] font-medium transition-all cursor-pointer flex items-center gap-2 ${
+            loading={mutating}
+            className={`min-h-[34px] px-3 rounded-md text-[13.5px] font-medium transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50 ${
               pricing.isPricingVisible ? 'bg-emerald-600 text-white' : 'bg-amber-600 text-white'
             }`}
           >
             {pricing.isPricingVisible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
             <span>{pricing.isPricingVisible ? 'Mode: Tiered Visible' : 'Mode: Hidden / Contact'}</span>
-          </button>
+          </AsyncButton>
         </div>
       </div>
 

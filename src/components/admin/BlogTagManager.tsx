@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Tag, Plus, Edit2, Trash2, Search, Loader2, Check, AlertCircle } from 'lucide-react';
+import { Tag, Plus, Edit2, Trash2, Search, Check, AlertCircle } from 'lucide-react';
 import * as api from '@/src/services/api';
 import type { BlogTag } from '@/src/types/api';
 import { slugify } from '@/lib/slug';
+import { AsyncButton, Skeleton, useAsyncAction } from '@/hooks/useAsyncAction';
 
 export function BlogTagManager() {
   const [tags, setTags] = useState<BlogTag[]>([]);
@@ -12,7 +13,9 @@ export function BlogTagManager() {
   const [search, setSearch] = useState('');
   const [editingTag, setEditingTag] = useState<Partial<BlogTag> | null>(null);
   const [isCreating, setIsCreating] = useState(false);
-  const [saving, setSaving] = useState(false);
+  // Shared async primitive (was ad-hoc `saving`): pending → disabled + spinner +
+  // aria-busy, error → toast, settle → re-enable. Inline error/success banners stay.
+  const mutation = useAsyncAction();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -45,49 +48,53 @@ export function BlogTagManager() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingTag || !editingTag.name?.trim()) return;
+    // Captured before the async boundary: narrowing does not survive the closure.
+    const draft = editingTag;
+    const name = draft?.name?.trim();
+    if (!draft || !name) return;
 
-    setSaving(true);
     setError(null);
-    try {
-      if (editingTag.id) {
-        await api.updateBlogTag(editingTag.id, {
-          name: editingTag.name.trim(),
-          slug: editingTag.slug?.trim() || slugify(editingTag.name),
-          description: editingTag.description?.trim() || '',
-        });
-        setSuccess('Tag updated successfully');
-      } else {
-        await api.createBlogTag({
-          name: editingTag.name.trim(),
-          slug: editingTag.slug?.trim() || slugify(editingTag.name),
-          description: editingTag.description?.trim() || '',
-        });
-        setSuccess('Tag created successfully');
-      }
+    await mutation.run(async () => {
+      try {
+        if (draft.id) {
+          await api.updateBlogTag(draft.id, {
+            name,
+            slug: draft.slug?.trim() || slugify(name),
+            description: draft.description?.trim() || '',
+          });
+          setSuccess('Tag updated successfully');
+        } else {
+          await api.createBlogTag({
+            name,
+            slug: draft.slug?.trim() || slugify(name),
+            description: draft.description?.trim() || '',
+          });
+          setSuccess('Tag created successfully');
+        }
 
-      await loadTags();
-      setIsCreating(false);
-      setEditingTag(null);
-      setTimeout(() => setSuccess(null), 3000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save tag');
-    } finally {
-      setSaving(false);
-    }
+        await loadTags();
+        setIsCreating(false);
+        setEditingTag(null);
+        setTimeout(() => setSuccess(null), 3000);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to save tag');
+      }
+    }, { errorPrefix: 'Failed to save tag' });
   };
 
   const handleDelete = async (id: number, name: string) => {
     if (!window.confirm(`Delete tag "${name}"?`)) return;
     setError(null);
-    try {
-      await api.deleteBlogTag(id);
-      await loadTags();
-      setSuccess(`Tag "${name}" deleted`);
-      setTimeout(() => setSuccess(null), 3000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete tag');
-    }
+    await mutation.run(async () => {
+      try {
+        await api.deleteBlogTag(id);
+        await loadTags();
+        setSuccess(`Tag "${name}" deleted`);
+        setTimeout(() => setSuccess(null), 3000);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to delete tag');
+      }
+    }, { errorPrefix: 'Failed to delete tag' });
   };
 
   const filteredTags = tags.filter(
@@ -219,14 +226,13 @@ export function BlogTagManager() {
             >
               Cancel
             </button>
-            <button
+            <AsyncButton
               type="submit"
-              disabled={saving}
+              loading={mutation.pending}
               className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-[#0f766e] hover:bg-[#115e59] text-white text-xs font-semibold shadow-xs disabled:opacity-50 cursor-pointer"
             >
-              {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
               <span>Save Tag</span>
-            </button>
+            </AsyncButton>
           </div>
         </form>
       )}
@@ -245,9 +251,8 @@ export function BlogTagManager() {
 
       {/* Tags Grid / Badges */}
       {loading ? (
-        <div className="flex items-center justify-center py-10 text-xs text-slate-400">
-          <Loader2 className="h-4 w-4 animate-spin mr-2 text-[#0f766e] dark:text-teal-300" />
-          Loading tags…
+        <div className="py-4" aria-busy="true" aria-label="Loading tags">
+          <Skeleton lines={4} />
         </div>
       ) : filteredTags.length === 0 ? (
         <div className="text-center py-10 rounded-xl border border-dashed border-slate-200 dark:border-white/10 text-xs text-slate-500 dark:text-slate-400">
@@ -283,14 +288,15 @@ export function BlogTagManager() {
                 >
                   <Edit2 className="h-3 w-3" />
                 </button>
-                <button
-                  type="button"
+                <AsyncButton
                   title="Delete"
+                  aria-label={`Delete tag ${tag.name}`}
+                  loading={mutation.pending}
                   onClick={() => handleDelete(tag.id, tag.name)}
-                  className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer"
+                  className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer disabled:opacity-50"
                 >
                   <Trash2 className="h-3 w-3" />
-                </button>
+                </AsyncButton>
               </div>
             </div>
           ))}

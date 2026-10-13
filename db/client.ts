@@ -136,6 +136,56 @@ export function getDb(): Database {
 }
 
 /**
+ * A0 audit verdict (fix/perf-overhaul, 2026-10-13) — why there is no Neon HTTP driver.
+ *
+ * The spec asked for `getDbHttp()` over `drizzle-orm/neon-http` + `@neondatabase/serverless`
+ * `neon()` built from the existing DIRECT_URL with no new secret/service. Audit outcome:
+ *
+ * - DIRECT_URL is Supabase (`postgresql://...db.REF.supabase.co:5432/postgres`, see
+ *   `.env.example:7` + `wrangler.toml` Hyperdrive binding). `neon()` derives an HTTPS
+ *   endpoint from a **Neon** hostname only — it cannot speak to Supabase. Wiring it would
+ *   require a Neon database (new Cloudflare-adjacent service) + a new secret, both
+ *   forbidden by the task invariants ("no KV, নতুন CF service/env/secret নয়").
+ * - `@neondatabase/serverless` is not in `package.json` (only `drizzle-orm/postgres-js`
+ *   + `postgres`); `drizzle-orm/neon-http` ships inside `drizzle-orm` but has no transport
+ *   without that peer.
+ * - Load-bearing transactions need session semantics: `app/api/admin/setup/route.ts:60`
+ *   runs `LOCK TABLE "admin_users" IN EXCLUSIVE MODE` inside the bootstrap transaction,
+ *   and `auth.ts:266` groups identity-upsert + expired-session GC + session insert +
+ *   last-login stamp + audit row atomically. The Neon HTTP driver runs each statement as
+ *   an independent fetch with no session — LOCK TABLE / multi-statement transactions are
+ *   impossible there.
+ * - Transaction inventory (36 `db.transaction(` sites): `auth.ts:266` (sign-in session
+ *   creation — load-bearing, low frequency, 0.6–3s acceptable + correct), setup bootstrap
+ *   (load-bearing — concurrent double-superadmin without the lock is silent corruption),
+ *   content publish/restore/flip (revision + live-row pairs — load-bearing, admin-only low
+ *   frequency), leads/blog/menus/users CRUD + audit pairs (load-bearing per AGENTS.md
+ *   "Multi-table writes are transactional" — a lead row without its audit row is silent
+ *   corruption). None use LISTEN/NOTIFY, advisory locks, or cursors (grep clean), but the
+ *   LOCK TABLE + multi-row atomicity above is enough to keep TCP.
+ *
+ * Decision: keep the per-request memoized TCP client (one handshake per REQUEST, not per
+ * query — the 1102 thundering-herd class is already dead via `perRequestDbs`). The
+ * `getDbHttp()` / `getDbTx()` names below are the spec's call-site vocabulary on top of
+ * that same client: reads + single-statement writes call `getDbHttp()`, multi-statement
+ * atomic groups call `getDbTx()`. When/if the database ever moves to Neon, only this
+ * file changes — every call site keeps its name.
+ */
+export function getDbHttp(): Database {
+  return getDb();
+}
+
+/**
+ * Transactional escape hatch — for load-bearing multi-statement atomic groups ONLY
+ * (`auth.ts` sign-in, setup bootstrap, publish/restore, lead+audit pairs). Plain queries
+ * MUST use `getDbHttp()`; using this for single statements pays the same handshake with
+ * none of the benefit and obscures the audit.
+ */
+export function getDbTx(): Database {
+  return getDb();
+}
+
+/**
  * Probe used by `/api/health`. Never throws: a false result means "no Hyperdrive binding
  * and no direct URL", which is the expected state before the bindings exist.
  */

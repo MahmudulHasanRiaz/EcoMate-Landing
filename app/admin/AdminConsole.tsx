@@ -9,6 +9,7 @@
 import { useEffect, useState } from 'react';
 import { signOut } from 'next-auth/react';
 import Link from 'next/link';
+import { AsyncButton, ToastStack, useAsyncAction } from '@/hooks/useAsyncAction';
 import {
   LayoutDashboard,
   LogOut,
@@ -50,6 +51,7 @@ interface OverviewMetrics {
 }
 
 export function AdminConsole({ email, role, userId }: AdminConsoleProps) {
+  const signoutAction = useAsyncAction();
   const [activeView, setActiveView] = useState<'overview' | 'operators'>('overview');
   const [metrics, setMetrics] = useState<OverviewMetrics>({
     postsTotal: null,
@@ -65,6 +67,28 @@ export function AdminConsole({ email, role, userId }: AdminConsoleProps) {
     async function fetchMetrics() {
       setLoadingMetrics(true);
       try {
+        // B3: one bootstrap call replaces ~5 dashboard fetches. Falls back to the
+        // individual endpoints when bootstrap is unavailable — they stay intact.
+        try {
+          const res = await fetch('/api/admin/bootstrap');
+          if (res.ok) {
+            const payload = (await res.json().catch(() => null)) as {
+              metrics?: OverviewMetrics;
+            } | null;
+            if (payload?.metrics && !cancelled) {
+              setMetrics({
+                postsTotal: payload.metrics.postsTotal ?? null,
+                leadsTotal: payload.metrics.leadsTotal ?? null,
+                mediaTotal: payload.metrics.mediaTotal ?? null,
+                categoriesTotal: payload.metrics.categoriesTotal ?? null,
+                tagsTotal: payload.metrics.tagsTotal ?? null,
+              });
+              return;
+            }
+          }
+        } catch {
+          // Fall through to individual endpoints below.
+        }
         const [postsRes, leadsRes, mediaRes, catRes, tagRes] = await Promise.allSettled([
           fetch('/api/blog?limit=1').then((r) => (r.ok ? r.json() : null)),
           fetch('/api/leads?limit=1').then((r) => (r.ok ? r.json() : null)),
@@ -153,16 +177,18 @@ export function AdminConsole({ email, role, userId }: AdminConsoleProps) {
             Live Site
           </Link>
 
-          <button
-            type="button"
+          <AsyncButton
+            loading={signoutAction.pending}
             onClick={() => {
-              void signOut({ callbackUrl: '/admin/login' });
+              void signoutAction.run(() => signOut({ callbackUrl: '/admin/login' }), {
+                errorPrefix: 'Sign out failed',
+              });
             }}
             className="inline-flex items-center gap-1.5 rounded-xl border border-[#e4e7ec] bg-white px-3.5 py-2 text-xs font-semibold text-[#1f242b] transition-colors hover:bg-[#f1f3f5] dark:border-[#232331] dark:bg-[#12121a] dark:text-[#e2e2ec] dark:hover:bg-[#1a1a26]"
           >
             <LogOut className="h-4 w-4" />
-            Sign out
-          </button>
+            {signoutAction.pending ? 'Signing out…' : 'Sign out'}
+          </AsyncButton>
         </div>
       </header>
 
@@ -501,6 +527,7 @@ export function AdminConsole({ email, role, userId }: AdminConsoleProps) {
           <AdminUsersPanel role={role} currentUserId={userId} />
         </main>
       )}
+      <ToastStack />
     </div>
   );
 }

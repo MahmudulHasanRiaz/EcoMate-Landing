@@ -8,6 +8,8 @@
  */
 import React, { useState } from 'react';
 import { useLanding } from '@/components/shell/useLanding';
+import { Reveal } from '@/components/motion/Reveal';
+import { staggerDelayMs } from '@/lib/motion';
 import { MkDock, MkFooter, MkHeader } from './Chrome';
 import { MkHero } from './Hero';
 import {
@@ -35,25 +37,60 @@ export function LandingV3() {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
-    <div className={`mk-page min-h-screen ${locale === 'bn' ? 'font-bangla' : ''}`}>
+    // D3 locale transition: key remounts on locale switch so the page-enter fade +
+    // hero entrance replay (opacity/transform only — no layout shift, no CLS cost).
+    <div
+      key={locale}
+      className={`mk-page min-h-screen motion-page-enter ${locale === 'bn' ? 'font-bangla' : ''}`}
+    >
       <MkHeader drawerOpen={drawerOpen} onDrawerChange={setDrawerOpen} />
       <main>
         <MkHero />
-        <MkFragmented />
-        <MkPacking />
-        <MkRevenue />
-        <MkLogistics />
-        <MkAdDefense />
-        <MkStores />
-        <MkOmnichannel />
-        <MkFinance />
-        <MkTeam />
-        <MkInfra />
-        <MkGettingStarted />
-        <MkTrust />
-        <MkPricing />
-        <MkFaq />
-        <MkLeadForm />
+        <Reveal delay={staggerDelayMs(0)}>
+          <MkFragmented />
+        </Reveal>
+        <Reveal delay={staggerDelayMs(1)}>
+          <MkPacking />
+        </Reveal>
+        <Reveal delay={staggerDelayMs(2)}>
+          <MkRevenue />
+        </Reveal>
+        <Reveal delay={staggerDelayMs(1)}>
+          <MkLogistics />
+        </Reveal>
+        <Reveal delay={staggerDelayMs(2)}>
+          <MkAdDefense />
+        </Reveal>
+        <Reveal delay={staggerDelayMs(1)}>
+          <MkStores />
+        </Reveal>
+        <Reveal delay={staggerDelayMs(2)}>
+          <MkOmnichannel />
+        </Reveal>
+        <Reveal delay={staggerDelayMs(1)}>
+          <MkFinance />
+        </Reveal>
+        <Reveal delay={staggerDelayMs(2)}>
+          <MkTeam />
+        </Reveal>
+        <Reveal delay={staggerDelayMs(1)}>
+          <MkInfra />
+        </Reveal>
+        <Reveal delay={staggerDelayMs(2)}>
+          <MkGettingStarted />
+        </Reveal>
+        <Reveal delay={staggerDelayMs(1)}>
+          <MkTrust />
+        </Reveal>
+        <Reveal delay={staggerDelayMs(2)}>
+          <MkPricing />
+        </Reveal>
+        <Reveal delay={staggerDelayMs(1)}>
+          <MkFaq />
+        </Reveal>
+        <Reveal delay={staggerDelayMs(0)}>
+          <MkLeadForm />
+        </Reveal>
       </main>
       <MkFooter />
       <MkDock drawerOpen={drawerOpen} />

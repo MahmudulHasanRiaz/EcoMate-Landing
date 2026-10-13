@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Clock, Download, History, LayoutGrid, List, RefreshCw, Search, Upload } from 'lucide-react';
 import type { Lead, OverdueLead } from '../../../types/api';
-import { Avatar, Card, EmptyState, GhostButton, IconButton, StatCell, Tag } from '../ui';
+import { AsyncButton } from '@/hooks/useAsyncAction';
+import { Avatar, Card, EmptyState, IconButton, StatCell, Tag } from '../ui';
 
 export interface LeadsTabProps {
   leads: Lead[];
@@ -9,6 +10,8 @@ export interface LeadsTabProps {
   overdueLeads: OverdueLead[];
   leadSearchQuery: string;
   leadStatusFilter: string;
+  /** Shared panel mutation pending flag (AdminPanel `mutation.pending`). */
+  mutating: boolean;
   exportUrl: string;
   onSearchChange: (value: string) => void;
   onStatusFilterChange: (value: string) => void;
@@ -58,6 +61,7 @@ export const LeadsTab: React.FC<LeadsTabProps> = ({
   overdueLeads,
   leadSearchQuery,
   leadStatusFilter,
+  mutating,
   exportUrl,
   onSearchChange,
   onStatusFilterChange,
@@ -247,30 +251,32 @@ export const LeadsTab: React.FC<LeadsTabProps> = ({
           <b className="mr-auto font-medium text-[#0f766e] dark:text-teal-300">
             Bulk actions ({selectedIds.length})
           </b>
-          <GhostButton
-            type="button"
+          <AsyncButton
             onClick={async () => {
               for (const id of selectedIds) {
                 await onRetryPortal(id);
               }
               setSelectedIds([]);
             }}
+            loading={mutating}
+            className="inline-flex items-center gap-2 min-h-[34px] px-3 rounded-md border border-[#d5d9e0] dark:border-[#2a2a3a] bg-white dark:bg-[#12121a] text-[#1f242b] dark:text-[#e2e2ec] text-[13.5px] font-medium cursor-pointer transition-colors hover:bg-[#f1f3f5] dark:hover:bg-[#1a1a26] disabled:opacity-50 disabled:cursor-wait"
           >
             <Upload className="h-3.5 w-3.5" />
             Sync to Portal
-          </GhostButton>
-          <GhostButton
-            type="button"
+          </AsyncButton>
+          <AsyncButton
             onClick={async () => {
               for (const id of selectedIds) {
                 await onRetryCapi(id);
               }
               setSelectedIds([]);
             }}
+            loading={mutating}
+            className="inline-flex items-center gap-2 min-h-[34px] px-3 rounded-md border border-[#d5d9e0] dark:border-[#2a2a3a] bg-white dark:bg-[#12121a] text-[#1f242b] dark:text-[#e2e2ec] text-[13.5px] font-medium cursor-pointer transition-colors hover:bg-[#f1f3f5] dark:hover:bg-[#1a1a26] disabled:opacity-50 disabled:cursor-wait"
           >
             <RefreshCw className="h-3.5 w-3.5" />
             Retry CAPI
-          </GhostButton>
+          </AsyncButton>
         </div>
       )}
 
@@ -343,6 +349,7 @@ export const LeadsTab: React.FC<LeadsTabProps> = ({
                         <select
                           value={lead.status}
                           aria-label={`Stage for ${lead.name}`}
+                          disabled={mutating}
                           onChange={(e) => onStatusChange(lead.id, e.target.value as Lead['status'])}
                           className="min-h-[30px] cursor-pointer rounded-md border border-[#d5d9e0] bg-white px-2 py-0.5 text-[12.5px] font-medium text-[#1f242b] dark:border-[#2a2a3a] dark:bg-[#12121a] dark:text-[#e2e2ec]"
                         >
@@ -369,6 +376,8 @@ export const LeadsTab: React.FC<LeadsTabProps> = ({
                         <IconButton
                           label={`Retry CAPI for ${lead.name}`}
                           title="Retry CAPI"
+                          disabled={mutating}
+                          aria-busy={mutating}
                           onClick={() => onRetryCapi(lead.id)}
                         >
                           <RefreshCw className="h-3.5 w-3.5" />
@@ -376,6 +385,8 @@ export const LeadsTab: React.FC<LeadsTabProps> = ({
                         <IconButton
                           label={`Sync ${lead.name} to Portal`}
                           title="Sync Portal"
+                          disabled={mutating}
+                          aria-busy={mutating}
                           onClick={() => onRetryPortal(lead.id)}
                         >
                           <Upload className="h-3.5 w-3.5" />

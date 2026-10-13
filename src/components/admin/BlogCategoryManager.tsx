@@ -9,13 +9,13 @@ import {
   Plus,
   ChevronRight,
   Folder,
-  Loader2,
   AlertCircle,
   Check,
 } from 'lucide-react';
 import * as api from '@/src/services/api';
 import type { BlogCategory } from '@/src/types/api';
 import { slugify } from '@/lib/slug';
+import { AsyncButton, Skeleton, useAsyncAction } from '@/hooks/useAsyncAction';
 
 export function BlogCategoryManager() {
   const [categories, setCategories] = useState<BlogCategory[]>([]);
@@ -25,7 +25,9 @@ export function BlogCategoryManager() {
   const [parentForNew, setParentForNew] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  // Shared async primitive (was ad-hoc `saving`): pending → disabled + spinner +
+  // aria-busy, error → toast, settle → re-enable. Inline error/success banners stay.
+  const mutation = useAsyncAction();
 
   const loadCategories = useCallback(async () => {
     setLoading(true);
@@ -73,40 +75,42 @@ export function BlogCategoryManager() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingCategory || !editingCategory.name?.trim()) return;
+    // Captured before the async boundary: narrowing does not survive the closure.
+    const draft = editingCategory;
+    const name = draft?.name?.trim();
+    if (!draft || !name) return;
 
-    setSaving(true);
     setError(null);
-    try {
-      if (editingCategory.id) {
-        await api.updateBlogCategory(editingCategory.id, {
-          name: editingCategory.name.trim(),
-          slug: editingCategory.slug?.trim() || slugify(editingCategory.name),
-          description: editingCategory.description?.trim() || '',
-          parentId: editingCategory.parentId ?? null,
-          sortOrder: Number(editingCategory.sortOrder ?? 0),
-        });
-        setSuccess('Category updated successfully');
-      } else {
-        await api.createBlogCategory({
-          name: editingCategory.name.trim(),
-          slug: editingCategory.slug?.trim() || slugify(editingCategory.name),
-          description: editingCategory.description?.trim() || '',
-          parentId: editingCategory.parentId ?? null,
-          sortOrder: Number(editingCategory.sortOrder ?? 0),
-        });
-        setSuccess('Category created successfully');
-      }
+    await mutation.run(async () => {
+      try {
+        if (draft.id) {
+          await api.updateBlogCategory(draft.id, {
+            name,
+            slug: draft.slug?.trim() || slugify(name),
+            description: draft.description?.trim() || '',
+            parentId: draft.parentId ?? null,
+            sortOrder: Number(draft.sortOrder ?? 0),
+          });
+          setSuccess('Category updated successfully');
+        } else {
+          await api.createBlogCategory({
+            name,
+            slug: draft.slug?.trim() || slugify(name),
+            description: draft.description?.trim() || '',
+            parentId: draft.parentId ?? null,
+            sortOrder: Number(draft.sortOrder ?? 0),
+          });
+          setSuccess('Category created successfully');
+        }
 
-      await loadCategories();
-      setIsCreating(false);
-      setEditingCategory(null);
-      setTimeout(() => setSuccess(null), 3000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save category');
-    } finally {
-      setSaving(false);
-    }
+        await loadCategories();
+        setIsCreating(false);
+        setEditingCategory(null);
+        setTimeout(() => setSuccess(null), 3000);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to save category');
+      }
+    }, { errorPrefix: 'Failed to save category' });
   };
 
   const handleDelete = async (id: number, name: string) => {
@@ -114,14 +118,16 @@ export function BlogCategoryManager() {
       return;
     }
     setError(null);
-    try {
-      await api.deleteBlogCategory(id);
-      await loadCategories();
-      setSuccess(`Category "${name}" deleted`);
-      setTimeout(() => setSuccess(null), 3000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete category');
-    }
+    await mutation.run(async () => {
+      try {
+        await api.deleteBlogCategory(id);
+        await loadCategories();
+        setSuccess(`Category "${name}" deleted`);
+        setTimeout(() => setSuccess(null), 3000);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to delete category');
+      }
+    }, { errorPrefix: 'Failed to delete category' });
   };
 
   const renderCategoryNode = (node: BlogCategory, depth = 0) => {
@@ -173,14 +179,15 @@ export function BlogCategoryManager() {
             >
               <Edit2 className="h-3.5 w-3.5" />
             </button>
-            <button
-              type="button"
+            <AsyncButton
               title="Delete"
+              aria-label={`Delete category ${node.name}`}
+              loading={mutation.pending}
               onClick={() => handleDelete(node.id, node.name)}
-              className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer"
+              className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer disabled:opacity-50"
             >
               <Trash2 className="h-3.5 w-3.5" />
-            </button>
+            </AsyncButton>
           </div>
         </div>
 
@@ -354,23 +361,21 @@ export function BlogCategoryManager() {
             >
               Cancel
             </button>
-            <button
+            <AsyncButton
               type="submit"
-              disabled={saving}
+              loading={mutation.pending}
               className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-[#0f766e] hover:bg-[#115e59] text-white text-xs font-semibold shadow-xs disabled:opacity-50 cursor-pointer"
             >
-              {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
               <span>Save Category</span>
-            </button>
+            </AsyncButton>
           </div>
         </form>
       )}
 
       {/* Tree view list */}
       {loading ? (
-        <div className="flex items-center justify-center py-10 text-xs text-slate-400">
-          <Loader2 className="h-4 w-4 animate-spin mr-2 text-[#0f766e] dark:text-teal-300" />
-          Loading categories…
+        <div className="py-4" aria-busy="true" aria-label="Loading categories">
+          <Skeleton lines={4} />
         </div>
       ) : categories.length === 0 ? (
         <div className="text-center py-10 rounded-xl border border-dashed border-slate-200 dark:border-white/10 text-xs text-slate-500 dark:text-slate-400">

@@ -22,6 +22,7 @@ import { ImagePickerField } from './ImagePickerField';
 import { CaseStudyEditor } from './CaseStudyEditor';
 import { MediaLibrary } from './MediaLibrary';
 import { DashboardTab } from './tabs/DashboardTab';
+import { LeadsTab } from './tabs/LeadsTab';
 import { TestimonialCard } from '../TestimonialCard';
 import { BlogPostEditor } from './BlogPostEditor';
 import { BlogCategoryManager } from './BlogCategoryManager';
@@ -55,7 +56,6 @@ import {
   Mail,
   Calendar,
   Languages,
-  Download,
   History,
   UserPlus,
   Clock,
@@ -1222,203 +1222,21 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
 
           {/* TAB 2: LEAD MANAGEMENT */}
           {activeTab === 'leads' && (
-            <div className="space-y-6 max-w-6xl mx-auto">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Inbound Lead Pipeline</h2>
-                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-0.5">
-                    Authoritative PostgreSQL records from public demo booking forms. Syncable to License Portal.
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <div className="relative">
-                    <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input
-                      type="text"
-                      placeholder="Search by name, phone, email..."
-                      value={leadSearchQuery}
-                      onChange={(e) => setLeadSearchQuery(e.target.value)}
-                      className="pl-8 pr-3 py-1.5 text-xs rounded-xl bg-white dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500"
-                    />
-                  </div>
-
-                  <select
-                    value={leadStatusFilter}
-                    onChange={(e) => setLeadStatusFilter(e.target.value)}
-                    className="px-3 py-1.5 text-xs rounded-xl bg-white dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white font-medium cursor-pointer"
-                  >
-                    <option value="All">All Statuses</option>
-                    <option value="New">New</option>
-                    <option value="Contacted">Contacted</option>
-                    <option value="Qualified">Qualified</option>
-                    <option value="Demo Scheduled">Demo Scheduled</option>
-                    <option value="Won">Won</option>
-                    <option value="Lost">Lost</option>
-                  </select>
-
-                  {/* CSV export (Task 16 §2). A plain link rather than a fetch-then-blob: the
-                      browser handles the download, the Content-Disposition filename comes from
-                      the server, and the session cookie rides along without any token handling. */}
-                  <a
-                    href={api.leadExportUrl()}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100 dark:border-white/10 dark:text-slate-200 dark:hover:bg-white/5"
-                    title="Download every lead as CSV (audited; capped at 10,000 rows)"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    Export CSV
-                  </a>
-                </div>
-              </div>
-
-              {/* Overdue follow-up worklist (Task 16 §2). Rendered above the table because a
-                  missed promise to a customer is the most time-sensitive thing on this screen. */}
-              {overdueLeads.length > 0 && (
-                <div className="rounded-2xl border border-rose-200 bg-rose-50/50 p-4 dark:border-rose-500/20 dark:bg-rose-500/5">
-                  <h3 className="flex items-center gap-2 text-sm font-bold text-rose-900 dark:text-rose-200">
-                    <Clock className="h-4 w-4" />
-                    Overdue follow-ups ({overdueLeads.length})
-                  </h3>
-                  <p className="mt-0.5 text-[11px] text-rose-700 dark:text-rose-300/80">
-                    Promised callback dates that have passed on leads that are still open.
-                  </p>
-                  <ul className="mt-3 divide-y divide-rose-200/60 text-xs dark:divide-rose-500/20">
-                    {overdueLeads.map((overdue) => (
-                      <li key={overdue.id} className="flex items-center justify-between gap-3 py-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const match = leads.find((l) => l.id === overdue.id);
-                            if (match) void handleOpenLead(match);
-                            else
-                              showNotification(
-                                `Lead #${overdue.id} is outside the loaded page — narrow the filters or use the CSV export.`,
-                              );
-                          }}
-                          className="min-w-0 text-left font-semibold text-slate-900 hover:underline dark:text-white"
-                        >
-                          <span className="block truncate">{overdue.name}</span>
-                          <span className="font-mono text-[11px] text-slate-600 dark:text-slate-300">{overdue.phone}</span>
-                        </button>
-                        <span className="shrink-0 font-mono text-[11px] text-rose-700 dark:text-rose-300">
-                          due {overdue.followUpAt ? new Date(overdue.followUpAt).toLocaleDateString() : '—'}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Leads Table */}
-              <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0C0E1B] overflow-hidden shadow-xs">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-50 dark:bg-white/[0.02] border-b border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 font-semibold uppercase tracking-wider text-[10px]">
-                      <tr>
-                        <th className="px-4 py-3">Lead / Company</th>
-                        <th className="px-4 py-3">Phone & Email</th>
-                        <th className="px-4 py-3">Order Volume</th>
-                        <th className="px-4 py-3">Stage Status</th>
-                        <th className="px-4 py-3">License Sync</th>
-                        <th className="px-4 py-3">Meta CAPI</th>
-                        <th className="px-4 py-3 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-                      {filteredLeads.map((lead) => (
-                        <tr key={lead.id} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors">
-                          <td className="px-4 py-3">
-                            <span className="font-bold text-slate-900 dark:text-white block">{lead.name}</span>
-                            <span className="text-[11px] text-slate-600 font-mono dark:text-slate-300">
-                              {new Date(lead.createdAt).toLocaleDateString()} · {lead.source}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="font-mono font-medium text-slate-800 dark:text-slate-200 block">{lead.phone}</span>
-                            <span className="text-[11px] text-slate-600 dark:text-slate-300">{lead.email || 'N/A'}</span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">
-                              {lead.dailyVolume}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <select
-                              value={lead.status}
-                              onChange={(e) => handleUpdateLeadStatus(lead.id, e.target.value as any)}
-                              className="px-2 py-1 rounded bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 font-medium text-xs text-slate-800 dark:text-slate-200 cursor-pointer"
-                            >
-                              <option value="New">New</option>
-                              <option value="Contacted">Contacted</option>
-                              <option value="Qualified">Qualified</option>
-                              <option value="Demo Scheduled">Demo Scheduled</option>
-                              <option value="Won">Won</option>
-                              <option value="Lost">Lost</option>
-                            </select>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
-                                lead.licensePortalStatus === 'Synced'
-                                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
-                                  : lead.licensePortalStatus === 'Failed'
-                                  ? 'bg-rose-50 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300'
-                                  : 'bg-amber-50 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300'
-                              }`}
-                            >
-                              {lead.licensePortalStatus}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
-                                lead.metaCapiStatus === 'Sent'
-                                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
-                                  : lead.metaCapiStatus === 'Failed'
-                                  ? 'bg-rose-50 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300'
-                                  : lead.metaCapiStatus === 'Skipped'
-                                  ? 'bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-300'
-                                  : 'bg-amber-50 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300'
-                              }`}
-                              title={lead.metaCapiError || 'Server-side Meta Conversions API (Lead event)'}
-                            >
-                              {lead.metaCapiStatus}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
-                              <button
-                                onClick={() => handleRetryMetaSync(lead.id)}
-                                className="px-2.5 py-1 rounded bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/20 text-[11px] font-semibold transition-colors cursor-pointer"
-                                title="Re-send the server-side Meta Lead event (skips leads already Sent)"
-                              >
-                                Retry CAPI
-                              </button>
-                              <button
-                                onClick={() => handleRetryLicenseSync(lead.id)}
-                                className="px-2.5 py-1 rounded bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-500/20 dark:text-indigo-300 dark:hover:bg-indigo-500/30 text-[11px] font-semibold transition-colors cursor-pointer"
-                                title="Dispatch to external License Portal queue"
-                              >
-                                Sync Portal
-                              </button>
-                              {/* Opens the drawer: timeline, assignment, follow-up. */}
-                              <button
-                                onClick={() => handleOpenLead(lead)}
-                                className="px-2.5 py-1 rounded bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/20 text-[11px] font-semibold transition-colors cursor-pointer"
-                                title="Open the full timeline, assignment and follow-up"
-                              >
-                                <History className="h-3 w-3" />
-                                <span className="sr-only">Timeline for lead {lead.id}</span>
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
+            <LeadsTab
+              leads={leads}
+              filteredLeads={filteredLeads}
+              overdueLeads={overdueLeads}
+              leadSearchQuery={leadSearchQuery}
+              leadStatusFilter={leadStatusFilter}
+              exportUrl={api.leadExportUrl()}
+              onSearchChange={setLeadSearchQuery}
+              onStatusFilterChange={setLeadStatusFilter}
+              onOpenLead={handleOpenLead}
+              onStatusChange={handleUpdateLeadStatus}
+              onRetryCapi={handleRetryMetaSync}
+              onRetryPortal={handleRetryLicenseSync}
+              onNotify={showNotification}
+            />
           )}
 
           {/* TAB 3: SECTIONS CMS */}

@@ -23,6 +23,8 @@ import { CaseStudyEditor } from './CaseStudyEditor';
 import { MediaLibrary } from './MediaLibrary';
 import { DashboardTab } from './tabs/DashboardTab';
 import { LeadsTab } from './tabs/LeadsTab';
+import { LeadDrawer } from './tabs/LeadDrawer';
+import { ConfirmDialog } from './ui';
 import { TestimonialCard } from '../TestimonialCard';
 import { BlogPostEditor } from './BlogPostEditor';
 import { BlogCategoryManager } from './BlogCategoryManager';
@@ -52,13 +54,7 @@ import {
   EyeOff,
   Server,
   X,
-  Phone,
-  Mail,
-  Calendar,
   Languages,
-  History,
-  UserPlus,
-  Clock,
 } from 'lucide-react';
 
 export type AdminTab =
@@ -119,6 +115,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
   const [systemHealth, setSystemHealth] = useState<{ status: string; uptime: number; postgresConfigured: boolean; licensePortalConfigured: boolean } | null>(null);
   /** In-flight cache purge scope; both purge buttons disable while non-null (double-click guard). */
   const [purging, setPurging] = useState<null | 'all' | 'landing'>(null);
+  /** Confirm dialog scope for cache purge; null means no dialog. Buttons set it,
+   *  the dialog confirms, then `runPurge` runs the existing async flow. */
+  const [confirmScope, setConfirmScope] = useState<null | 'all' | 'landing'>(null);
 
   // --- Side-by-side EN|BN landing-content editor + translation report (Task 15 §6) -------
   const [i18nReport, setI18nReport] = useState<I18nReport | null>(null);
@@ -294,6 +293,28 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
   const showNotification = (msg: string) => {
     setSaveMessage(msg);
     setTimeout(() => setSaveMessage(null), 3500);
+  };
+
+  /**
+   * Existing purge flow, extracted to a named function so both the Settings cache
+   * card and the `ConfirmDialog` share one code path. Closes the dialog alongside
+   * the toast on success and on failure.
+   */
+  const runPurge = async (scope: 'all' | 'landing'): Promise<void> => {
+    setPurging(scope);
+    try {
+      const res = await api.purgeCache(scope);
+      showNotification(
+        scope === 'all'
+          ? `Cache purged (${res.invalidated.length} tags)`
+          : `Landing cache purged (${res.invalidated.length} tags)`,
+      );
+    } catch (err) {
+      showNotification(err instanceof Error ? err.message : 'Purge failed');
+    } finally {
+      setPurging(null);
+      setConfirmScope(null);
+    }
   };
 
   /**
@@ -733,226 +754,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
     return matchesStatus && matchesSearch;
   });
 
-  /**
-   * The lead drawer: timeline, assignment, follow-up (Task 16 §1).
-   *
-   * A fixed overlay rather than an inline row expansion, because the timeline is a scrollable
-   * column of its own and expanding a table row to hold it breaks the row height for every
-   * other row in the table.
-   */
-  const renderLeadDrawer = () => {
-    if (!selectedLead) return null;
-    const lead = selectedLead;
-    const isOverdue =
-      lead.followUpAt !== null &&
-      lead.followUpAt !== undefined &&
-      new Date(lead.followUpAt).getTime() < Date.now() &&
-      lead.status !== 'Won' &&
-      lead.status !== 'Lost';
-
-    return (
-      <div
-        className="fixed inset-0 z-[60] flex justify-end bg-slate-900/40 backdrop-blur-sm"
-        role="dialog"
-        aria-modal="true"
-        aria-label={`Lead ${lead.name} — timeline and follow-up`}
-        onClick={(e) => {
-          // Click-outside to close, but not a click that started inside the panel: a text
-          // selection inside the timeline must not dismiss it.
-          if (e.target === e.currentTarget) setSelectedLead(null);
-        }}
-      >
-        <div className="flex h-full w-full max-w-xl flex-col overflow-y-auto border-l border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-[#0B0D18]">
-          <header className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-slate-200 bg-white px-5 py-4 dark:border-white/10 dark:bg-[#0B0D18]">
-            <div className="min-w-0">
-              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">
-                <History className="h-3.5 w-3.5" />
-                Lead #{lead.id}
-              </p>
-              <h3 className="mt-1 truncate text-lg font-bold text-slate-900 dark:text-white">{lead.name}</h3>
-              <p className="truncate font-mono text-xs text-slate-600 dark:text-slate-300">
-                {lead.phone}
-                {lead.email ? ` · ${lead.email}` : ''}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setSelectedLead(null)}
-              aria-label="Close lead panel"
-              className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-white/10 dark:hover:text-slate-200"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </header>
-
-          {/* Anonymised by the retention cron: the timeline is history, but the contact
-              details below it are gone and re-entering them would undo a compliance action. */}
-          {lead.anonymizedAt && (
-            <p className="mx-5 mt-4 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
-              Personal data on this lead was anonymised on{' '}
-              {new Date(lead.anonymizedAt).toLocaleDateString()} under the retention policy.
-              Status history is preserved.
-            </p>
-          )}
-
-          <div className="space-y-6 px-5 py-5">
-            {/* Assignment */}
-            <section>
-              <h4 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300">
-                <UserPlus className="h-3.5 w-3.5" />
-                Assignment
-              </h4>
-              <div className="mt-2 flex items-center gap-2">
-                <select
-                  value={lead.assignedToId ?? ''}
-                  onChange={(e) => {
-                    const raw = e.target.value;
-                    void handleAssignLead(lead.id, raw === '' ? null : Number(raw));
-                  }}
-                  aria-label="Assign this lead to an operator"
-                  className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 dark:border-white/10 dark:bg-black/40 dark:text-white"
-                >
-                  <option value="">Unassigned</option>
-                  {operators.map((operator) => (
-                    <option key={operator.id} value={operator.id}>
-                      {operator.email}
-                    </option>
-                  ))}
-                </select>
-                {/* The legacy free-text column, shown because it is what the rest of the
-                    pipeline has historically displayed and it is not written by this task. */}
-                {lead.assignedTo && (
-                  <span className="shrink-0 rounded-full bg-slate-100 px-2 py-1 text-[11px] text-slate-600 dark:bg-white/10 dark:text-slate-300">
-                    {lead.assignedTo}
-                  </span>
-                )}
-              </div>
-            </section>
-
-            {/* Follow-up */}
-            <section>
-              <h4 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300">
-                <Clock className="h-3.5 w-3.5" />
-                Follow-up
-              </h4>
-              <div className="mt-2 flex items-center gap-2">
-                <input
-                  type="date"
-                  value={followUpDraft}
-                  onChange={(e) => setFollowUpDraft(e.target.value)}
-                  aria-label="Scheduled follow-up date"
-                  className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 dark:border-white/10 dark:bg-black/40 dark:text-white"
-                />
-                <button
-                  type="button"
-                  onClick={() => void handleSaveFollowUp(lead)}
-                  className="rounded-xl bg-indigo-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-indigo-700"
-                >
-                  Save
-                </button>
-              </div>
-              {isOverdue && (
-                <p className="mt-1.5 text-[11px] font-semibold text-rose-700 dark:text-rose-300">
-                  Overdue — the promised follow-up date has passed.
-                </p>
-              )}
-            </section>
-
-            {/* Timeline, newest first */}
-            <section>
-              <h4 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300">
-                <History className="h-3.5 w-3.5" />
-                Timeline
-              </h4>
-
-              {isLoadingTimeline ? (
-                <p className="mt-2 text-xs text-slate-600 dark:text-slate-300">Loading history…</p>
-              ) : leadActivities.length === 0 ? (
-                <p className="mt-2 text-xs text-slate-600 dark:text-slate-300">
-                  No recorded activity yet. Every status change and assignment from here on is
-                  logged with the operator who made it.
-                </p>
-              ) : (
-                <ol className="mt-3 space-y-0 border-l border-slate-200 pl-4 dark:border-white/10">
-                  {leadActivities.map((activity) => (
-                    <li key={activity.id} className="relative pb-4 last:pb-0">
-                      <span
-                        aria-hidden="true"
-                        className="absolute -left-[21px] top-1.5 h-2 w-2 rounded-full bg-indigo-500 ring-4 ring-white dark:ring-[#0B0D18]"
-                      />
-                      <p className="text-xs font-semibold text-slate-900 dark:text-white">
-                        {activity.fromStatus && activity.toStatus && activity.fromStatus !== activity.toStatus
-                          ? `${activity.fromStatus} → ${activity.toStatus}`
-                          : activity.toStatus || 'Activity'}
-                      </p>
-                      {activity.note && (
-                        <p className="mt-0.5 text-[11px] text-slate-600 dark:text-slate-300">
-                          {activity.note}
-                        </p>
-                      )}
-                      <p className="mt-0.5 text-[10px] text-slate-400">
-                        {new Date(activity.createdAt).toLocaleString()}
-                        {/* A null actor is either system-initiated (lead captured) or an operator
-                            who has since been deleted — both are worth distinguishing from
-                            "an operator did this" rather than leaving the field blank. */}
-                        {activity.actorId === null ? ' · system' : ` · operator #${activity.actorId}`}
-                      </p>
-                    </li>
-                  ))}
-                </ol>
-              )}
-            </section>
-
-            {/* Dispatch state + manual retry (Task 20 §4). Extends this drawer —
-                no second drawer: the statuses below are the same `metaCapiStatus` /
-                `licensePortalStatus` the table shows, with the retry actions the
-                table buttons call. A failed first attempt additionally lands in
-                `dispatch_queue` for the drain cron; retrying here re-runs the same
-                `dispatchLeadIntegrations` path the cron uses. */}
-            <section>
-              <h4 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300">
-                <Share2 className="h-3.5 w-3.5" />
-                Dispatch
-              </h4>
-              <dl className="mt-2 space-y-2 rounded-xl border border-slate-200 p-3 text-xs dark:border-white/10">
-                <div className="flex items-center justify-between gap-2">
-                  <dt className="font-semibold text-slate-600 dark:text-slate-400">Meta CAPI</dt>
-                  <dd className="font-mono font-bold text-slate-900 dark:text-white">{lead.metaCapiStatus}</dd>
-                </div>
-                {lead.metaCapiError ? (
-                  <p className="text-[11px] text-slate-600 dark:text-slate-300">{lead.metaCapiError}</p>
-                ) : null}
-                <div className="flex items-center justify-between gap-2">
-                  <dt className="font-semibold text-slate-600 dark:text-slate-400">License Portal</dt>
-                  <dd className="font-mono font-bold text-slate-900 dark:text-white">{lead.licensePortalStatus}</dd>
-                </div>
-                {lead.licensePortalError ? (
-                  <p className="text-[11px] text-slate-600 dark:text-slate-300">{lead.licensePortalError}</p>
-                ) : null}
-                <div className="flex gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => void handleRetryMetaSync(lead.id)}
-                    className="rounded-lg bg-slate-100 px-3 py-1.5 text-[11px] font-semibold text-slate-700 transition-colors hover:bg-slate-200 dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/20"
-                  >
-                    Retry CAPI
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void handleRetryLicenseSync(lead.id)}
-                    className="rounded-lg bg-indigo-50 px-3 py-1.5 text-[11px] font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 dark:bg-indigo-500/20 dark:text-indigo-300"
-                  >
-                    Retry Portal
-                  </button>
-                </div>
-              </dl>
-            </section>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-slate-50 dark:bg-[#07080E] text-slate-900 dark:text-slate-100 overflow-hidden font-sans">
       {/* Top Admin Navigation Header */}
@@ -973,13 +774,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
         </div>
 
         <div className="flex items-center gap-3">
-          {saveMessage && (
-            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300 animate-in fade-in">
-              <CheckCircle2 className="h-3.5 w-3.5" />
-              <span>{saveMessage}</span>
-            </div>
-          )}
-
           <button
             onClick={loadData}
             disabled={isLoading}
@@ -2340,18 +2134,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
                   <button
                     type="button"
                     disabled={purging !== null}
-                    onClick={async () => {
-                      if (!window.confirm('সব cache clear হবে। নিশ্চিত?')) return;
-                      setPurging('all');
-                      try {
-                        const res = await api.purgeCache('all');
-                        showNotification(`Cache purged (${res.invalidated.length} tags)`);
-                      } catch (err) {
-                        showNotification(err instanceof Error ? err.message : 'Purge failed');
-                      } finally {
-                        setPurging(null);
-                      }
-                    }}
+                    onClick={() => setConfirmScope('all')}
                     className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-wait"
                   >
                     {purging === 'all' ? 'Purging…' : 'Purge all cache'}
@@ -2360,18 +2143,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
                     type="button"
                     title="শুধু landing shell (content, menus, branding, pricing)"
                     disabled={purging !== null}
-                    onClick={async () => {
-                      if (!window.confirm('Landing cache clear হবে। নিশ্চিত?')) return;
-                      setPurging('landing');
-                      try {
-                        const res = await api.purgeCache('landing');
-                        showNotification(`Landing cache purged (${res.invalidated.length} tags)`);
-                      } catch (err) {
-                        showNotification(err instanceof Error ? err.message : 'Purge failed');
-                      } finally {
-                        setPurging(null);
-                      }
-                    }}
+                    onClick={() => setConfirmScope('landing')}
                     className="px-3 py-2 rounded-xl border border-slate-300 dark:border-white/15 text-slate-700 dark:text-slate-200 font-bold text-xs cursor-pointer flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-wait"
                   >
                     <RotateCcw className="h-4 w-4" />
@@ -2384,7 +2156,61 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
         </main>
       </div>
 
-      {renderLeadDrawer()}
+      {selectedLead && (
+        <LeadDrawer
+          lead={selectedLead}
+          activities={leadActivities}
+          isLoadingTimeline={isLoadingTimeline}
+          operators={operators}
+          followUpDraft={followUpDraft}
+          onFollowUpDraftChange={setFollowUpDraft}
+          onClose={() => setSelectedLead(null)}
+          onStatusChange={(id, status) => void handleUpdateLeadStatus(id, status)}
+          onAssign={(leadId, assignedToId) => void handleAssignLead(leadId, assignedToId)}
+          onSaveFollowUp={(lead) => void handleSaveFollowUp(lead)}
+          onRetryCapi={(id) => void handleRetryMetaSync(id)}
+          onRetryPortal={(id) => void handleRetryLicenseSync(id)}
+          onNotify={showNotification}
+        />
+      )}
+
+      <ConfirmDialog
+        open={confirmScope !== null}
+        title={confirmScope === 'all' ? 'Purge all caches?' : 'Purge public cache?'}
+        body={
+          confirmScope === 'all'
+            ? 'Clears cached data everywhere, so every screen and page loads fresh.'
+            : 'Clears the public website cache only.'
+        }
+        confirmLabel={confirmScope === 'all' ? 'Purge all caches' : 'Purge public cache'}
+        pending={purging !== null}
+        onConfirm={() => {
+          if (confirmScope) void runPurge(confirmScope);
+        }}
+        onClose={() => setConfirmScope(null)}
+      />
+
+      {/* Toast (artifact `.toast`): bottom-right status card. `showNotification`
+          is unchanged — only this container moved out of the header. */}
+      {saveMessage && (
+        <div
+          role="status"
+          className="fixed bottom-5 right-5 z-[70] flex max-w-[380px] items-center gap-3 rounded-lg border border-[#e4e7ec] bg-white px-3.5 py-3 shadow-xl dark:border-[#2a2a3a] dark:bg-[#14141c]"
+        >
+          <CheckCircle2 className="h-[18px] w-[18px] flex-none text-emerald-600 dark:text-emerald-400" />
+          <p className="m-0 flex-1 text-[13.5px] font-medium text-[#14171c] dark:text-[#ededf3]">
+            {saveMessage}
+          </p>
+          <button
+            type="button"
+            onClick={() => setSaveMessage(null)}
+            aria-label="Dismiss notification"
+            className="inline-flex h-6 w-6 flex-none cursor-pointer items-center justify-center rounded-md text-[#667085] transition-colors hover:bg-[#f1f3f5] dark:text-[#8e8ea4] dark:hover:bg-white/10"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
     </div>
   );
 };

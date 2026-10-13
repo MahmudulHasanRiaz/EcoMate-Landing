@@ -31,11 +31,10 @@
  */
 import { NextResponse, type NextMiddleware, type NextRequest } from 'next/server';
 import { auth } from '@/auth';
-import { getSeoIndexingEnabled } from '@/lib/content';
 import { applySecurityHeaders } from '@/lib/securityHeaders';
 import { DEFAULT_LOCALE, localeFromPathname } from '@/lib/locales';
 import { findManagedRedirect } from '@/lib/redirects';
-import { getSlugByIdUncached } from '@/lib/content';
+import { getSeoIndexingEnabled, getSlugByIdUncached } from '@/lib/content';
 import { timed } from '@/lib/slowlog';
 
 /**

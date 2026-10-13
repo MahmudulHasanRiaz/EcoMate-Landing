@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { signOut } from 'next-auth/react';
 import type {
   SiteSettings,
   LandingSection,
@@ -25,6 +26,7 @@ import { DashboardTab } from './tabs/DashboardTab';
 import { LeadsTab } from './tabs/LeadsTab';
 import { LeadDrawer } from './tabs/LeadDrawer';
 import { ConfirmDialog } from './ui';
+import { AdminShell, type AdminNavItem } from './AdminShell';
 import { TestimonialCard } from '../TestimonialCard';
 import { BlogPostEditor } from './BlogPostEditor';
 import { BlogCategoryManager } from './BlogCategoryManager';
@@ -39,7 +41,6 @@ import {
   Image,
   Settings,
   Share2,
-  RefreshCw,
   RotateCcw,
   Plus,
   Trash2,
@@ -316,6 +317,72 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
       setConfirmScope(null);
     }
   };
+
+  /**
+   * Tab switch shared by the shell sidebar and every in-panel shortcut.
+   * Leaving the blog list/editor always exits edit mode so a returning
+   * operator lands on the list, never a stale draft.
+   */
+  const handleTab = (tab: AdminTab): void => {
+    setActiveTab(tab);
+    setIsEditingBlog(false);
+  };
+
+  /**
+   * Shell navigation groups — ids/labels/icons/counts copied verbatim from the
+   * retired sidebar so badges behave exactly as before: New-lead count in rose,
+   * translation-gap count in amber, no badge anywhere else. (The old Editorial
+   * group carried a `count` on the blog entry that its renderer ignored, so the
+   * shell item omits it to preserve the rendered output.)
+   */
+  const NAV_GROUPS: { group: string; items: AdminNavItem[] }[] = [
+    {
+      group: 'Operations',
+      items: [
+        { id: 'dashboard', label: 'Dashboard Overview', icon: LayoutDashboard },
+        {
+          id: 'leads',
+          label: 'Lead CRM',
+          icon: Users,
+          count: leads.filter((l) => l.status === 'New').length,
+          tone: 'rose',
+        },
+      ],
+    },
+    {
+      group: 'Editorial & Media',
+      items: [
+        { id: 'blog', label: 'Blog & Articles', icon: BookOpen },
+        { id: 'media', label: 'Media Library', icon: Image },
+      ],
+    },
+    {
+      group: 'Marketing CMS',
+      items: [
+        { id: 'sections', label: 'Landing Sections', icon: FileText },
+        {
+          id: 'content',
+          label: 'Bilingual Strings',
+          icon: Languages,
+          count: i18nReport?.gapCount ?? 0,
+          tone: 'amber',
+        },
+        { id: 'pricing', label: 'Dynamic Pricing', icon: DollarSign },
+        { id: 'testimonials', label: 'Testimonials', icon: MessageSquareQuote },
+      ],
+    },
+    {
+      group: 'System',
+      items: [
+        { id: 'integrations', label: 'License Portal Queue', icon: Share2 },
+        { id: 'settings', label: 'System & Branding', icon: Settings },
+      ],
+    },
+  ];
+
+  const activeLabel =
+    NAV_GROUPS.flatMap((g) => g.items).find((item) => item.id === activeTab)?.label ??
+    'Dashboard Overview';
 
   /**
    * Open one section in the EN|BN editor.
@@ -755,44 +822,30 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-slate-50 dark:bg-[#07080E] text-slate-900 dark:text-slate-100 overflow-hidden font-sans">
-      {/* Top Admin Navigation Header */}
-      <header className="h-16 px-4 sm:px-6 border-b border-slate-200 dark:border-white/10 bg-white dark:bg-[#0B0D18] flex items-center justify-between shrink-0 shadow-xs">
-        <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white font-bold shadow-sm">
-            EM
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-base text-slate-900 dark:text-white">EcoMate Platform Admin</span>
-              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30">
-                Self-Contained CMS & DB
-              </span>
-            </div>
-            <p className="text-xs text-slate-600 dark:text-slate-300">Authoritative PostgreSQL & Content Engine</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button
-            onClick={loadData}
-            disabled={isLoading}
-            className="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
-            title="Refresh DB Data"
-          >
-            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin text-indigo-600' : ''}`} />
-          </button>
-
-          <button
-            onClick={onClose}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-white/20 text-xs font-semibold transition-colors cursor-pointer"
-          >
-            <span>Back to Public Site</span>
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      </header>
-
+    <div className="fixed inset-0 z-50 overflow-y-auto">
+      <AdminShell
+        nav={NAV_GROUPS}
+        activeTab={activeTab}
+        onTab={handleTab}
+        breadcrumb={activeLabel}
+        health={{
+          sql: loadError ? 'down' : 'ok',
+          license: systemHealth?.licensePortalConfigured ? 'connected' : 'standby',
+        }}
+        // AdminPanel receives no session/email prop (verified: no useSession or
+        // operator email anywhere in this file) — the shell shows a generic
+        // operator identity until session wiring lands. Sign-out still ends the
+        // real next-auth session (flow copied from AdminConsole).
+        user={{ name: 'Admin User', email: '', role: 'Platform Admin' }}
+        logoUrl={settings?.logoUrl ?? ''}
+        siteName={settings?.siteName || 'EcoMate'}
+        purging={purging}
+        onPurge={(scope) => setConfirmScope(scope)}
+        onSignOut={() => {
+          void signOut({ callbackUrl: '/admin/login' });
+        }}
+        onBackToSite={onClose}
+      >
       {/* Maintenance state (Task 20 §3): DB outage shows here with a retry. */}
       {loadError && (
         <div
@@ -809,190 +862,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
           </button>
         </div>
       )}
-
-      {/* Main Admin Layout: Sidebar + Body */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar Tabs */}
-        <aside className="w-56 sm:w-64 border-r border-slate-200 dark:border-white/10 bg-white dark:bg-[#090B14] p-3 flex flex-col justify-between shrink-0 overflow-y-auto">
-          <nav className="space-y-4">
-            {/* Group 1: Operations */}
-            <div>
-              <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
-                Operations
-              </p>
-              <div className="space-y-0.5">
-                {[
-                  { id: 'dashboard', label: 'Dashboard Overview', icon: LayoutDashboard },
-                  { id: 'leads', label: 'Lead CRM', icon: Users, count: leads.filter((l) => l.status === 'New').length },
-                ].map((tab) => {
-                  const Icon = tab.icon;
-                  const isActive = activeTab === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => {
-                        setActiveTab(tab.id as AdminTab);
-                        setIsEditingBlog(false);
-                      }}
-                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
-                        isActive
-                          ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-600 dark:text-white shadow-2xs font-bold'
-                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <Icon className="h-4 w-4 shrink-0" />
-                        <span>{tab.label}</span>
-                      </div>
-                      {tab.count !== undefined && tab.count > 0 && (
-                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500 text-white">
-                          {tab.count}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Group 2: Editorial & Blog */}
-            <div>
-              <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
-                Editorial &amp; Media
-              </p>
-              <div className="space-y-0.5">
-                {[
-                  { id: 'blog', label: 'Blog & Articles', icon: BookOpen, count: blogPosts.length },
-                  { id: 'media', label: 'Media Library', icon: Image },
-                ].map((tab) => {
-                  const Icon = tab.icon;
-                  const isActive = activeTab === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => {
-                        setActiveTab(tab.id as AdminTab);
-                        setIsEditingBlog(false);
-                      }}
-                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
-                        isActive
-                          ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-600 dark:text-white shadow-2xs font-bold'
-                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <Icon className="h-4 w-4 shrink-0" />
-                        <span>{tab.label}</span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Group 3: Marketing CMS */}
-            <div>
-              <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
-                Marketing CMS
-              </p>
-              <div className="space-y-0.5">
-                {[
-                  { id: 'sections', label: 'Landing Sections', icon: FileText },
-                  {
-                    id: 'content',
-                    label: 'Bilingual Strings',
-                    icon: Languages,
-                    count: i18nReport?.gapCount ?? 0,
-                  },
-                  { id: 'pricing', label: 'Dynamic Pricing', icon: DollarSign },
-                  { id: 'testimonials', label: 'Testimonials', icon: MessageSquareQuote },
-                ].map((tab) => {
-                  const Icon = tab.icon;
-                  const isActive = activeTab === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => {
-                        setActiveTab(tab.id as AdminTab);
-                        setIsEditingBlog(false);
-                      }}
-                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
-                        isActive
-                          ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-600 dark:text-white shadow-2xs font-bold'
-                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <Icon className="h-4 w-4 shrink-0" />
-                        <span>{tab.label}</span>
-                      </div>
-                      {tab.count !== undefined && tab.count > 0 && (
-                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500 text-white">
-                          {tab.count}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Group 4: System */}
-            <div>
-              <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
-                System
-              </p>
-              <div className="space-y-0.5">
-                {[
-                  { id: 'integrations', label: 'License Portal Queue', icon: Share2 },
-                  { id: 'settings', label: 'System & Branding', icon: Settings },
-                ].map((tab) => {
-                  const Icon = tab.icon;
-                  const isActive = activeTab === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => {
-                        setActiveTab(tab.id as AdminTab);
-                        setIsEditingBlog(false);
-                      }}
-                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
-                        isActive
-                          ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-600 dark:text-white shadow-2xs font-bold'
-                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <Icon className="h-4 w-4 shrink-0" />
-                        <span>{tab.label}</span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </nav>
-
-          {/* Database & Integration Status Badge */}
-          <div className="p-3 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/[0.08] text-xs space-y-2 mt-4">
-            <div className="flex items-center justify-between">
-              <span className="text-slate-500 dark:text-slate-400 font-medium">SQL Repository:</span>
-              <span className="text-emerald-700 dark:text-emerald-400 font-mono font-semibold flex items-center gap-1">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" />
-                Active (Authoritative)
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-slate-500 dark:text-slate-400 font-medium">License Portal:</span>
-              <span className="text-indigo-600 dark:text-indigo-400 font-mono font-semibold">
-                {systemHealth?.licensePortalConfigured ? 'Connected' : 'Standby / Queue'}
-              </span>
-            </div>
-          </div>
-        </aside>
-
-        {/* Content View Area */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           {/* TAB 1: DASHBOARD */}
           {activeTab === 'dashboard' && (
             <DashboardTab
@@ -1004,13 +873,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
               articleCount={blogPosts.length}
               overdueCount={overdueLeads.length}
               recentLeads={leads.slice(0, 4)}
-              onOpenLeads={() => setActiveTab('leads')}
-              onOpenContent={() => setActiveTab('content')}
+              onOpenLeads={() => handleTab('leads')}
+              onOpenContent={() => handleTab('content')}
               onOpenLead={handleOpenLead}
               onStatusChange={handleUpdateLeadStatus}
-              onAddSection={() => setActiveTab('sections')}
-              onWriteArticle={() => setActiveTab('blog')}
-              onUploadMedia={() => setActiveTab('media')}
+              onAddSection={() => handleTab('sections')}
+              onWriteArticle={() => handleTab('blog')}
+              onUploadMedia={() => handleTab('media')}
             />
           )}
 
@@ -2153,8 +2022,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
               </div>
             </div>
           )}
-        </main>
-      </div>
+      </AdminShell>
 
       {selectedLead && (
         <LeadDrawer

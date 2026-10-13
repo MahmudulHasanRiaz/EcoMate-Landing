@@ -6,12 +6,15 @@ describe('purgeScopeTags', () => {
     const tags = purgeScopeTags('landing');
     expect(tags).toContain('content:en');
     expect(tags).toContain('content:bn');
+    expect(tags).toContain('menus:main:en');
+    expect(tags).toContain('menus:footer:bn');
     expect(tags).toContain('branding');
     expect(tags).toContain('pricing');
     expect(tags).toContain('seo');
     expect(tags).not.toContain('blog');
     expect(tags).not.toContain('casestudies');
     expect(tags).not.toContain('testimonials');
+    expect(tags).not.toContain('social');
   });
 
   it('all scope covers every tag family', () => {

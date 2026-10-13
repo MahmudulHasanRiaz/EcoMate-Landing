@@ -27,6 +27,7 @@ export const siteSettingsTable = pgTable('site_settings', {
   messengerUrl: text('messenger_url').notNull().default('https://m.me/ecomate.bd'),
   address: text('address').notNull().default('Tejgaon I/A, Dhaka 1208, Bangladesh'),
   isPricingVisible: boolean('is_pricing_visible').notNull().default(true),
+  seoIndexingEnabled: boolean('seo_indexing_enabled').notNull().default(false),
   // --- Meta CAPI two-mode config (H-1/Decision 14, admin-configurable) -----------------
   /** 'instant' = full Lead on submit; 'validated' = light instant event on submit + full Lead on status trigger. */
   metaCapiMode: text('meta_capi_mode').notNull().default('instant'),

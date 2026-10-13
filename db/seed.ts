@@ -54,6 +54,7 @@ async function main() {
         messengerUrl: 'https://m.me/ecomate.bd',
         address: 'Tejgaon I/A, Dhaka 1208, Bangladesh',
         isPricingVisible: true,
+        seoIndexingEnabled: false,
       });
     }
 

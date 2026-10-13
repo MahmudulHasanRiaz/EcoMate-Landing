@@ -101,6 +101,18 @@ export const AdminShell: React.FC<AdminShellProps> = ({
     setIsDark(document.documentElement.classList.contains('dark'));
   }, []);
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setUserOpen(false);
+        setSystemsOpen(false);
+        setSidebarOpen(false);
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
+
   const toggleTheme = () => {
     const next = !isDark;
     document.documentElement.classList.toggle('dark', next);
@@ -222,23 +234,25 @@ export const AdminShell: React.FC<AdminShellProps> = ({
                   {user.email}
                 </p>
               </div>
-              <div className="p-1.5">
-                <a
-                  href="#"
-                  onClick={(e) => e.preventDefault()}
-                  className="flex items-center gap-2.5 px-2.5 min-h-[34px] rounded-[6px] text-[13.5px] font-medium text-[#2b313b] dark:text-[#c6c6d4] hover:bg-[#eef0f3] dark:hover:bg-[#1a1a26]"
+              <div className="p-1.5" role="menu" aria-label="Account">
+                <button
+                  type="button"
+                  disabled
+                  title="Coming soon"
+                  className="flex items-center gap-2.5 px-2.5 min-h-[34px] w-full rounded-[6px] text-[13.5px] font-medium text-[#2b313b] dark:text-[#c6c6d4] disabled:opacity-50 text-left"
                 >
                   <User className="w-4 h-4 flex-none text-[#6b7280] dark:text-[#8a8a9e]" />
                   Account &amp; profile
-                </a>
-                <a
-                  href="#"
-                  onClick={(e) => e.preventDefault()}
-                  className="flex items-center gap-2.5 px-2.5 min-h-[34px] rounded-[6px] text-[13.5px] font-medium text-[#2b313b] dark:text-[#c6c6d4] hover:bg-[#eef0f3] dark:hover:bg-[#1a1a26]"
+                </button>
+                <button
+                  type="button"
+                  disabled
+                  title="Coming soon"
+                  className="flex items-center gap-2.5 px-2.5 min-h-[34px] w-full rounded-[6px] text-[13.5px] font-medium text-[#2b313b] dark:text-[#c6c6d4] disabled:opacity-50 text-left"
                 >
                   <Bell className="w-4 h-4 flex-none text-[#6b7280] dark:text-[#8a8a9e]" />
                   Notifications
-                </a>
+                </button>
                 <button
                   type="button"
                   onClick={onBackToSite}

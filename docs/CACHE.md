@@ -37,6 +37,7 @@ contract: move it into `lib/content.ts`.
 | `testimonials` | `getTestimonials()` | `POST /api/testimonials`, `PATCH`/`DELETE /api/testimonials/[id]` (Phase 2b H-19 closed the "no writer" gap) | `updateTag` via `invalidateDomains('testimonials')` | `3600` |
 | `casestudies` | `getCaseStudies()` (index, sitemap) | `POST /api/case-studies`, `PATCH`/`DELETE /api/case-studies/[idOrSlug]` (Phase 2b H-20 closed the gap) | `updateTag` via `invalidateDomains('casestudies', locale, slug)` | `3600` |
 | `casestudies` + `casestudies:${slug}` | `getCaseStudy(slug)` (body) | same writers as the index | same as index | **long: `86400`** |
+| `seo` | `getSeoIndexingEnabled()` (global flag) | `PUT /api/settings` | `updateTag` via `invalidateDomains('seo')` | `3600` |
 
 Failure path (all readers): on DB error the function logs server-side and returns `null`;
 the page renders static fallback copy. The `null` is cached for the normal window (there

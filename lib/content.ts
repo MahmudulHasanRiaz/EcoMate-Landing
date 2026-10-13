@@ -632,6 +632,27 @@ export function getSiteBranding(): Promise<SiteBranding | null> {
   })();
 }
 
+/** Global SEO indexing kill-switch. Fail-closed: missing row or DB error → `false`. */
+async function _getSeoIndexingEnabled(): Promise<boolean> {
+  try {
+    const [row] = await withTimeout(getDb()
+      .select({ seoIndexingEnabled: siteSettingsTable.seoIndexingEnabled })
+      .from(siteSettingsTable)
+      .limit(1), 'getSeoIndexingEnabled');
+    return row?.seoIndexingEnabled ?? false;
+  } catch (e) {
+    logOnce('warn', 'content:seo-flag', '[content] seo flag read failed, defaulting OFF:', errorMessage(e));
+    return false;
+  }
+}
+
+export function getSeoIndexingEnabled(): Promise<boolean> {
+  return unstable_cache(_getSeoIndexingEnabled, ['seo-indexing-enabled'], {
+    tags: ['seo'],
+    revalidate: REVALIDATE_STANDARD,
+  })();
+}
+
 /** jsonb arrays pass through `unknown`; anything that is not a string array is treated as empty. */
 function asStringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];

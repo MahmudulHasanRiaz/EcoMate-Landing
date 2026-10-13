@@ -30,7 +30,7 @@ import { PricingTab } from './tabs/PricingTab';
 import { TestimonialsTab } from './tabs/TestimonialsTab';
 import { BlogTab } from './tabs/BlogTab';
 import { LeadDrawer } from './tabs/LeadDrawer';
-import { ConfirmDialog } from './ui';
+import { ConfirmDialog, Card, CardHeader } from './ui';
 import { AdminShell, type AdminNavItem } from './AdminShell';
 import { TestimonialCard } from '../TestimonialCard';
 import { BlogPostEditor } from './BlogPostEditor';
@@ -987,7 +987,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, locale, theme, 
           )}
 
           {/* TAB 7: MEDIA SLOTS */}
-          {activeTab === 'media' && <MediaLibrary />}
+          {activeTab === 'media' && (
+            <Card>
+              <CardHeader title="Media Library" />
+              <div className="p-5">
+                <MediaLibrary />
+              </div>
+            </Card>
+          )}
 
           {/* TAB 8: LICENSE PORTAL INTEGRATION QUEUE */}
           {activeTab === 'integrations' && (

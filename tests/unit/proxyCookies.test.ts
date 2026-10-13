@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest, type NextMiddleware } from 'next/server';
 import { auth } from '@/auth';
 import { findManagedRedirect } from '@/lib/redirects';
-import { proxy } from '@/proxy';
+import { proxy, resetSeoFlagCacheForTests } from '@/proxy';
+import { getSeoIndexingEnabledUncached } from '@/lib/content';
 
 vi.mock('@/auth', () => ({
   auth: vi.fn(),
@@ -14,6 +15,7 @@ vi.mock('@/lib/redirects', () => ({
 
 vi.mock('@/lib/content', () => ({
   getSlugByIdUncached: vi.fn(),
+  getSeoIndexingEnabledUncached: vi.fn(),
 }));
 
 /** The mock stands in for the middleware call signature (request, event) -> Response. */
@@ -52,6 +54,9 @@ beforeEach(() => {
   mockAuth().mockReset();
   mockRedirects().mockReset();
   mockRedirects().mockResolvedValue(null);
+  vi.mocked(getSeoIndexingEnabledUncached).mockReset();
+  vi.mocked(getSeoIndexingEnabledUncached).mockResolvedValue(true);
+  resetSeoFlagCacheForTests();
 });
 
 describe('proxy auth-cookie stripping (edge-cacheable public pages)', () => {
@@ -85,5 +90,19 @@ describe('proxy auth-cookie stripping (edge-cacheable public pages)', () => {
     const response = (await proxy(requestFor('/bn'), event())) as Response;
     expect(response.headers.getSetCookie()).toHaveLength(0);
     expect(response.headers.get('x-request-id')).not.toBeNull();
+  });
+
+  it('sets X-Robots-Tag noindex on public paths while indexing is off', async () => {
+    vi.mocked(getSeoIndexingEnabledUncached).mockResolvedValue(false);
+    mockAuth().mockResolvedValue(new Response('ok'));
+    const response = (await proxy(requestFor('/en'), event())) as Response;
+    expect(response.headers.get('x-robots-tag')).toContain('noindex');
+  });
+
+  it('omits X-Robots-Tag on public paths while indexing is on', async () => {
+    vi.mocked(getSeoIndexingEnabledUncached).mockResolvedValue(true);
+    mockAuth().mockResolvedValue(new Response('ok'));
+    const response = (await proxy(requestFor('/en'), event())) as Response;
+    expect(response.headers.get('x-robots-tag')).toBeNull();
   });
 });

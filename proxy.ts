@@ -85,6 +85,11 @@ async function isSeoIndexingEnabled(): Promise<boolean> {
   return value;
 }
 
+/** Test hook: clear the isolate-local SEO flag memo between test cases. */
+export function resetSeoFlagCacheForTests(): void {
+  seoFlagCache = null;
+}
+
 /** The language of the response body, as declared by `Content-Language`. */
 function contentLanguageFor(pathname: string): string {
   return localeFromPathname(pathname) ?? DEFAULT_LOCALE;

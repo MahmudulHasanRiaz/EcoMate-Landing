@@ -46,13 +46,17 @@ export const IconButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> 
   />
 );
 
-/** Mono tag: artifact `.tg`. Tone teal default; `amber` for pending states. */
-export const Tag: React.FC<{ tone?: 'teal' | 'amber'; children: React.ReactNode }> = ({ tone = 'teal', children }) => (
+/** Mono tag: artifact `.tg`. Tone teal default; `amber` for pending states, `red` for failed, `slate` for skipped. */
+export const Tag: React.FC<{ tone?: 'teal' | 'amber' | 'red' | 'slate'; children: React.ReactNode }> = ({ tone = 'teal', children }) => (
   <span
     className={
       tone === 'amber'
         ? 'inline-flex font-mono text-[11.5px] font-medium text-[#b45309] dark:text-[#fbbf24] bg-[#b45309]/[.08] dark:bg-[#fbbf24]/[.1] border border-[#b45309]/25 dark:border-[#fbbf24]/25 rounded-[5px] px-2 py-[1px]'
-        : 'text-[12px] font-medium text-teal-700 dark:text-teal-300 bg-[#e6f2f0] dark:bg-[#12302e] border border-[#bfdcd7] dark:border-[#1f4f4a] rounded-[5px] px-2 py-[1px]'
+        : tone === 'red'
+          ? 'inline-flex text-[11.5px] font-medium text-[#b91c1c] dark:text-[#fca5a5] bg-[#dc2626]/[.08] dark:bg-[#f87171]/[.1] border border-[#dc2626]/25 dark:border-[#f87171]/25 rounded-[5px] px-2 py-[1px]'
+          : tone === 'slate'
+            ? 'inline-flex text-[11.5px] font-medium text-[#566070] dark:text-[#a2a2b6] bg-[#f1f3f5] dark:bg-[#1c1c2c] border border-[#e6e8ec] dark:border-[#2a2a3a] rounded-[5px] px-2 py-[1px]'
+            : 'text-[12px] font-medium text-teal-700 dark:text-teal-300 bg-[#e6f2f0] dark:bg-[#12302e] border border-[#bfdcd7] dark:border-[#1f4f4a] rounded-[5px] px-2 py-[1px]'
     }
   >
     {children}

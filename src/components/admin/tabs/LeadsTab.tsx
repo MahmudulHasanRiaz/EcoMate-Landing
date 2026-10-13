@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Clock, Download, History, LayoutGrid, List, RefreshCw, Search, Upload } from 'lucide-react';
 import type { Lead, OverdueLead } from '../../../types/api';
 import { Avatar, Card, EmptyState, GhostButton, IconButton, StatCell, Tag } from '../ui';
@@ -14,8 +14,8 @@ export interface LeadsTabProps {
   onStatusFilterChange: (value: string) => void;
   onOpenLead: (lead: Lead) => void;
   onStatusChange: (id: number, status: Lead['status']) => void;
-  onRetryCapi: (id: number) => void;
-  onRetryPortal: (id: number) => void;
+  onRetryCapi: (id: number) => void | Promise<void>;
+  onRetryPortal: (id: number) => void | Promise<void>;
   onNotify: (message: string) => void;
 }
 
@@ -71,6 +71,11 @@ export const LeadsTab: React.FC<LeadsTabProps> = ({
   const [view, setView] = useState<'list' | 'board'>('list');
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
+  // Prune stale row selection when the visible set changes (search / stage / view).
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [leadSearchQuery, leadStatusFilter, view]);
+
   const demoCount = leads.filter((l) => l.status === 'Demo Scheduled').length;
   const portalPendingCount = leads.filter((l) => l.licensePortalStatus === 'Pending').length;
   const capiPendingCount = leads.filter((l) => l.metaCapiStatus === 'Pending').length;
@@ -90,10 +95,10 @@ export const LeadsTab: React.FC<LeadsTabProps> = ({
     );
   };
 
-  const portalTone = (status: Lead['licensePortalStatus']): 'teal' | 'amber' =>
-    status === 'Synced' ? 'teal' : 'amber';
-  const capiTone = (status: Lead['metaCapiStatus']): 'teal' | 'amber' =>
-    status === 'Sent' ? 'teal' : 'amber';
+  const portalTone = (status: string): 'teal' | 'amber' | 'red' | 'slate' =>
+    status === 'Synced' ? 'teal' : status === 'Failed' ? 'red' : status === 'Skipped' ? 'slate' : 'amber';
+  const capiTone = (status: string): 'teal' | 'amber' | 'red' | 'slate' =>
+    status === 'Sent' ? 'teal' : status === 'Failed' ? 'red' : status === 'Skipped' ? 'slate' : 'amber';
 
   return (
     <div className="space-y-3.5">
@@ -107,7 +112,7 @@ export const LeadsTab: React.FC<LeadsTabProps> = ({
             Authoritative PostgreSQL records from public demo booking forms. Syncable to License Portal.
           </p>
         </div>
-        {/* Plain anchor (not a nested button): same ghost styling as `GhostButton`. */}
+        {/* CSV export: plain link (not fetch-then-blob) — browser handles download, Content-Disposition filename from server, session cookie rides along. */}
         <a
           href={exportUrl}
           title="Download every lead as CSV (audited; capped at 10,000 rows)"
@@ -177,7 +182,7 @@ export const LeadsTab: React.FC<LeadsTabProps> = ({
           <Search className="absolute left-[11px] top-1/2 h-4 w-4 -translate-y-1/2 text-[#667085] dark:text-[#8e8ea4]" />
           <input
             type="search"
-            placeholder="Search name, phone, email, company"
+            placeholder="Search name, phone, email"
             aria-label="Search leads"
             value={leadSearchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
@@ -242,11 +247,27 @@ export const LeadsTab: React.FC<LeadsTabProps> = ({
           <b className="mr-auto font-medium text-[#0f766e] dark:text-teal-300">
             Bulk actions ({selectedIds.length})
           </b>
-          <GhostButton type="button" onClick={() => selectedIds.forEach((id) => onRetryPortal(id))}>
+          <GhostButton
+            type="button"
+            onClick={async () => {
+              for (const id of selectedIds) {
+                await onRetryPortal(id);
+              }
+              setSelectedIds([]);
+            }}
+          >
             <Upload className="h-3.5 w-3.5" />
             Sync to Portal
           </GhostButton>
-          <GhostButton type="button" onClick={() => selectedIds.forEach((id) => onRetryCapi(id))}>
+          <GhostButton
+            type="button"
+            onClick={async () => {
+              for (const id of selectedIds) {
+                await onRetryCapi(id);
+              }
+              setSelectedIds([]);
+            }}
+          >
             <RefreshCw className="h-3.5 w-3.5" />
             Retry CAPI
           </GhostButton>

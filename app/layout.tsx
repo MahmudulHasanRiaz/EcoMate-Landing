@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Script from 'next/script';
-import { Hind_Siliguri, Instrument_Serif, Inter, JetBrains_Mono } from 'next/font/google';
+import { Geist, Geist_Mono, Hind_Siliguri, Instrument_Serif, Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { ConsentBanner } from '@/components/ConsentBanner';
 import { MetaPixel } from '@/components/MetaPixel';
@@ -37,6 +37,16 @@ const mono = JetBrains_Mono({
   weight: ['400', '500', '600'],
   display: 'swap',
   variable: '--font-mono',
+});
+const adminSans = Geist({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-geist-admin',
+});
+const adminMono = Geist_Mono({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-geist-mono-admin',
 });
 
 const baseMetadata: Metadata = {
@@ -123,7 +133,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="en"
       suppressHydrationWarning
-      className={`scroll-smooth ${sans.variable} ${serif.variable} ${bangla.variable} ${mono.variable}`}
+      className={`scroll-smooth ${sans.variable} ${serif.variable} ${bangla.variable} ${mono.variable} ${adminSans.variable} ${adminMono.variable}`}
     >
       <body className="bg-white text-slate-900 antialiased selection:bg-indigo-600 selection:text-white dark:bg-[#090A0F] dark:text-slate-100">
         {/* v3: apply the stored theme (default dark) before paint so the first

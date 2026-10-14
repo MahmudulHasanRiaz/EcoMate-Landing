@@ -37,7 +37,7 @@
     "@lhci/cli": "^0.15.1",
     "@next/playwright": "^16.3.8",
     "@opennextjs/cloudflare": "^1.20.8",
-    "@playwright/test": "^1.63.0",
+    "@playwright/test": "^1.64.0",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^26.6.4",
     "@types/react": "^19.3.0",
